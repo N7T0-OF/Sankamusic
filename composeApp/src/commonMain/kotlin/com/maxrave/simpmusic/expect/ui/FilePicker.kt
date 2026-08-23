@@ -18,3 +18,8 @@ expect fun fileSaverResult(
     mimeType: String,
     onResultUri: (String?) -> Unit,
 ): FilePickerLauncher
+
+/**
+ * Writes text content to a URI that was obtained from [fileSaverResult].
+ */
+expect suspend fun writeTextToUri(uri: String, text: String): Boolean

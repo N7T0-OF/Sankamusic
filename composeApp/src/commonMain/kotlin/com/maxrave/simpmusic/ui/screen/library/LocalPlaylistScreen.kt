@@ -118,12 +118,16 @@ import com.maxrave.logger.Logger
 import com.maxrave.simpmusic.Platform
 import com.maxrave.simpmusic.expect.ui.layerBackdrop
 import com.maxrave.simpmusic.expect.ui.rememberBackdrop
+import com.maxrave.simpmusic.expect.ui.fileSaverResult
 import com.maxrave.simpmusic.expect.ui.toImageBitmap
+import com.maxrave.simpmusic.expect.ui.writeTextToUri
 import com.maxrave.simpmusic.extension.artworkScrimBrush
 import com.maxrave.simpmusic.extension.displayNameRes
 import com.maxrave.simpmusic.extension.getColorFromPalette
 import com.maxrave.simpmusic.extension.getScreenSizeInfo
+import com.maxrave.simpmusic.extension.toExportData
 import com.maxrave.simpmusic.extension.toImmersiveBackground
+import com.maxrave.simpmusic.extension.toJsonString
 import com.maxrave.simpmusic.getPlatform
 import com.maxrave.simpmusic.ui.component.SearchBarExit
 import com.maxrave.simpmusic.ui.component.SearchBarEnter
@@ -319,6 +323,30 @@ fun LocalPlaylistScreen(
     }
 
     val trackPagingItems: LazyPagingItems<Pair<SongEntity, PairSongLocalPlaylist>> = viewModel.tracksPagingState.collectAsLazyPagingItems()
+
+    // JSON file export: pre-serialize so the fileSaverResult callback only needs the URI.
+    var exportJsonText by remember { mutableStateOf<String?>(null) }
+    val exportScope = rememberCoroutineScope()
+    val exportJsonLauncher =
+        fileSaverResult(
+            "${uiState.title.replace(" ", "_")}.json",
+            "application/json",
+        ) { uri ->
+            uri?.let { uriStr ->
+                val json = exportJsonText
+                if (json != null) {
+                    exportScope.launch {
+                        val ok = writeTextToUri(uriStr, json)
+                        if (ok) {
+                            viewModel.makeToast("Playlist exported ✓")
+                        } else {
+                            viewModel.makeToast("Export failed")
+                        }
+                    }
+                }
+            }
+        }
+
     LaunchedEffect(Unit) {
         snapshotFlow {
             trackPagingItems.loadState
@@ -1572,6 +1600,20 @@ fun LocalPlaylistScreen(
             onDelete = {
                 viewModel.deletePlaylist(uiState.id)
                 navController.navigateUp()
+            },
+            onExportJson = {
+                val songs = trackPagingItems.itemSnapshotList.items.map { (song, _) -> song }
+                if (songs.isNotEmpty()) {
+                    val playlistEntity = LocalPlaylistEntity(
+                        id = uiState.id,
+                        title = uiState.title,
+                    )
+                    val json = playlistEntity.toExportData(songs).toJsonString()
+                    exportJsonText = json
+                    exportJsonLauncher.launch()
+                } else {
+                    viewModel.makeToast("No tracks loaded yet — scroll to load them first")
+                }
             },
         )
     }

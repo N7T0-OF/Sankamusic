@@ -26,3 +26,12 @@ actual fun fileSaverResult(
             onResultUri(File(getHomeFolderPath(emptyList()), fileName).absolutePath)
         }
     }
+
+actual suspend fun writeTextToUri(uri: String, text: String): Boolean {
+    return try {
+        File(uri).writeText(text, Charsets.UTF_8)
+        true
+    } catch (e: Exception) {
+        false
+    }
+}

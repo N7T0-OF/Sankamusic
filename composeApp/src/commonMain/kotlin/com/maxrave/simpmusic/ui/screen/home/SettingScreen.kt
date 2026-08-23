@@ -115,8 +115,11 @@ import com.maxrave.simpmusic.extension.isValidProxyHost
 import com.maxrave.simpmusic.getPlatform
 import com.maxrave.simpmusic.ui.component.ActionButton
 import com.maxrave.simpmusic.ui.component.CenterLoadingBox
+import com.maxrave.simpmusic.ui.component.CollapsibleSection
 import com.maxrave.simpmusic.ui.component.EndOfPage
 import com.maxrave.simpmusic.ui.component.LoadingDialog
+import com.maxrave.simpmusic.ui.component.NavigationBarStyle
+import com.maxrave.simpmusic.ui.component.NavigationBarStyleSelector
 import com.maxrave.simpmusic.ui.component.RippleIconButton
 import com.maxrave.simpmusic.ui.component.SettingItem
 import com.maxrave.simpmusic.ui.icon.ArrowBackIosNew
@@ -331,6 +334,8 @@ import simpmusic.composeapp.generated.resources.save_all_your_playlist_data
 import simpmusic.composeapp.generated.resources.save_last_played
 import simpmusic.composeapp.generated.resources.save_last_played_track_and_queue
 import simpmusic.composeapp.generated.resources.save_playback_state
+import simpmusic.composeapp.generated.resources.smart_shuffle
+import simpmusic.composeapp.generated.resources.smart_shuffle_description
 import simpmusic.composeapp.generated.resources.save_shuffle_and_repeat_mode
 import simpmusic.composeapp.generated.resources.send_back_listening_data_to_google
 import simpmusic.composeapp.generated.resources.set
@@ -538,6 +543,7 @@ fun SettingScreen(
     val crossfadeDuration by viewModel.crossfadeDuration.collectAsStateWithLifecycle()
     val crossfadeDjMode by viewModel.crossfadeDjMode.collectAsStateWithLifecycle()
     val crossfadeSkipAlbum by viewModel.crossfadeSkipAlbum.collectAsStateWithLifecycle()
+    val smartShuffleEnabled by viewModel.smartShuffleEnabled.collectAsStateWithLifecycle()
     val castState by viewModel.castState.collectAsStateWithLifecycle()
 
     val isCheckingUpdate by sharedViewModel.isCheckingUpdate.collectAsStateWithLifecycle()
@@ -592,9 +598,7 @@ fun SettingScreen(
             Spacer(Modifier.height(64.dp))
         }
         item(key = "user_interface") {
-            Column {
-                Spacer(Modifier.height(16.dp))
-                Text(text = stringResource(Res.string.user_interface), style = typo().labelMedium, color = MaterialTheme.colorScheme.onBackground)
+            CollapsibleSection(title = stringResource(Res.string.user_interface)) {
                 val themeModeLabels =
                     listOf(
                         DataStoreManager.THEME_MODE_SYSTEM to stringResource(Res.string.theme_mode_system),
@@ -671,26 +675,31 @@ fun SettingScreen(
                     subtitle = stringResource(Res.string.you_can_see_the_content_below_the_bottom_bar),
                     smallSubtitle = true,
                     switch = (enableTranslucentNavBar to { viewModel.setTranslucentBottomBar(it) }),
+                    otherView = if (getPlatform() == Platform.Android) {
+                        {
+                            val navBarStyle = remember(enableTranslucentNavBar, enableLiquidGlass) {
+                                when {
+                                    enableLiquidGlass -> NavigationBarStyle.GLASS
+                                    enableTranslucentNavBar -> NavigationBarStyle.TRANSLUCENT
+                                    else -> NavigationBarStyle.CLASSIC
+                                }
+                            }
+                            NavigationBarStyleSelector(
+                                currentStyle = navBarStyle,
+                                onStyleChanged = { style ->
+                                    viewModel.setTranslucentBottomBar(style.hasTranslucent)
+                                    viewModel.setEnableLiquidGlass(style.hasLiquidGlass)
+                                },
+                            )
+                        }
+                    } else {
+                        null
+                    },
                 )
-                if (getPlatform() == Platform.Android) {
-                    SettingItem(
-                        title = stringResource(Res.string.enable_liquid_glass_effect),
-                        subtitle = stringResource(Res.string.enable_liquid_glass_effect_description),
-                        smallSubtitle = true,
-                        switch = (enableLiquidGlass to { viewModel.setEnableLiquidGlass(it) }),
-                        isEnable = getPlatform() == Platform.Android,
-                    )
-                }
             }
         }
         item(key = "content") {
-            Column {
-                Text(
-                    text = stringResource(Res.string.content),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
+            CollapsibleSection(title = stringResource(Res.string.content)) {
                 SettingItem(
                     title = stringResource(Res.string.youtube_account),
                     subtitle = stringResource(Res.string.manage_your_youtube_accounts),
@@ -1083,49 +1092,37 @@ fun SettingScreen(
         }
         if (getPlatform() == Platform.Android) {
             item(key = "audio") {
-                Column {
-                    Text(
-                        text = stringResource(Res.string.audio),
-                        style = typo().labelMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(vertical = 8.dp),
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.normalize_volume),
-                        subtitle = stringResource(Res.string.balance_media_loudness),
-                        switch = (normalizeVolume to { viewModel.setNormalizeVolume(it) }),
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.skip_silent),
-                        subtitle = stringResource(Res.string.skip_no_music_part),
-                        switch = (skipSilent to { viewModel.setSkipSilent(it) }),
-                    )
-                    SettingItem(
-                        title = stringResource(Res.string.open_system_equalizer),
-                        subtitle =
-                            if (castState.isRemote) {
-                                stringResource(Res.string.not_available_while_casting)
-                            } else {
-                                stringResource(Res.string.use_your_system_equalizer)
-                            },
-                        isEnable = !castState.isRemote,
-                        onClick = {
-                            coroutineScope.launch {
-                                resultLauncher.launch()
-                            }
+                CollapsibleSection(title = stringResource(Res.string.audio)) {
+                SettingItem(
+                    title = stringResource(Res.string.normalize_volume),
+                    subtitle = stringResource(Res.string.balance_media_loudness),
+                    switch = (normalizeVolume to { viewModel.setNormalizeVolume(it) }),
+                )
+                SettingItem(
+                    title = stringResource(Res.string.skip_silent),
+                    subtitle = stringResource(Res.string.skip_no_music_part),
+                    switch = (skipSilent to { viewModel.setSkipSilent(it) }),
+                )
+                SettingItem(
+                    title = stringResource(Res.string.open_system_equalizer),
+                    subtitle =
+                        if (castState.isRemote) {
+                            stringResource(Res.string.not_available_while_casting)
+                        } else {
+                            stringResource(Res.string.use_your_system_equalizer)
                         },
-                    )
-                }
+                    isEnable = !castState.isRemote,
+                    onClick = {
+                        coroutineScope.launch {
+                            resultLauncher.launch()
+                        }
+                    },
+                )
             }
         }
+        }
         item(key = "playback") {
-            Column {
-                Text(
-                    text = stringResource(Res.string.playback),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
+            CollapsibleSection(title = stringResource(Res.string.playback)) {
                 // Desktop only for now: the shared interface ships a no-op default, so on Android
                 // these controls would move nothing. It lives under Playback rather than Audio
                 // because that whole group is inside an Android-only branch — "Open system
@@ -1154,6 +1151,12 @@ fun SettingScreen(
                     title = stringResource(Res.string.save_last_played),
                     subtitle = stringResource(Res.string.save_last_played_track_and_queue),
                     switch = (saveLastPlayed to { viewModel.setSaveLastPlayed(it) }),
+                )
+                SettingItem(
+                    title = stringResource(Res.string.smart_shuffle),
+                    subtitle = stringResource(Res.string.smart_shuffle_description),
+                    smallSubtitle = true,
+                    switch = (smartShuffleEnabled to { viewModel.setSmartShuffleEnabled(it) }),
                 )
                 if (getPlatform() == Platform.Android) {
                     SettingItem(
@@ -1282,13 +1285,7 @@ fun SettingScreen(
         // rows it leaves behind exist on Desktop just the same. The switch that produces the history
         // and the button that erases it belong together.
         item(key = "listening_history") {
-            Column {
-                Text(
-                    text = stringResource(Res.string.listening_history),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
+            CollapsibleSection(title = stringResource(Res.string.listening_history)) {
                 SettingItem(
                     title = stringResource(Res.string.local_tracking_title),
                     subtitle = stringResource(Res.string.local_tracking_description),
@@ -1314,13 +1311,7 @@ fun SettingScreen(
             }
         }
         item(key = "lyrics") {
-            Column {
-                Text(
-                    text = stringResource(Res.string.lyrics),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
+            CollapsibleSection(title = stringResource(Res.string.lyrics)) {
                 SettingItem(
                     title = stringResource(Res.string.main_lyrics_provider),
                     subtitle =
@@ -1479,14 +1470,8 @@ fun SettingScreen(
                 )
             }
         }
-        item(key = "AI") {
-            Column {
-                Text(
-                    text = stringResource(Res.string.ai),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
+        item(key = "ai") {
+            CollapsibleSection(title = stringResource(Res.string.ai)) {
                 SettingItem(
                     title = stringResource(Res.string.ai_provider),
                     subtitle =
@@ -1661,13 +1646,7 @@ fun SettingScreen(
             }
         }
         item(key = "spotify") {
-            Column {
-                Text(
-                    text = stringResource(Res.string.spotify),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
+            CollapsibleSection(title = stringResource(Res.string.spotify)) {
                 SettingItem(
                     // The title follows the state: a row that still reads "Log in" while logged in
                     // gives no clue that tapping it signs you out.
@@ -1718,13 +1697,7 @@ fun SettingScreen(
             }
         }
         item(key = "discord") {
-            Column {
-                Text(
-                    text = stringResource(Res.string.discord_integration),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
+            CollapsibleSection(title = stringResource(Res.string.discord_integration)) {
                 SettingItem(
                     title =
                         if (discordLoggedIn) {
@@ -1810,13 +1783,7 @@ fun SettingScreen(
             }
         }
         item(key = "sponsor_block") {
-            Column {
-                Text(
-                    text = stringResource(Res.string.sponsorBlock),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
+            CollapsibleSection(title = stringResource(Res.string.sponsorBlock)) {
                 SettingItem(
                     title = stringResource(Res.string.enable_sponsor_block),
                     subtitle = stringResource(Res.string.skip_sponsor_part_of_video),
@@ -1888,13 +1855,7 @@ fun SettingScreen(
         }
         if (getPlatform() == Platform.Android) {
             item(key = "storage") {
-                Column {
-                    Text(
-                        text = stringResource(Res.string.storage),
-                        style = typo().labelMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(vertical = 8.dp),
-                    )
+                CollapsibleSection(title = stringResource(Res.string.storage)) {
                     SettingItem(
                         title = stringResource(Res.string.player_cache),
                         subtitle = "${playerCache.bytesToMB()} MB",
@@ -2199,13 +2160,7 @@ fun SettingScreen(
             }
         }
         item(key = "backup") {
-            Column {
-                Text(
-                    text = stringResource(Res.string.backup),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
+            CollapsibleSection(title = stringResource(Res.string.backup)) {
                 SettingItem(
                     title = stringResource(Res.string.backup_downloaded),
                     subtitle = stringResource(Res.string.backup_downloaded_description),
@@ -2366,13 +2321,7 @@ fun SettingScreen(
             }
         }
         item(key = "about_us") {
-            Column {
-                Text(
-                    text = stringResource(Res.string.about_us),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
+            CollapsibleSection(title = stringResource(Res.string.about_us)) {
                 SettingItem(
                     title = stringResource(Res.string.version),
                     subtitle = stringResource(Res.string.version_format, VersionManager.getVersionName()),

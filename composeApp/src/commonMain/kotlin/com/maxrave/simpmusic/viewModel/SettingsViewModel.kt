@@ -157,6 +157,9 @@ class SettingsViewModel(
     val crossfadeDjMode: StateFlow<Boolean> = _crossfadeDjMode
     private val _crossfadeSkipAlbum = MutableStateFlow<Boolean>(false)
     val crossfadeSkipAlbum: StateFlow<Boolean> = _crossfadeSkipAlbum
+
+    private val _smartShuffleEnabled = MutableStateFlow<Boolean>(false)
+    val smartShuffleEnabled: StateFlow<Boolean> = _smartShuffleEnabled
     private val _autoDownloadLikedSongs = MutableStateFlow<Boolean>(false)
     val autoDownloadLikedSongs: StateFlow<Boolean> = _autoDownloadLikedSongs
     private val _youtubeSubtitleLanguage = MutableStateFlow<String>("")
@@ -306,6 +309,7 @@ class SettingsViewModel(
         getCrossfadeDuration()
         getCrossfadeDjMode()
         getCrossfadeSkipAlbum()
+        getSmartShuffleEnabled()
         getAutoDownloadLikedSongs()
         getContributorNameAndEmail()
         getBackupDownloaded()
@@ -510,6 +514,20 @@ class SettingsViewModel(
             // picks this up. Calling the getter again would leave a second collector running for
             // the life of the ViewModel, one more per toggle.
             dataStoreManager.setCrossfadeSkipAlbum(enabled)
+        }
+    }
+
+    private fun getSmartShuffleEnabled() {
+        viewModelScope.launch {
+            dataStoreManager.smartShuffleEnabled.collect { enabled ->
+                _smartShuffleEnabled.value = enabled == DataStoreManager.TRUE
+            }
+        }
+    }
+
+    fun setSmartShuffleEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            dataStoreManager.setSmartShuffleEnabled(enabled)
         }
     }
 

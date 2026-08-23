@@ -98,6 +98,7 @@ import com.maxrave.simpmusic.expect.ui.toImageBitmap
 import com.maxrave.simpmusic.extension.artworkScrimBrush
 import com.maxrave.simpmusic.extension.getColorFromPalette
 import com.maxrave.simpmusic.extension.getScreenSizeInfo
+import com.maxrave.simpmusic.extension.calculateTotalDuration
 import com.maxrave.simpmusic.extension.getStringBlocking
 import com.maxrave.simpmusic.extension.toImmersiveBackground
 import com.maxrave.simpmusic.ui.component.AddToPlaylistModalBottomSheet
@@ -1044,17 +1045,20 @@ fun PlaylistScreen(
                                                         uriHandler.openUri(url)
                                                     },
                                                 )
-                                                Text(
-                                                    text =
-                                                        if (data.isRadio) {
-                                                            stringResource(Res.string.unlimited)
-                                                        } else {
-                                                            stringResource(
-                                                                Res.string.album_length,
-                                                                (data.trackCount).toString(),
-                                                                "",
-                                                            )
-                                                        },
+                                            val totalDuration = remember(tracks) {
+                                                tracks.calculateTotalDuration()
+                                            }
+                                            Text(
+                                                text =
+                                                    if (data.isRadio) {
+                                                        stringResource(Res.string.unlimited)
+                                                    } else {
+                                                        stringResource(
+                                                            Res.string.album_length,
+                                                            (data.trackCount).toString(),
+                                                            totalDuration.ifEmpty { "" },
+                                                        )
+                                                    },
                                                     color = Color.White,
                                                     style = typo().bodyMedium,
                                                     modifier = Modifier.padding(vertical = 8.dp),

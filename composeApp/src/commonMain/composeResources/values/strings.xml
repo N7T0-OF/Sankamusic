@@ -503,6 +503,8 @@
     <string name="downloading_liked_songs">Downloading %1$d liked songs</string>
     <string name="crossfade_skip_album">Keep albums continuous</string>
     <string name="crossfade_skip_album_description">Skip the crossfade between tracks of the same album, so albums meant to run without gaps still do. The transition out of the album still crossfades.</string>
+    <string name="smart_shuffle">Smart Shuffle</string>
+    <string name="smart_shuffle_description">Avoids recently played tracks and prioritizes your favorite artists when shuffling playlists</string>
     <string name="youtube_subtitle_language">YouTube Subtitle Translation Language</string>
     <string name="youtube_subtitle_language_message">Type language code (Eg: en) (2 letters). This is the preferred translation language for YouTube subtitles.</string>
     <string name="use_anonymous">Use anonymous name to contribute</string>
