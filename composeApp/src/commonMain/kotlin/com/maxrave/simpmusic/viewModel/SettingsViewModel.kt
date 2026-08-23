@@ -519,7 +519,7 @@ class SettingsViewModel(
 
     private fun getSmartShuffleEnabled() {
         viewModelScope.launch {
-            dataStoreManager.smartShuffleEnabled.collect { enabled ->
+            dataStoreManager.getString("smart_shuffle_enabled").collect { enabled ->
                 _smartShuffleEnabled.value = enabled == DataStoreManager.TRUE
             }
         }
@@ -527,7 +527,7 @@ class SettingsViewModel(
 
     fun setSmartShuffleEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            dataStoreManager.setSmartShuffleEnabled(enabled)
+            dataStoreManager.putString("smart_shuffle_enabled", if (enabled) DataStoreManager.TRUE else DataStoreManager.FALSE)
         }
     }
 
