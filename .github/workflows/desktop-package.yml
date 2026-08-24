@@ -36,6 +36,11 @@ permissions:
 jobs:
   build-desktop-packages:
     name: Build desktop packages (AppImage + Mac zip + Windows msix)
+    # Conveyor requires a signing key. Skip the whole job when
+    # CONVEYOR_SIGNING_KEY is not configured on the repo instead of failing
+    # every build with "Missing required input: signing_key". Configure the
+    # secret to enable desktop packaging.
+    if: ${{ secrets.CONVEYOR_SIGNING_KEY != '' }}
     runs-on: ubuntu-22.04
     defaults:
       run:
