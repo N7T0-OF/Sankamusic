@@ -119,11 +119,17 @@ jobs:
 
   build-desktop-packages:
     name: Build desktop packages (AppImage + Mac zip + Windows msix)
-    # Conveyor requires a signing key. Skip the whole job (and the DMG wrap
-    # job that needs it) when CONVEYOR_SIGNING_KEY is not configured on the
-    # repo, instead of failing every release with "Missing required input:
-    # signing_key". Configure the secret to enable desktop packaging.
-    if: ${{ secrets.CONVEYOR_SIGNING_KEY != '' }}
+    # Conveyor requires a signing key. When CONVEYOR_SIGNING_KEY is not
+    # configured on the repo every release dies with "Missing required
+    # input: signing_key"; instead the packaging steps below are skipped
+    # (the job still reports success) and wrap-mac-dmg is skipped via the
+    # `built` output. Configure the secret to enable desktop packaging.
+    # (secrets cannot be read in a job-level `if`, so the check lives in a
+    # job-level env and the steps read that.)
+    env:
+      DESKTOP_SIGNING_KEY_SET: ${{ secrets.CONVEYOR_SIGNING_KEY != '' }}
+    outputs:
+      built: ${{ env.DESKTOP_SIGNING_KEY_SET }}
     runs-on: ubuntu-22.04
     defaults:
       run:
@@ -170,15 +176,18 @@ jobs:
           echo "LASTFM_SECRET=${{ secrets.LASTFM_SECRET }}" >> ./local.properties
 
       - name: Generate aboutLibraries.json
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
         run: ./gradlew exportLibraryDefinitions
 
       - name: Cache mpv-natives
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
         uses: actions/cache@v4
         with:
           path: mpv-natives
           key: mpv-natives-${{ hashFiles('composeApp/build.gradle.kts') }}
 
       - name: Populate mpv-natives for all OSes
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
         # Conveyor is invoked by its own action further down, NOT through Gradle,
         # so the dependsOn(":composeApp:mpvSetupAll") wired into the conveyor*
         # tasks never fires on this path — the natives have to be staged here
@@ -186,6 +195,7 @@ jobs:
         run: ./gradlew :composeApp:mpvSetupAll --no-configuration-cache
 
       - name: Generate Conveyor config
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
         # Run writeConveyorConfig BEFORE Conveyor so the parser only reads
         # the static generated.conveyor.conf and never tastes Gradle stdout
         # (which can contain plugin println output and break HOCON parsing).
@@ -195,6 +205,7 @@ jobs:
       # that our packageConveyorAppImage task wraps into a portable AppImage.
       # Conveyor 22.0 dropped native AppImage support, hence the wrap.
       - name: Run Conveyor (linux-app)
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
         uses: hydraulic-software/conveyor/actions/build@v22.0
         with:
           command: -Kapp.machines=linux.amd64.glibc make linux-app
@@ -202,6 +213,7 @@ jobs:
           signing_key: ${{ secrets.CONVEYOR_SIGNING_KEY }}
 
       - name: Wrap Linux app tree → AppImage
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
         run: ./gradlew :desktopApp:packageConveyorAppImage --no-configuration-cache
 
       # `make site` builds every machine that has non-empty targets +
@@ -218,6 +230,7 @@ jobs:
       # build with "Linux Tarball Contents for Intel" before the Mac /
       # Windows artifacts get a chance to run.
       - name: Run Conveyor (make site, Mac + Windows only)
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
         uses: hydraulic-software/conveyor/actions/build@v22.0
         with:
           command: '-Kapp.machines=[mac.amd64,mac.aarch64,windows.amd64] make site'
@@ -225,18 +238,22 @@ jobs:
           signing_key: ${{ secrets.CONVEYOR_SIGNING_KEY }}
 
       - name: Stage AppImage into output/ for upload
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
         run: cp desktopApp/build/appimage/conveyor/SimpMusic-*.AppImage output/
 
       - name: Show built artifacts
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
         run: ls -lh output/
 
       - name: Upload AppImage to run artifacts
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: desktop-appimage
           path: output/SimpMusic-*.AppImage
 
       - name: Upload macOS zips to run artifacts
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: desktop-mac-zips
@@ -254,6 +271,7 @@ jobs:
       # conveyor.conf for full context). ARM Windows users get the x64
       # msix running under Prism emulation, which works correctly.
       - name: Bundle Windows offline installer
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
         run: |
           set -euo pipefail
           if [ ! -f output/simpmusic.crt ]; then
@@ -277,6 +295,7 @@ jobs:
           ls -lh installers/
 
       - name: Upload Windows offline installer
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: desktop-windows
@@ -286,6 +305,9 @@ jobs:
     name: Wrap macOS .zip → .dmg (installer UX)
     runs-on: macos-14
     needs: build-desktop-packages
+    # Only meaningful when desktop packaging actually ran (i.e. a signing
+    # key is configured and the Conveyor steps produced the Mac zips).
+    if: ${{ needs.build-desktop-packages.outputs.built == 'true' }}
     defaults:
       run:
         shell: bash
