@@ -47,6 +47,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -105,6 +107,8 @@ import com.maxrave.domain.repository.ImportProgress
 import com.maxrave.domain.utils.LocalResource
 import com.maxrave.logger.Logger
 import com.maxrave.simpmusic.Platform
+import com.maxrave.simpmusic.expect.HapticManager
+import com.maxrave.simpmusic.expect.HapticType
 import com.maxrave.simpmusic.expect.ui.fileSaverResult
 import com.maxrave.simpmusic.expect.ui.isWallpaperDynamicColorSupported
 import com.maxrave.simpmusic.expect.ui.openEqResult
@@ -135,6 +139,7 @@ import com.maxrave.simpmusic.ui.navigation.destination.login.LoginDestination
 import com.maxrave.simpmusic.ui.navigation.destination.login.SpotifyLoginDestination
 import com.maxrave.simpmusic.ui.theme.md_theme_dark_primary
 import com.maxrave.simpmusic.ui.theme.parseThemeColorHex
+import com.maxrave.simpmusic.ui.theme.seed
 import com.maxrave.simpmusic.ui.theme.typo
 import com.maxrave.simpmusic.utils.VersionManager
 import com.maxrave.simpmusic.viewModel.ImportViewModel
@@ -355,6 +360,11 @@ import simpmusic.composeapp.generated.resources.storage
 import simpmusic.composeapp.generated.resources.such_as_music_video_lyrics_video_podcasts_and_more
 import simpmusic.composeapp.generated.resources.theme
 import simpmusic.composeapp.generated.resources.theme_color
+import simpmusic.composeapp.generated.resources.vibration
+import simpmusic.composeapp.generated.resources.vibration_description
+import simpmusic.composeapp.generated.resources.vibration_intensity
+import simpmusic.composeapp.generated.resources.vibration_intensity_strong
+import simpmusic.composeapp.generated.resources.vibration_intensity_weak
 import simpmusic.composeapp.generated.resources.theme_color_custom
 import simpmusic.composeapp.generated.resources.theme_color_default
 import simpmusic.composeapp.generated.resources.theme_color_wallpaper
@@ -544,6 +554,8 @@ fun SettingScreen(
     val crossfadeDjMode by viewModel.crossfadeDjMode.collectAsStateWithLifecycle()
     val crossfadeSkipAlbum by viewModel.crossfadeSkipAlbum.collectAsStateWithLifecycle()
     val smartShuffleEnabled by viewModel.smartShuffleEnabled.collectAsStateWithLifecycle()
+    val vibrationEnabled by viewModel.vibrationEnabled.collectAsStateWithLifecycle()
+    val vibrationIntensity by viewModel.vibrationIntensity.collectAsStateWithLifecycle()
     val castState by viewModel.castState.collectAsStateWithLifecycle()
 
     val isCheckingUpdate by sharedViewModel.isCheckingUpdate.collectAsStateWithLifecycle()
@@ -696,6 +708,53 @@ fun SettingScreen(
                         null
                     },
                 )
+                if (getPlatform() == Platform.Android) {
+                    SettingItem(
+                        title = stringResource(Res.string.vibration),
+                        subtitle = stringResource(Res.string.vibration_description),
+                        smallSubtitle = true,
+                        switch = (vibrationEnabled to { viewModel.setVibrationEnabled(it) }),
+                    )
+                    if (vibrationEnabled) {
+                        SettingItem(
+                            title = stringResource(Res.string.vibration_intensity),
+                            smallSubtitle = true,
+                            otherView = {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 24.dp, vertical = 4.dp),
+                                ) {
+                                    Slider(
+                                        value = vibrationIntensity,
+                                        onValueChange = { viewModel.setVibrationIntensity(it) },
+                                        valueRange = 0f..1f,
+                                        colors =
+                                            SliderDefaults.colors(
+                                                thumbColor = seed,
+                                                activeTrackColor = seed,
+                                            ),
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                    ) {
+                                        Text(
+                                            text = stringResource(Res.string.vibration_intensity_weak),
+                                            style = typo().bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                        Text(
+                                            text = stringResource(Res.string.vibration_intensity_strong),
+                                            style = typo().bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                            },
+                        )
+                    }
+                }
             }
         }
         item(key = "content") {
@@ -1245,6 +1304,7 @@ fun SettingScreen(
                                                         else -> 5000
                                                     }
                                                 viewModel.setCrossfadeDuration(duration)
+                                                HapticManager.vibrate(HapticType.SLIDER_STEP)
                                             },
                                         dismiss = runBlocking { getString(Res.string.cancel) },
                                     ),

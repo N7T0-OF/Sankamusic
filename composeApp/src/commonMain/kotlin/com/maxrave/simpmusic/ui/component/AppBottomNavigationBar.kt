@@ -20,6 +20,8 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.maxrave.simpmusic.expect.HapticManager
+import com.maxrave.simpmusic.expect.HapticType
 import com.maxrave.simpmusic.extension.artworkScrimBrush
 import com.maxrave.simpmusic.extension.greyScale
 import com.maxrave.simpmusic.ui.navigation.destination.home.AnalyticsDestination
@@ -114,6 +116,7 @@ fun AppBottomNavigationBar(
                             }
                         } else {
                             selectedIndex = screen.ordinal
+                            HapticManager.vibrate(HapticType.SELECT)
                             navController.navigate(screen.destination) {
                                 popUpTo(navController.graph.startDestinationId) {
                                     saveState = true

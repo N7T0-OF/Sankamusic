@@ -24,6 +24,7 @@ import com.maxrave.domain.utils.LocalResource
 import com.maxrave.logger.LogLevel
 import com.maxrave.logger.Logger
 import com.maxrave.simpmusic.Platform
+import com.maxrave.simpmusic.expect.HapticManager
 import com.maxrave.simpmusic.getPlatform
 import com.maxrave.simpmusic.viewModel.base.BaseViewModel
 import kotlinx.coroutines.Dispatchers
@@ -160,6 +161,10 @@ class SettingsViewModel(
 
     private val _smartShuffleEnabled = MutableStateFlow<Boolean>(false)
     val smartShuffleEnabled: StateFlow<Boolean> = _smartShuffleEnabled
+    private val _vibrationEnabled = MutableStateFlow<Boolean>(false)
+    val vibrationEnabled: StateFlow<Boolean> = _vibrationEnabled
+    private val _vibrationIntensity = MutableStateFlow<Float>(0.5f)
+    val vibrationIntensity: StateFlow<Float> = _vibrationIntensity
     private val _autoDownloadLikedSongs = MutableStateFlow<Boolean>(false)
     val autoDownloadLikedSongs: StateFlow<Boolean> = _autoDownloadLikedSongs
     private val _youtubeSubtitleLanguage = MutableStateFlow<String>("")
@@ -310,6 +315,8 @@ class SettingsViewModel(
         getCrossfadeDjMode()
         getCrossfadeSkipAlbum()
         getSmartShuffleEnabled()
+        getVibrationEnabled()
+        getVibrationIntensity()
         getAutoDownloadLikedSongs()
         getContributorNameAndEmail()
         getBackupDownloaded()
@@ -528,6 +535,44 @@ class SettingsViewModel(
     fun setSmartShuffleEnabled(enabled: Boolean) {
         viewModelScope.launch {
             dataStoreManager.putString("smart_shuffle_enabled", if (enabled) DataStoreManager.TRUE else DataStoreManager.FALSE)
+        }
+    }
+
+    private fun getVibrationEnabled() {
+        viewModelScope.launch {
+            dataStoreManager.getString("vibration_enabled").collect { enabled ->
+                _vibrationEnabled.value = enabled == DataStoreManager.TRUE
+                // Keep the central haptics layer in sync so UI handlers don't
+                // need to reach into DataStore themselves.
+                HapticManager.enabled = enabled == DataStoreManager.TRUE
+            }
+        }
+    }
+
+    fun setVibrationEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            _vibrationEnabled.value = enabled
+            HapticManager.enabled = enabled
+            dataStoreManager.putString("vibration_enabled", if (enabled) DataStoreManager.TRUE else DataStoreManager.FALSE)
+        }
+    }
+
+    private fun getVibrationIntensity() {
+        viewModelScope.launch {
+            dataStoreManager.getString("vibration_intensity").collect { raw ->
+                val value = raw?.toFloatOrNull() ?: 0.5f
+                _vibrationIntensity.value = value
+                HapticManager.intensity = value
+            }
+        }
+    }
+
+    fun setVibrationIntensity(value: Float) {
+        viewModelScope.launch {
+            val clamped = value.coerceIn(0f, 1f)
+            _vibrationIntensity.value = clamped
+            HapticManager.intensity = clamped
+            dataStoreManager.putString("vibration_intensity", clamped.toString())
         }
     }
 

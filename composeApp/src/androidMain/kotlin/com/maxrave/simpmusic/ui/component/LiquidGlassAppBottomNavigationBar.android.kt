@@ -46,6 +46,8 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.maxrave.domain.data.player.GenericMediaItem
 import com.maxrave.logger.Logger
+import com.maxrave.simpmusic.expect.HapticManager
+import com.maxrave.simpmusic.expect.HapticType
 import com.maxrave.simpmusic.expect.ui.PlatformBackdrop
 import com.maxrave.simpmusic.ui.navigation.destination.home.AnalyticsDestination
 import com.maxrave.simpmusic.ui.navigation.destination.home.HomeDestination
@@ -226,6 +228,7 @@ actual fun LiquidGlassAppBottomNavigationBar(
             }
         } else {
             selectedIndex = index
+            HapticManager.vibrate(HapticType.SELECT)
             navController.navigate(screen.destination) {
                 popUpTo(navController.graph.startDestinationId) {
                     saveState = true
