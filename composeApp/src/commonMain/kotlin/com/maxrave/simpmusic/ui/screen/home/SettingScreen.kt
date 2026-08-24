@@ -692,8 +692,9 @@ fun SettingScreen(
                     switch = (enableTranslucentNavBar to { viewModel.setTranslucentBottomBar(it) }),
                     otherView = if (getPlatform() == Platform.Android) {
                         {
-                            val navBarStyle = remember(enableTranslucentNavBar, enableLiquidGlass) {
+                            val navBarStyle = remember(enableTranslucentNavBar, enableLiquidGlass, minimalisticNavBar) {
                                 when {
+                                    minimalisticNavBar -> NavigationBarStyle.MINIMALISTIC
                                     enableLiquidGlass -> NavigationBarStyle.GLASS
                                     enableTranslucentNavBar -> NavigationBarStyle.TRANSLUCENT
                                     else -> NavigationBarStyle.CLASSIC
@@ -702,8 +703,11 @@ fun SettingScreen(
                             NavigationBarStyleSelector(
                                 currentStyle = navBarStyle,
                                 onStyleChanged = { style ->
-                                    viewModel.setTranslucentBottomBar(style.hasTranslucent)
-                                    viewModel.setEnableLiquidGlass(style.hasLiquidGlass)
+                                    viewModel.setMinimalisticNavBar(style.isMinimalistic)
+                                    if (!style.isMinimalistic) {
+                                        viewModel.setTranslucentBottomBar(style.hasTranslucent)
+                                        viewModel.setEnableLiquidGlass(style.hasLiquidGlass)
+                                    }
                                 },
                             )
                         }

@@ -14,11 +14,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContentColor
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -122,17 +123,19 @@ fun MinimalisticAppBottomNavigationBar(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = screen.icon(),
-                        contentDescription = stringResource(screen.title),
-                        tint =
+                    // screen.icon is a @Composable () -> Unit that already renders the Icon.
+                    // Wrap it in a ContentColor so the active tab is tinted with the primary
+                    // colour while the rest keep the default onSurfaceVariant.
+                    CompositionLocalProvider(
+                        LocalContentColor provides
                             if (selected) {
                                 MaterialTheme.colorScheme.primary
                             } else {
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
-                        modifier = Modifier.size(22.dp),
-                    )
+                    ) {
+                        screen.icon()
+                    }
                     if (selected) {
                         Box(
                             modifier =
