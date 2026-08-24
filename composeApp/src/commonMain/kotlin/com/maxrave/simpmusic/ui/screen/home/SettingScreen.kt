@@ -98,6 +98,7 @@ import com.maxrave.common.LIMIT_CACHE_SIZE
 import com.maxrave.common.QUALITY
 import com.maxrave.common.SUPPORTED_LANGUAGE
 import com.maxrave.common.SUPPORTED_LOCATION
+import com.maxrave.common.SpaceKaiFeatures
 import com.maxrave.common.SponsorBlockType
 import com.maxrave.common.VIDEO_QUALITY
 import com.maxrave.domain.extension.now
@@ -716,13 +717,15 @@ fun SettingScreen(
                         null
                     },
                 )
-                if (getPlatform() == Platform.Android) {
-                    SettingItem(
-                        title = stringResource(Res.string.minimalistic_nav_bar),
-                        subtitle = stringResource(Res.string.minimalistic_nav_bar_description),
-                        smallSubtitle = true,
-                        switch = (minimalisticNavBar to { viewModel.setMinimalisticNavBar(it) }),
-                    )
+                if (getPlatform() == Platform.Android && SpaceKaiFeatures.HAPTICS) {
+                    if (SpaceKaiFeatures.MINIMALISTIC_NAVIGATION) {
+                        SettingItem(
+                            title = stringResource(Res.string.minimalistic_nav_bar),
+                            subtitle = stringResource(Res.string.minimalistic_nav_bar_description),
+                            smallSubtitle = true,
+                            switch = (minimalisticNavBar to { viewModel.setMinimalisticNavBar(it) }),
+                        )
+                    }
                     SettingItem(
                         title = stringResource(Res.string.vibration),
                         subtitle = stringResource(Res.string.vibration_description),
@@ -1768,14 +1771,16 @@ fun SettingScreen(
                         }
                     },
                 )
-                SettingItem(
-                    title = "Importer vos playlists Spotify",
-                    subtitle = "Synchronisez vos playlists Spotify dans votre bibliothèque",
-                    smallSubtitle = true,
-                    onClick = {
-                        navController.navigate(SpotifySyncDestination)
-                    },
-                )
+                if (SpaceKaiFeatures.SPOTIFY_SYNC) {
+                    SettingItem(
+                        title = "Importer vos playlists Spotify",
+                        subtitle = "Synchronisez vos playlists Spotify dans votre bibliothèque",
+                        smallSubtitle = true,
+                        onClick = {
+                            navController.navigate(SpotifySyncDestination)
+                        },
+                    )
+                }
             }
         }
         item(key = "discord") {

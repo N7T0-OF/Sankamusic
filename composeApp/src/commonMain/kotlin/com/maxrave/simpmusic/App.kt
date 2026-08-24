@@ -59,6 +59,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_MEDIUM_LOWER_BOUND
 import coil3.toUri
 import com.maxrave.domain.data.player.GenericMediaItem
+import com.maxrave.common.SpaceKaiFeatures
 import com.maxrave.domain.manager.DataStoreManager
 import com.maxrave.domain.manager.DataStoreManager.Values.TRUE
 import com.maxrave.domain.repository.SpotifySyncRepository
@@ -213,7 +214,7 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                 // of it. The token is handed straight to the shared view model, and the screen
                 // closes itself when it sees a session key appear.
                 token?.let { viewModel.completeLastfmLogin(it) }
-            } else if (data.scheme == "simpmusic" && data.host == "spotify-auth") {
+            } else if (SpaceKaiFeatures.SPOTIFY_SYNC && data.scheme == "simpmusic" && data.host == "spotify-auth") {
                 // Spotify OAuth PKCE callback: simpmusic://spotify-auth?code=xxx. Handled here,
                 // not on the sync screen, so it survives a process kill. The screen learns the
                 // login succeeded by watching oauthLoggedIn, exactly like Last.fm.
