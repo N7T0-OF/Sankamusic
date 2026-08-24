@@ -1,7 +1,15 @@
-name: Build APK for Release (Full & FOSS) && Desktop app release
+name: SpaceKai Release
 
 on:
   workflow_dispatch:
+    inputs:
+      flavor:
+        description: 'Android flavor for the single APK'
+        type: choice
+        default: full
+        options:
+          - full
+          - foss
   push:
     branches:
       - 'main'
@@ -17,8 +25,12 @@ permissions:
   contents: write
 
 jobs:
-  build-full-release:
-    name: Build full release version
+  # ---------------------------------------------------------------
+  # ONE universal, signed APK + SHA256SUMS.txt. No ABI splits, no
+  # foss/full variants in the published assets.
+  # ---------------------------------------------------------------
+  build-android:
+    name: Build Android (single APK)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -60,62 +72,22 @@ jobs:
       - name: Update build product flavor
         run: |
           echo "" >> ./gradle.properties
-          echo "isFullBuild=true" >> ./gradle.properties
+          echo "isFullBuild=${{ inputs.flavor == 'foss' && 'false' || 'true' }}" >> ./gradle.properties
 
-      - name: Build full release APK
+      - name: Build single release APK
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./build_and_sign_apk.sh --release --full
+        run: ./build_and_sign_apk.sh --release --single ${{ inputs.flavor == 'foss' && '--foss' || '--full' }}
 
-      - name: Upload APK
+      - name: Upload APK + checksums
         uses: actions/upload-artifact@v4
         with:
-          name: app-full-release
-          path: androidApp/build/outputs/apk/release/*.apk
-
-  build-foss-release:
-    name: Build foss release version
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          submodules: 'recursive'
-
-      - name: set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: 21
-          distribution: "microsoft"
-          cache: 'gradle'
-
-      - name: Update environment variables
-        env:
-          BASE_64_SIGNING_KEY: ${{ secrets.BASE_64_SIGNING_KEY }}
-        run:
-          echo $BASE_64_SIGNING_KEY | base64 -d > simpmusic.jks
-
-      - name: Update build product flavor
-        run: |
-          echo "" >> ./gradle.properties
-          echo "isFullBuild=false" >> ./gradle.properties
-
-      - name: Build foss release APK
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./build_and_sign_apk.sh --release --foss
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-foss-release
-          path: androidApp/build/outputs/apk/release/*.apk
+          name: android-release
+          path: |
+            androidApp/build/outputs/apk/release/SpaceKai-v*.apk
+            androidApp/build/outputs/apk/release/SHA256SUMS.txt
 
   build-desktop-packages:
     name: Build desktop packages (AppImage + Mac zip + Windows msix)

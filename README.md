@@ -1,3 +1,25 @@
+## SpaceKai
+
+SpaceKai is a **customization layer over SimpMusic** — a personal build with its own
+features, UI and branding on top of the upstream engine. It is not the original project.
+
+- **Upstream**: [SimpMusic](https://github.com/maxrave-dev/SimpMusic) (GPL-3.0, license and notices preserved)
+- **SpaceKai releases**: https://github.com/N7T0-OF/Sankamusic/releases
+- **Architecture**: see [docs/UPSTREAM.md](docs/UPSTREAM.md) — upstream tracking, sync procedure, conflict surfaces
+- **Release format**: one universal signed APK `SpaceKai-vX.Y.Z.apk` + `SHA256SUMS.txt`, plus desktop packages
+- **Locked assets**: `circle_app_icon.png` / `app_icon.png` are never modified by the build pipeline
+
+SpaceKai features beyond upstream:
+
+- Spotify playlist import (OAuth PKCE) — Settings → Spotify → *Importer vos playlists Spotify*
+- Customizable navigation (translucent / liquid glass / minimalistic) with reorderable sections
+- Haptic feedback (vibration) with intensity control
+- Fullscreen landscape player
+- Dynamic color fixes + custom theme colors
+- Update checker pointed at SpaceKai releases
+
+---
+
 <div align="center"> <img src="https://raw.githubusercontent.com/maxrave-dev/SimpMusic/main/fastlane/metadata/android/en-US/images/featureGraphic.png"> <h1>SimpMusic</h1>  
 A FOSS YouTube Music client for Android and Desktop with many features from<br>Spotify, SponsorBlock, ReturnYouTubeDislike using Compose Multiplatform to develop.
 <br> 

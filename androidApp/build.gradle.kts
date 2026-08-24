@@ -7,6 +7,19 @@ val isFullBuild: Boolean =
         false
     }
 
+/**
+ * Release-only flag: -PsingleReleaseApk=true disables the ABI splits so the build emits ONE
+ * universal APK (containing all of `abis`) instead of one APK per ABI + a universal one.
+ * SpaceKai publishes a single user-facing APK; the per-ABI splits stay available for
+ * side-loading/debugging when the flag is absent.
+ */
+val singleReleaseApk: Boolean =
+    try {
+        extra["singleReleaseApk"] == "true"
+    } catch (e: Exception) {
+        false
+    }
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.sentry.gradle)
@@ -89,12 +102,14 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            splits {
-                abi {
-                    isEnable = true
-                    reset()
-                    isUniversalApk = true
-                    include(*abis)
+            if (!singleReleaseApk) {
+                splits {
+                    abi {
+                        isEnable = true
+                        reset()
+                        isUniversalApk = true
+                        include(*abis)
+                    }
                 }
             }
         }

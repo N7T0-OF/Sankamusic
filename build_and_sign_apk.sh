@@ -6,6 +6,7 @@ set -e
 # Default variables
 BUILD_TYPE="release"
 BUILD_VARIANT="full"
+SINGLE_APK="false"
 KEYSTORE_PATH="./simpmusic.jks"
 # Read passwords from environment variables or use default (for backward compatibility)
 KEYSTORE_PASSWORD="${KEYSTORE_PASSWORD}"
@@ -38,6 +39,7 @@ print_usage() {
   echo "  --debug            Build in debug mode"
   echo "  --full             Build full with Sentry"
   echo "  --foss             Build foss, compatibility with F-Droid, no Sentry"
+  echo "  --single           Build ONE universal APK (SpaceKai-vX.Y.Z.apk) + SHA256SUMS.txt"
   echo "  -h, --help         Show this help message"
   echo ""
   echo "Environment variables:"
@@ -54,6 +56,7 @@ while [[ "$#" -gt 0 ]]; do
     --foss) BUILD_VARIANT="foss" ;;
     --release) BUILD_TYPE="release" ;;
     --debug) BUILD_TYPE="debug" ;;
+    --single) SINGLE_APK="true" ;;
     -h|--help) print_usage ;;
     *) echo "Unknown parameter: $1"; print_usage ;;
   esac
@@ -69,6 +72,9 @@ BUILD_TOOLS_PATH="$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sor
 APKSIGNER="$BUILD_TOOLS_PATH/apksigner"
 ZIPALIGN="$BUILD_TOOLS_PATH/zipalign"
 
+# App version from the version catalog
+APP_VERSION=$(grep '^version-name' ./gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+
 # Create output directory for signed APKs
 mkdir -p "$SIGNED_APK_OUTPUT_DIR"
 
@@ -77,6 +83,9 @@ echo "===================="
 echo "Building APK Process"
 echo "===================="
 echo "Build Type: $BUILD_TYPE"
+echo "Build Variant: $BUILD_VARIANT"
+echo "Single APK: $SINGLE_APK"
+echo "App Version: $APP_VERSION"
 echo "===================="
 
 # Step 1: Clean the project
@@ -86,7 +95,12 @@ echo "Project cleaned successfully."
 
 # Step 2: Build the APK
 echo "[Step 2] Building APK..."
-./gradlew androidApp:assemble"$BUILD_TYPE"
+if [ "$SINGLE_APK" == "true" ]; then
+  # Disable ABI splits → exactly one universal APK containing all ABIs
+  ./gradlew androidApp:assemble"$BUILD_TYPE" -PsingleReleaseApk=true
+else
+  ./gradlew androidApp:assemble"$BUILD_TYPE"
+fi
 echo "APK built successfully."
 
 # Step 3: Locate the built APKs
@@ -129,7 +143,24 @@ for APK_PATH in $APK_PATHS; do
   echo "Signed APK verified successfully: $SIGNED_APK_PATH"
 done
 
-echo "[Step 7] Cleaning up temporary files..."
+# Step 7: Single-APK mode — rename to SpaceKai-vX.Y.Z.apk and write SHA256SUMS.txt
+if [ "$SINGLE_APK" == "true" ]; then
+  echo "[Step 7] Producing the single user-facing APK + checksums..."
+  RELEASE_APK="$SIGNED_APK_OUTPUT_DIR/SpaceKai-v${APP_VERSION}.apk"
+  # Exactly one signed APK is expected in single mode
+  SIGNED_APK=$(find "$SIGNED_APK_OUTPUT_DIR" -maxdepth 1 -name "SimpMusic-*.apk" | head -1)
+  if [ -z "$SIGNED_APK" ]; then
+    echo "Error: no signed APK found for the single release"
+    exit 1
+  fi
+  cp "$SIGNED_APK" "$RELEASE_APK"
+  ( cd "$SIGNED_APK_OUTPUT_DIR" && sha256sum "SpaceKai-v${APP_VERSION}.apk" > SHA256SUMS.txt )
+  echo "Release APK: $RELEASE_APK"
+  cat "$SIGNED_APK_OUTPUT_DIR/SHA256SUMS.txt"
+fi
+
+# Step 8: Clean up temporary files
+echo "[Step 8] Cleaning up temporary files..."
 cd "$SIGNED_APK_OUTPUT_DIR"
 rm -f *.idsig
 rm -f *aligned*
