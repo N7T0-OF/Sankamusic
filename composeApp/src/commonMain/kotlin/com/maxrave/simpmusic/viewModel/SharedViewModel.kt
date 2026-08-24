@@ -1726,11 +1726,9 @@ class SharedViewModel(
                 }
             }
         }
-    }
-
-    fun getTranslucentBottomBar() = dataStoreManager.translucentBottomBar
-
+    }    fun getTranslucentBottomBar() = dataStoreManager.translucentBottomBar
     fun getEnableLiquidGlass() = dataStoreManager.enableLiquidGlass
+    fun getMinimalisticNavBar() = dataStoreManager.getString("minimalistic_nav_bar")
 
     fun getLocalTrackingEnabled() = dataStoreManager.localTrackingEnabled
 

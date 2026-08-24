@@ -358,6 +358,8 @@ import simpmusic.composeapp.generated.resources.spotify_canvas_cache
 import simpmusic.composeapp.generated.resources.spotify_lyrícs_info
 import simpmusic.composeapp.generated.resources.storage
 import simpmusic.composeapp.generated.resources.such_as_music_video_lyrics_video_podcasts_and_more
+import simpmusic.composeapp.generated.resources.minimalistic_nav_bar
+import simpmusic.composeapp.generated.resources.minimalistic_nav_bar_description
 import simpmusic.composeapp.generated.resources.theme
 import simpmusic.composeapp.generated.resources.theme_color
 import simpmusic.composeapp.generated.resources.vibration
@@ -556,6 +558,7 @@ fun SettingScreen(
     val smartShuffleEnabled by viewModel.smartShuffleEnabled.collectAsStateWithLifecycle()
     val vibrationEnabled by viewModel.vibrationEnabled.collectAsStateWithLifecycle()
     val vibrationIntensity by viewModel.vibrationIntensity.collectAsStateWithLifecycle()
+    val minimalisticNavBar by viewModel.minimalisticNavBar.collectAsStateWithLifecycle()
     val castState by viewModel.castState.collectAsStateWithLifecycle()
 
     val isCheckingUpdate by sharedViewModel.isCheckingUpdate.collectAsStateWithLifecycle()
@@ -709,6 +712,12 @@ fun SettingScreen(
                     },
                 )
                 if (getPlatform() == Platform.Android) {
+                    SettingItem(
+                        title = stringResource(Res.string.minimalistic_nav_bar),
+                        subtitle = stringResource(Res.string.minimalistic_nav_bar_description),
+                        smallSubtitle = true,
+                        switch = (minimalisticNavBar to { viewModel.setMinimalisticNavBar(it) }),
+                    )
                     SettingItem(
                         title = stringResource(Res.string.vibration),
                         subtitle = stringResource(Res.string.vibration_description),

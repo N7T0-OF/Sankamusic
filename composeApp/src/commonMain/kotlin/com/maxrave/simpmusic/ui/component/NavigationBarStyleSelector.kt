@@ -45,10 +45,11 @@ import com.maxrave.simpmusic.ui.theme.typo
  * - TRANSLUCENT: semi-transparent, shows content behind
  * - GLASS: full liquid glass effect (blur + vibrancy)
  */
-enum class NavigationBarStyle(val label: String, val hasLiquidGlass: Boolean, val hasTranslucent: Boolean) {
+enum class NavigationBarStyle(val label: String, val hasLiquidGlass: Boolean, val hasTranslucent: Boolean, val isMinimalistic: Boolean = false) {
     CLASSIC("Classic", false, false),
     TRANSLUCENT("Translucent", false, true),
     GLASS("Glass", true, true),
+    MINIMALISTIC("Minimalistic", false, false, isMinimalistic = true),
 }
 
 /**
@@ -109,6 +110,7 @@ fun NavigationBarPreview(style: NavigationBarStyle) {
         NavigationBarStyle.CLASSIC -> Color(0xFF1A1A1A)
         NavigationBarStyle.TRANSLUCENT -> Color(0xFF1A1A1A).copy(alpha = 0.7f)
         NavigationBarStyle.GLASS -> Color.White.copy(alpha = 0.12f)
+        NavigationBarStyle.MINIMALISTIC -> Color.Transparent
     }
 
     Box(

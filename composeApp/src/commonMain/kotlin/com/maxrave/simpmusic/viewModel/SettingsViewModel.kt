@@ -165,6 +165,8 @@ class SettingsViewModel(
     val vibrationEnabled: StateFlow<Boolean> = _vibrationEnabled
     private val _vibrationIntensity = MutableStateFlow<Float>(0.5f)
     val vibrationIntensity: StateFlow<Float> = _vibrationIntensity
+    private val _minimalisticNavBar = MutableStateFlow<Boolean>(false)
+    val minimalisticNavBar: StateFlow<Boolean> = _minimalisticNavBar
     private val _autoDownloadLikedSongs = MutableStateFlow<Boolean>(false)
     val autoDownloadLikedSongs: StateFlow<Boolean> = _autoDownloadLikedSongs
     private val _youtubeSubtitleLanguage = MutableStateFlow<String>("")
@@ -317,6 +319,7 @@ class SettingsViewModel(
         getSmartShuffleEnabled()
         getVibrationEnabled()
         getVibrationIntensity()
+        getMinimalisticNavBar()
         getAutoDownloadLikedSongs()
         getContributorNameAndEmail()
         getBackupDownloaded()
@@ -573,6 +576,21 @@ class SettingsViewModel(
             _vibrationIntensity.value = clamped
             HapticManager.intensity = clamped
             dataStoreManager.putString("vibration_intensity", clamped.toString())
+        }
+    }
+
+    private fun getMinimalisticNavBar() {
+        viewModelScope.launch {
+            dataStoreManager.getString("minimalistic_nav_bar").collect { enabled ->
+                _minimalisticNavBar.value = enabled == DataStoreManager.TRUE
+            }
+        }
+    }
+
+    fun setMinimalisticNavBar(enabled: Boolean) {
+        viewModelScope.launch {
+            _minimalisticNavBar.value = enabled
+            dataStoreManager.putString("minimalistic_nav_bar", if (enabled) DataStoreManager.TRUE else DataStoreManager.FALSE)
         }
     }
 

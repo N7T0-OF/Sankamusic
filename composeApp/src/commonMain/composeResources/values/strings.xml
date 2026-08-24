@@ -510,6 +510,8 @@
     <string name="vibration_intensity">Intensity</string>
     <string name="vibration_intensity_weak">Weak</string>
     <string name="vibration_intensity_strong">Strong</string>
+    <string name="minimalistic_nav_bar">Minimalistic bar</string>
+    <string name="minimalistic_nav_bar_description">Compact navigation with icons and a small active indicator</string>
     <string name="youtube_subtitle_language">YouTube Subtitle Translation Language</string>
     <string name="youtube_subtitle_language_message">Type language code (Eg: en) (2 letters). This is the preferred translation language for YouTube subtitles.</string>
     <string name="use_anonymous">Use anonymous name to contribute</string>
