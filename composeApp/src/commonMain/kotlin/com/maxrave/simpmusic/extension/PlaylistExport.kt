@@ -33,9 +33,9 @@ fun LocalPlaylistEntity.toExportData(songs: List<SongEntity>): PlaylistExportDat
         songs = songs.map { song ->
             SongExportEntry(
                 title = song.title,
-                artist = song.artistName ?: "",
+                artist = song.artistName?.joinToString(", ") ?: "",
                 album = song.albumName,
-                duration = song.duration,
+                duration = song.durationSeconds.toLong(),
                 videoId = song.videoId,
             )
         },
