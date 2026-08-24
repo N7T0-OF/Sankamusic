@@ -8,10 +8,12 @@ import com.maxrave.simpmusic.ui.navigation.destination.login.DiscordLoginDestina
 import com.maxrave.simpmusic.ui.navigation.destination.login.LastfmLoginDestination
 import com.maxrave.simpmusic.ui.navigation.destination.login.LoginDestination
 import com.maxrave.simpmusic.ui.navigation.destination.login.SpotifyLoginDestination
+import com.maxrave.simpmusic.ui.navigation.destination.login.SpotifySyncDestination
 import com.maxrave.simpmusic.ui.screen.login.DiscordLoginScreen
 import com.maxrave.simpmusic.ui.screen.login.LastfmLoginScreen
 import com.maxrave.simpmusic.ui.screen.login.LoginScreen
 import com.maxrave.simpmusic.ui.screen.login.SpotifyLoginScreen
+import com.maxrave.simpmusic.ui.screen.login.SpotifySyncScreen
 
 fun NavGraphBuilder.loginScreenGraph(
     innerPadding: PaddingValues,
@@ -34,6 +36,13 @@ fun NavGraphBuilder.loginScreenGraph(
             navController = navController,
             hideBottomNavigation = hideBottomBar,
             showBottomNavigation = showBottomBar,
+        )
+    }
+
+    composable<SpotifySyncDestination> {
+        SpotifySyncScreen(
+            innerPadding = innerPadding,
+            navController = navController,
         )
     }
 

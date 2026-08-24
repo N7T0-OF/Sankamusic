@@ -61,6 +61,7 @@ import coil3.toUri
 import com.maxrave.domain.data.player.GenericMediaItem
 import com.maxrave.domain.manager.DataStoreManager
 import com.maxrave.domain.manager.DataStoreManager.Values.TRUE
+import com.maxrave.domain.repository.SpotifySyncRepository
 import com.maxrave.logger.Logger
 import com.maxrave.simpmusic.expect.Orientation
 import com.maxrave.simpmusic.expect.currentOrientation
@@ -133,6 +134,7 @@ import kotlin.time.ExperimentalTime
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class, ExperimentalFoundationApi::class)
 @Composable
 fun App(viewModel: SharedViewModel = koinInject()) {
+    val spotifySyncRepository: SpotifySyncRepository = koinInject()
     val windowSize = currentWindowAdaptiveInfo().windowSizeClass
     val navController = rememberNavController()
     val isDesktopShell = getPlatform() == Platform.Desktop
@@ -211,6 +213,16 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                 // of it. The token is handed straight to the shared view model, and the screen
                 // closes itself when it sees a session key appear.
                 token?.let { viewModel.completeLastfmLogin(it) }
+            } else if (data.scheme == "simpmusic" && data.host == "spotify-auth") {
+                // Spotify OAuth PKCE callback: simpmusic://spotify-auth?code=xxx. Handled here,
+                // not on the sync screen, so it survives a process kill. The screen learns the
+                // login succeeded by watching oauthLoggedIn, exactly like Last.fm.
+                val code = data.getQueryParameter("code")
+                Logger.d("MainActivity", "Spotify OAuth callback, code present: ${!code.isNullOrEmpty()}")
+                viewModel.setIntent(null)
+                if (!code.isNullOrEmpty()) {
+                    spotifySyncRepository.completeOAuthLogin(code)
+                }
             } else if (data.host == "simpmusic.org" || data.scheme == "simpmusic") {
                 // https://simpmusic.org/app/watch?v=VIDEO_ID
                 // https://simpmusic.org/app/playlist?list=PLAYLIST_ID

@@ -137,6 +137,7 @@ import com.maxrave.simpmusic.ui.navigation.destination.login.DiscordLoginDestina
 import com.maxrave.simpmusic.ui.navigation.destination.login.LastfmLoginDestination
 import com.maxrave.simpmusic.ui.navigation.destination.login.LoginDestination
 import com.maxrave.simpmusic.ui.navigation.destination.login.SpotifyLoginDestination
+import com.maxrave.simpmusic.ui.navigation.destination.login.SpotifySyncDestination
 import com.maxrave.simpmusic.ui.theme.md_theme_dark_primary
 import com.maxrave.simpmusic.ui.theme.parseThemeColorHex
 import com.maxrave.simpmusic.ui.theme.seed
@@ -1765,6 +1766,14 @@ fun SettingScreen(
                         if (spotifyCanvas) {
                             viewModel.setSpotifyCanvas(false)
                         }
+                    },
+                )
+                SettingItem(
+                    title = "Importer vos playlists Spotify",
+                    subtitle = "Synchronisez vos playlists Spotify dans votre bibliothèque",
+                    smallSubtitle = true,
+                    onClick = {
+                        navController.navigate(SpotifySyncDestination)
                     },
                 )
             }
