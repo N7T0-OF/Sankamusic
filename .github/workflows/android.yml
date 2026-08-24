@@ -60,30 +60,15 @@ jobs:
       - name: Generate aboutLibraries.json
         run: ./gradlew exportLibraryDefinitions
 
-      - name: Build release APK
+      # Compile check only: dev pushes must not hard-fail on secrets that
+      # only the release pipeline needs (the previous version signed the APK
+      # with secrets.SIGNING_KEY, which is not configured on this repo —
+      # every dev push died with "Input required and not supplied").
+      - name: Build release APK (unsigned compile check)
         run: ./gradlew androidApp:assembleRelease
 
-      - name: Check build-tools version
-        shell: bash
-        run: |
-          BUILD_TOOL_VERSION=$(ls /usr/local/lib/android/sdk/build-tools/ | tail -n 1)
-          echo "BUILD_TOOL_VERSION=$BUILD_TOOL_VERSION" >> $GITHUB_ENV
-          echo Last build tool version is: $BUILD_TOOL_VERSION
-
-      - uses: kevin-david/zipalign-sign-android-release@v2
-        id: sign_app
-        with:
-          releaseDirectory: androidApp/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
-          zipAlign: true
-        env:
-            BUILD_TOOLS_VERSION: ${{ env.BUILD_TOOL_VERSION }}
-
-      - name: Upload APK
+      - name: Upload APK (unsigned, diagnostics only)
         uses: actions/upload-artifact@v4
         with:
           name: app
-          path: androidApp/build/outputs/apk/release/*-signed.apk
+          path: androidApp/build/outputs/apk/release/*.apk
