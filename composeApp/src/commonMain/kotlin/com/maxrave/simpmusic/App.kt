@@ -408,6 +408,9 @@ fun App(viewModel: SharedViewModel = koinInject()) {
     }
     val isTablet = windowSize.isWidthAtLeastBreakpoint(WIDTH_DP_MEDIUM_LOWER_BOUND)
     val isTabletLandscape = isTablet && currentOrientation() == Orientation.LANDSCAPE
+    // Phone in landscape: the portrait NowPlaying modal would render squashed to ~1/4 of the
+    // screen. Route it to the dedicated FullscreenPlayer (a true full-screen layout) instead.
+    val isPhoneLandscape = !isTablet && currentOrientation() == Orientation.LANDSCAPE
 
     AppTheme(
         themeMode = themeMode,
@@ -669,11 +672,21 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                 }
 
                 if (isShowNowPlaylistScreen && !isTabletLandscape) {
-                    ForceDarkContent {
-                        NowPlayingScreen(
-                            navController = navController,
-                        ) {
+                    if (isPhoneLandscape) {
+                        // Phone in landscape: don't render the squashed portrait modal. Open the
+                        // dedicated full-screen player instead and clear the sheet flag so the
+                        // back button / dismiss return to the normal UI.
+                        LaunchedEffect(Unit) {
                             isShowNowPlaylistScreen = false
+                            navController.navigate(FullscreenDestination)
+                        }
+                    } else {
+                        ForceDarkContent {
+                            NowPlayingScreen(
+                                navController = navController,
+                            ) {
+                                isShowNowPlaylistScreen = false
+                            }
                         }
                     }
                 }
