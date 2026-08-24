@@ -192,7 +192,11 @@ sentry {
             }
         authToken.set(token ?: "")
         includeProguardMapping.set(true)
-        autoUploadProguardMapping.set(true)
+        // Only upload the mapping file when a Sentry auth token is actually
+        // configured. Without SENTRY_AUTH_TOKEN in local.properties the plugin
+        // would hard-fail the whole release build with a 401 from the Sentry
+        // API on :androidApp:uploadSentryProguardMappingsRelease.
+        autoUploadProguardMapping.set(!token.isNullOrEmpty())
     } else {
         includeProguardMapping.set(false)
         autoUploadProguardMapping.set(false)
