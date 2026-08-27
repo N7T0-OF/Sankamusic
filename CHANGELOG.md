@@ -33,8 +33,12 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   (faits documentés dans `docs/UPSTREAM_SYSTEM.md` § 8).
 - Module `:app` (MainActivity, SankamusicApp, Compose) : **non compilé** — nécessite un
   Android SDK (machine équipée, ou CI après push).
-- APK de cette release : à produire via `scripts/release.sh` ou le workflow `release.yml`
-  (déclenché par le tag `v0.1.0`), puis vérification post-publication (étape 7 du guide).
+- APK `Sankamusic-v0.1.0.apk` **produit et vérifié localement** le 2026-08-28 (clé DEV) :
+  `assembleRelease` BUILD SUCCESSFUL (154 tâches, R8 inclus), `apksigner verify` rc=0
+  (cert `CN=Sankamusic Dev`), version `0.1.0` / code `1` cohérente avec `gradle.properties`,
+  `SHA256SUMS.txt` généré et re-vérifié (`sha256sum -c` → OK). Artefact hors repo
+  (`%TEMP%\sankamusic-verify\apk-verify\`). À re-vérifier depuis GitHub après publication
+  (étape 7 du guide) ; le `release.yml` re-vérifiera tout au tag `v0.1.0`.
 
 ### Corrigé
 -

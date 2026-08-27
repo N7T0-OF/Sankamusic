@@ -60,6 +60,11 @@ keytool -list -keystore "%TEMP%\sankamusic-verify\keystore-v010\dev-keystore.jks
 
 ## Étapes d'exécution (poste avec Android Studio / JDK 17 / SDK)
 
+> ✅ **Déjà fait le 2026-08-28 (preuve locale)** : l'APK signé `Sankamusic-v0.1.0.apk`
+> a été construit et vérifié (signature `apksigner` rc=0, version `0.1.0` cohérente,
+> `SHA256SUMS.txt` re-vérifié). Artefact hors repo : `%TEMP%\sankamusic-verify\apk-verify\`.
+> Les étapes ci-dessous restent valables pour re-produire et surtout pour le CI/tag.
+
 1. **Tests** : `./gradlew test` → vert sur toutes les machines (voir prérequis CI).
 2. **APK signé** (remplacer les 4 valeurs ci-dessous par **tes** secrets DEV locaux) :
    ```bash
