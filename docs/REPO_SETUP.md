@@ -61,6 +61,31 @@ git add LICENSE && git commit -m "docs: add LICENSE" && git push
 
 ## Étape 4 — Keystore de signature + secrets CI
 
+### Réponse rapide — keystore de DEV éphémère (débloquer le CI)
+
+Pour tester le workflow de release sans attendre le vrai keystore, le helper
+`scripts/make-dev-keystore.sh` génère un keystore **DEV** et exporte les 4
+secrets :
+
+```bash
+# clef / alias / mots de passe générés aléatoirement, affichés une seule fois
+scripts/make-dev-keystore.sh
+# → colle la sortie (`export ...`) dans ta session, copie les 4 valeurs
+#   dans les secrets GitHub (Actions), puis tag / push
+```
+
+Le helper VÉRIFIE la cohérence : il re-décode le base64 et valide avec
+`keytool -list` (et le script imprime « ✅ cohérent » uniquement si c'est bon).
+Il écrit le `.jks` et le `.b64` dans `OUT` (défaut `.tmp-signing/`, jamais
+commité), et n'accepte un `keytool` fourni que s'il le trouve dans le PATH ou
+via `JAVA_HOME/bin`.
+
+> 🚨 **DEV UNIQUEMENT.** Il sert à débloquer le CI et à produire un APK
+> installable. **Remplace-le par un vrai keystore de release, gardé privé,
+> AVANT toute publication réelle.**
+
+### Vrai keystore de release (avant publication)
+
 ```bash
 keytool -genkeypair -v -keystore release.keystore -alias sankamusic \
   -keyalg RSA -keysize 2048 -validity 10000

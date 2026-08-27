@@ -54,6 +54,8 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 - Repo GitHub : `scripts/setup-remote.sh` + `docs/REPO_SETUP.md` (remote configuré,
   procédure identité/push/description/topics/licence/secrets/release v0.1.0 ; constat
   vérifié : repo public vide, SimpMusic GPL-3.0, BetterDiscord Apache-2.0).
+- Signature : `scripts/make-dev-keystore.sh` — keystore DEV éphémère (keytool), export des
+  4 secrets release.yml, cohérence vérifiée (re-décodage + keytool -list) ; jamais commité.
 
 ### Corrigé
 -
