@@ -48,7 +48,22 @@ jobs:
           echo "Android SDK installé dans $SDK (platforms;android-35, build-tools;35.0.0)"
 
       - name: Run tests
-        run: ./gradlew test
+        run: |
+          # Capture la sortie Gradle et, en cas d'échec, publie les dernières lignes
+          # via `::error::` pour que la cause soit lisible dans les annotations du
+          # check-run (sans besoin de télécharger les logs bruts, 403 sans token).
+          set +e
+          ./gradlew test --console=plain > /tmp/gradle-test.log 2>&1
+          rc=$?
+          if [ $rc -ne 0 ]; then
+            echo "::error::Gradle test failed (exit $rc) — dernières lignes du log :"
+            tail -n 80 /tmp/gradle-test.log | while IFS= read -r line; do
+              echo "::error::$line"
+            done
+            cat /tmp/gradle-test.log
+            exit $rc
+          fi
+          cat /tmp/gradle-test.log
 
       - name: Build release APK
         run: ./gradlew $GRADLE_TASK
