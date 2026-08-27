@@ -47,6 +47,8 @@ jobs:
       - name: Install Android SDK
         run: |
           # Même SDK qu'au CI (ubuntu-latest n'en installe pas par défaut).
+          # ANDROID_HOME / ANDROID_SDK_ROOT sont exposés aux steps suivants
+          # (AGP résout le SDK via ces variables ; on n'écrit PAS local.properties).
           SDK="${ANDROID_HOME:-$HOME/android-sdk}"
           mkdir -p "$SDK/cmdline-tools"
           curl -fsSL -o /tmp/cmdline.zip \
@@ -55,7 +57,9 @@ jobs:
           mv "$SDK/cmdline-tools/cmdline-tools" "$SDK/cmdline-tools/latest"
           yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
           "$SDK/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" >/dev/null
-          echo "sdk.dir=$SDK" > local.properties
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          rm -f local.properties
           echo "Android SDK installé dans $SDK (platforms;android-35, build-tools;35.0.0)"
 
       - name: Build release APK

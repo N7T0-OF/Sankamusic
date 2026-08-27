@@ -34,8 +34,11 @@ jobs:
       - name: Install Android SDK
         run: |
           # ubuntu-latest n'installe pas l'Android SDK par défaut → AGP ne trouve
-          # pas compileSdk 35. On l'installe via cmdline-tools et on pointe
-          # local.properties vers ANDROID_HOME ($ANDROID_HOME:/opt/android-sdk sur le runner).
+          # pas compileSdk 35. On l'installe via cmdline-tools, puis on expose
+          # ANDROID_HOME / ANDROID_SDK_ROOT aux steps suivants (via GITHUB_ENV).
+          # ⚠️ On n'écrit PAS sdk.dir dans local.properties : sur certains postes,
+          # AGP rejette la voie LOCAL_SDK_DIR de ce fichier (SdkLocator.validateSdkPath),
+          # alors qu'ANDROID_HOME fonctionne (verrou levé en local par ce chemin).
           SDK="${ANDROID_HOME:-$HOME/android-sdk}"
           mkdir -p "$SDK/cmdline-tools"
           curl -fsSL -o /tmp/cmdline.zip \
@@ -44,7 +47,9 @@ jobs:
           mv "$SDK/cmdline-tools/cmdline-tools" "$SDK/cmdline-tools/latest"
           yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
           "$SDK/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" >/dev/null
-          echo "sdk.dir=$SDK" > local.properties
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          rm -f local.properties
           echo "Android SDK installé dans $SDK (platforms;android-35, build-tools;35.0.0)"
 
       - name: Run tests
