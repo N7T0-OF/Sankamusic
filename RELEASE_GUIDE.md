@@ -3,6 +3,8 @@
 > **Document maître des releases.** Tout agent IA (ou humain) qui publie une release
 > **doit** suivre ce guide **dans l'ordre**, sans sauter d'étape.
 > Une release est considérée comme **valide uniquement si la checklist finale (§ 6) est cochée à 100 %**.
+> ✅ Exécution pratique (valeurs DEV, commandes, secrets, keystore) :
+> **[`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md)** — à consulter en parallèle.
 
 ---
 
