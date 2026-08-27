@@ -101,9 +101,29 @@ Le squelette de build existe (Phase 2, préparation) :
 - Module `app` minimal (manifest, ressources, `MainActivity` Compose) — **squelette de build
   uniquement**, pas l'architecture cible.
 
-> ⚠️ **Aucune compilation effectuée** : l'environnement de travail ne dispose ni de JDK,
-> ni de Gradle, ni de l'Android SDK. La première action de validation (sur une machine
-> équipée) est : `./gradlew test` puis `./gradlew assembleRelease`.
+> ⚠️ **État de validation (2026-08-27)** : la configuration Gradle compile
+> (`./gradlew help` → BUILD SUCCESSFUL : les 6 erreurs de compilation du script
+> `app/build.gradle.kts` ont été corrigées — signature dans `signingConfigs {}`, nommage
+> de l'APK via `BaseVariantOutputImpl.outputFileName`). Le SDK est désormais installé
+> en CI. En revanche `./gradlew test` (compilation + tests des modules) échoue encore au
+> step CI `Run tests` — cause exacte non confirmée ici (logs 403 sans token ; reproduction
+> locale masquée par un artefact Windows, `SdkLocator.validateSdkPath`). C'est le verrou
+> restant avant toute release (voir `docs/RELEASE_CHECKLIST.md`).
+
+## 8bis. Diagnostic CI — `scripts/ci-watch.sh`
+
+Sonde un workflow GitHub Actions et **nomme le step en échec**, sans token (repo public).
+
+```bash
+scripts/ci-watch.sh            # dernier run de main
+scripts/ci-watch.sh <run-id>   # un run précis
+```
+
+- Sortie : statut (`queued → in_progress → completed conclusion`), chaque job/step avec
+  conclusion + horodatage, et le(s) step(s) `failure` mis en évidence.
+- Limite : les **job-logs bruts** (`jobs/{id}/logs`) restent **403 sans token admin** —
+  le script nomme le step fautif mais ne lit pas sa sortie. Pour la cause exacte d'un
+  échec Gradle, voir via un token (`Actions: read`) ou reproduire localement.
 
 ## 9. À compléter
 
