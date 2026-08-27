@@ -1,10 +1,36 @@
 # Mise en place du repo GitHub — N7T0-OF/Sankamusic
 
-- **Constat vérifié le 2026-08-27** (API GitHub, sans token) : le repo existe et est
-  **public** mais **vide** — 0 Ko, pas de README, pas de description, pas de topics,
-  pas de licence, **pas de release v0.1.0**.
+- **Historique** : le repo existait (vérifié le 2026-08-27 via API, sans token) mais était
+  **vide** ; la branche `main` a depuis été poussée (README, docs, `:core`, CI).
+- **État au 2026-08-27** : `main` poussée, README/LICENSE affichés ; **pas encore de
+  release v0.1.0** (l'updater reste en `ERROR` tant qu'aucune release n'existe).
 - **Objectif** : remplir le repo proprement (conformément à `RELEASE_GUIDE.md`) pour
   que l'updater en-app sorte de l'état `ERROR`.
+
+## B. Suivi du push et du CI (2026-08-27)
+
+| Point | Détail |
+|-------|--------|
+| Push de `main` | **Réussi** — 3 commits (`4df8a82`, `68c8dac`, `e63ba58`), README et LICENSE
+  visibles sur GitHub. |
+| Workflow `CI` | Run #1 → **failure** au step `./gradlew test`. |
+| Garde-fou | Le CI a correctement sauté `Build release APK` et `Enforce exactly one
+  release APK` (règle `RELEASE_GUIDE.md` : on ne publie pas d'artefact non vérifié). |
+
+**Cause probable** : les modules sont des bibliothèques/UI Android (`:core`,
+`:plugins`, `:themes`, `:app` Compose) → `./gradlew` nécessite **l'Android SDK**,
+qui n'est pas pré-installé sur un runner `ubuntu-latest` libre. Les tests JUnit sont
+verts **hors Gradle** (kotlinc + JRE temporaires, ~73 tests), mais le build complet
+n'a pas encore tourné sur machine équipée. Le log brut GitHub est protégé par droits
+admin (levée 403 sans token) — diagnostic confirmé par la séquence des steps, pas
+par le texte du log.
+
+**Issue recommandée** : sur une machine avec Android Studio, lancer
+`./gradlew :core:test :plugins:hellospacekai:test :themes:exampletheme:test
+assembleRelease`, corriger ce qui échoue, re-pousser → CI vert → tag+pousser
+`v0.1.0` → `release.yml` vérifie et crée une release **DRAFT**.
+
+---
 
 ## Étape 0 — Identité git (une seule fois) + réparation de l'historique
 

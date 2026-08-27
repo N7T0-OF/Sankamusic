@@ -44,6 +44,20 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Install Android SDK
+        run: |
+          # Même SDK qu'au CI (ubuntu-latest n'en installe pas par défaut).
+          SDK="${ANDROID_HOME:-$HOME/android-sdk}"
+          mkdir -p "$SDK/cmdline-tools"
+          curl -fsSL -o /tmp/cmdline.zip \
+            "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
+          unzip -q /tmp/cmdline.zip -d "$SDK/cmdline-tools"
+          mv "$SDK/cmdline-tools/cmdline-tools" "$SDK/cmdline-tools/latest"
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
+          "$SDK/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" >/dev/null
+          echo "sdk.dir=$SDK" > local.properties
+          echo "Android SDK installé dans $SDK (platforms;android-35, build-tools;35.0.0)"
+
       - name: Build release APK
         run: ./gradlew $GRADLE_TASK
         env:
