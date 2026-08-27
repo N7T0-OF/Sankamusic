@@ -101,14 +101,15 @@ Le squelette de build existe (Phase 2, préparation) :
 - Module `app` minimal (manifest, ressources, `MainActivity` Compose) — **squelette de build
   uniquement**, pas l'architecture cible.
 
-> ⚠️ **État de validation (2026-08-27)** : la configuration Gradle compile
-> (`./gradlew help` → BUILD SUCCESSFUL : les 6 erreurs de compilation du script
-> `app/build.gradle.kts` ont été corrigées — signature dans `signingConfigs {}`, nommage
-> de l'APK via `BaseVariantOutputImpl.outputFileName`). Le SDK est désormais installé
-> en CI. En revanche `./gradlew test` (compilation + tests des modules) échoue encore au
-> step CI `Run tests` — cause exacte non confirmée ici (logs 403 sans token ; reproduction
-> locale masquée par un artefact Windows, `SdkLocator.validateSdkPath`). C'est le verrou
-> restant avant toute release (voir `docs/RELEASE_CHECKLIST.md`).
+> ✅ **État de validation (2026-08-27)** : **CI VERT** — le workflow complet passe
+> (`Run tests`, `Build release APK`, `Enforce exactly one release APK` = success, tête
+> `b1b693f`). Les correctifs : (1) `gradlew` et `scripts/*.sh` passés en `100755` — les blobs
+> `100644` faisaient échouer `./gradlew test` en 0s sur le runner Linux (`Permission denied`),
+> masqué par le poste Windows ; (2) le SDK est exposé via `ANDROID_HOME`/`ANDROID_SDK_ROOT`
+> (via `GITHUB_ENV`) au lieu de `local.properties`, que AGP rejette localement
+> (`SdkLocator.validateSdkPath`). `./gradlew test` complet = 147 tâches BUILD SUCCESSFUL
+> (vérifié localement via `ANDROID_HOME`). Le chemin CI → release n'a plus de verrou de
+> build ; il reste les secrets de signature (voir `docs/RELEASE_CHECKLIST.md`).
 
 ## 8bis. Diagnostic CI — `scripts/ci-watch.sh`
 

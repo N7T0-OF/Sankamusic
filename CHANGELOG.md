@@ -58,10 +58,17 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   4 secrets release.yml, cohérence vérifiée (re-décodage + keytool -list) ; jamais commité.
 
 ### Corrigé
--
+- **CI rendu vert (verrou v0.1.0 levé)** — cause du 0s `Run tests` nommée : `gradlew` et
+  `scripts/*.sh` committés en `100644` (sans bit exécutable) → `Permission denied` sur le
+  runner Linux. Passés à `100755` (commit `b1b693f`).
+- `app/build.gradle.kts` : correction des 6 erreurs de compilation du script (signature dans
+  `signingConfigs {}`, renommage de l'APK via `BaseVariantOutputImpl.outputFileName`),
+  `./gradlew help` → BUILD SUCCESSFUL (commit `eb24e63`).
+- Workflows : SDK exposé via `ANDROID_HOME`/`ANDROID_SDK_ROOT` (GITHUB_ENV) au lieu d'écrire
+  `local.properties` que AGP rejette localement (`SdkLocator.validateSdkPath`) — `29fd0b3`.
 
 ### Modifié
--
+- Docs : `RELEASE_CHECKLIST.md` et `BUILD_SYSTEM.md` reflètent l'état CI vert (2026-08-27).
 
 ---
 

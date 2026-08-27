@@ -7,26 +7,28 @@
 
 ## Rappel de l'état vérifié (2026-08-27)
 
-- Repo `N7T0-OF/Sankamusic` : **public**, `main` poussée (`eb24e63`), **0 release**.
-- CI : run de la tête `eb24e63` = **failure** au step `Run tests` (détail ci-dessous).
-- `:core`/plugins/thèmes/update : **73 tests JVM verts** (kotlinc + JRE, hors Gradle).
-- Correctif de config Gradle (`app/build.gradle.kts`) : `./gradlew help` → **BUILD SUCCESSFUL**,
-  le script compile désormais (n'avait plus les 6 erreurs de compilation).
+- Repo `N7T0-OF/Sankamusic` : **public**, `main` poussée (`b1b693f`), **0 release**.
+- **CI : VERT** — run de la tête `b1b693f` = `completed / success` (`Run tests`, `Build release
+  APK`, `Enforce exactly one release APK` tous verts). Le verrou CI est levé.
+- `:core`/plugins/thèmes/update + `:app` : **`./gradlew test` complet = 147 tâches, BUILD SUCCESSFUL**
+  (vérifié localement via `ANDROID_HOME`), et le CI exécute le même flux en vert.
 
-### Cause du CI `Run tests` (non confirmée — 2026-08-27)
+### Cause du CI `Run tests` (nommée et résolue — 2026-08-27)
 
-Les logs bruts du workflow Linux sont **403 sans token** (admin requise).
-L'API jobs nomme le step fautif (`Run tests`) mais pas l'erreur. La reproduction
-locale est **masquée** par un artefact Windows (`SdkLocator.validateSdkPath`
-rejette le chemin du SDK local — `local.properties` est gitignoré, donc sans lien
-avec le CI). Un `./gradlew test` réussi sur une machine Linux/macOS (chemin sans
-espace, SDK installé) est nécessaire pour **nommer** la vraie cause avant tout tag.
+Le step `Run tests` échouait en **0s** car `gradlew` et `scripts/*.sh` étaient committés
+en mode **`100644`** (sans bit exécutable) → sur le runner Linux, `./gradlew test` mourait
+immédiatement en `Permission denied`. Le poste Windows masquait ce symptôme (`chmod +x` sur
+disque, vérification de mode différente). **Correctif** : les 5 fichiers sont passés à
+`100755` (commit `b1b693f`). Un correctif orthogonal (`29fd0b3`) expose le SDK via
+`ANDROID_HOME`/`ANDROID_SDK_ROOT` au lieu d'écrire `local.properties` — la voie que AGP
+rejetait localement (`SdkLocator.validateSdkPath`).
 
-**Ne pas tagger ni publier tant que `Run tests` n'est pas vert** (règle `RELEASE_GUIDE.md`).
+**Le CI est désormais vert** : la règle « pas de tag avec CI rouge » de `RELEASE_GUIDE.md`
+n'est plus un frein.
 
 ## Prérequis avant tout tag
 
-1. **CI vert** : lever l'échec `Run tests` (voir ci-dessus).
+1. ~~CI vert~~ — ✅ **acquis** (run `b1b693f` = success).
 2. **4 secrets GitHub** configurés dans **Settings → Secrets and variables → Actions** :
    - `ANDROID_KEYSTORE_BASE64`
    - `ANDROID_KEYSTORE_PASSWORD`
