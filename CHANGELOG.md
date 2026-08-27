@@ -51,6 +51,9 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   l'API réelle), `UpdateEngine` instancié dans `SankamusicApp` (repos réels
   `N7T0-OF/Sankamusic` et `maxrave-dev/SimpMusic`), écran Compose « Mises à jour »
   (3 catégories, état ERROR géré sans crash) — **UI Compose non compilée (SDK requis)**.
+- Repo GitHub : `scripts/setup-remote.sh` + `docs/REPO_SETUP.md` (remote configuré,
+  procédure identité/push/description/topics/licence/secrets/release v0.1.0 ; constat
+  vérifié : repo public vide, SimpMusic GPL-3.0, BetterDiscord Apache-2.0).
 
 ### Corrigé
 -

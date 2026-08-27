@@ -12,6 +12,7 @@ BetterDiscord / Spicetify / Vencord, avec **SimpMusic** comme base upstream de c
 | Document | Rôle |
 |----------|------|
 | `RELEASE_GUIDE.md` | Procédure de release : **un seul artefact par plateforme**, validation CI réelle, checklist 100 % |
+| `REPO_SETUP.md` | Mise en place du repo GitHub (identité, push, description/topics, licence, secrets, release v0.1.0) |
 | `ARCHITECTURE_DECISIONS.md` | Décisions d'architecture enregistrées (ADR) — à lire avant tout choix |
 | `CHANGELOG.md` | Journal des versions publiées |
 | `docs/` | Analyse et conception (architecture, plugins, thèmes, upstream, update, build, sécurité, migration, roadmap) |
