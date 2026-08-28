@@ -51,6 +51,13 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Guide de montage build Phase 2 (`docs/PHASE2_BUILD.md`)** : procédure
+  exécutable pour un poste Android équipé — prérequis SDK/JDK, 3 options
+  d'intégration (sous-module git / includeBuild local / publication Maven),
+  montée de la toolchain vers AGP 9 / Kotlin 2.4 / Gradle 9.5 (voie
+  alternative : extraction isolée des seules classes nécessaires), câblage
+  des 3 sous-adaptateurs via le pont déjà testé (~5 lignes chacun), extension
+  des plages à `2.0.x`, checklist finale. Rattaché au ROADMAP Phase 2.
 - **Playlists YouTube ajoutées au mapping § 7 + pont** : `PlaylistEntity`
   (playlist YouTube : `id: String`, `title`, `trackCount`, `thumbnails`,
   `tracks`) complète le mapping ; `YoutubePlaylistDraft` → `UnifiedPlaylist`

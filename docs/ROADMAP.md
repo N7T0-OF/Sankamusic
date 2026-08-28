@@ -30,6 +30,10 @@ Construire uniquement :
 
 **Critère de sortie** : le prototype compile, démarre et charge un plugin/theme minimal.
 
+> **Phase 2 — build contre la base 2.0.0** : voir le guide de montage
+> `docs/PHASE2_BUILD.md` (toolchain, 3 options d'intégration, câblage des
+> sous-adaptateurs, extension des plages, checklist). Le Core reste inchangé.
+
 ## Phase 3 — Validation du framework
 
 Créer et tester :
