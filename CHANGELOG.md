@@ -58,6 +58,12 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   -f2`, robuste aux commentaires mentionnant d'autres valeurs).  Passage à la
   nouvelle toolchain = un seul point à changer (`docs/PHASE2_BUILD.md` § 4).
   **Non-compilation réelle ici (SDK absent) — vérifiée par le CI.**
+- **Audit toolchain automatisé (`scripts/check-toolchain.sh`)** : produit le
+  rapport PASS/FAIL ligne par ligne de l'étape 1 (JDK, SDK/android-N,
+  adb/sdkmanager, Gradle wrapper, AGP/Kotlin/BOM depuis le catalog, état Git).
+  Sortie : coller le rapport complet → exit 0 = toutes vertes, exit 1 = une
+  case rouge → stop. Référencé dans `PHASE2_BUILD.md` étape 1 ; syntaxe
+  vérifiée par le CI (`bash -n`).
 - **Guide de montage build Phase 2 (`docs/PHASE2_BUILD.md`)** : procédure
   exécutable pour un poste Android équipé — prérequis SDK/JDK, 3 options
   d'intégration (sous-module git / includeBuild local / publication Maven),

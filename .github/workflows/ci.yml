@@ -80,6 +80,11 @@ jobs:
         # agrégation des plages) sans appeler l'API live.
         run: bash scripts/test-upstream.sh
 
+      - name: Check toolchain audit script syntax
+        # Vérifie que check-toolchain.sh (audit d'environnement Phase 2, exécuté
+        # localement sur le poste équipé) reste syntactiquement valide.
+        run: bash -n scripts/check-toolchain.sh
+
       - name: Phase 2 validation gate
         # Garde-fou : refuse une plage manifest à 2.x sans le marqueur
         # PHASE2_V2_VALIDATED (généré uniquement après le pipeline Phase 2).

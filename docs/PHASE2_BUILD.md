@@ -201,6 +201,10 @@ Les étapes **doivent** être exécutées dans l'ordre ; on ne passe à l'étape
 suivante que si la précédente est entièrement verte.
 
 ### Étape 1 — Prérequis (machine équipée)
+> **Audit automatisé** : `bash scripts/check-toolchain.sh` produit le rapport
+> PASS/FAIL ligne par ligne (JDK, SDK/android-36, adb/sdkmanager, Gradle,
+> AGP, Kotlin, BOM, Git). Sortie → coller l'intégralité du rapport, exit 0
+> (toutes vertes) pour poursuivre, sinon exit 1 (une case rouge = stop).
 - [ ] Android SDK présent (`ANDROID_HOME`) + `platforms;android-36`, `build-tools;36.0.0`.
 - [ ] JDK 17 (ou celui requis par AGP 9).
 - [ ] Gradle wrapper à jour (Gradle **9.5.1**, § 4).
