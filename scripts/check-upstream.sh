@@ -56,11 +56,17 @@ pattern_matches() {
 
 # ── Récupération de la dernière release upstream ─────────────────────────────
 echo "→ Récupération de la dernière release de $REPO ..."
-LATEST_JSON="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest")"
-TAG="$(printf '%s' "$LATEST_JSON" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
-if [ -z "$TAG" ]; then
-  echo "::error::Impossible de lire le tag de la dernière release de $REPO"
-  exit 2
+# Surcharge testable : SIMPMUSIC_LATEST_TAG (ex. "v1.7.2") permet de vérifier
+# la logique hors réseau (scripts/test-upstream.sh). Sinon, appel live à l'API.
+if [ -n "${SIMPMUSIC_LATEST_TAG:-}" ]; then
+  TAG="$SIMPMUSIC_LATEST_TAG"
+else
+  LATEST_JSON="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest")"
+  TAG="$(printf '%s' "$LATEST_JSON" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
+  if [ -z "$TAG" ]; then
+    echo "::error::Impossible de lire le tag de la dernière release de $REPO"
+    exit 2
+  fi
 fi
 VERSION="${TAG#v}"
 

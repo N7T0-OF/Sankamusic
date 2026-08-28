@@ -74,6 +74,12 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   3 scénarios contractuels via manifests temporaires (sans toucher au vrai
   manifest), et `ci.yml` le lance AVANT la gate — une régression du garde-fou
   casse le CI et empêche toute faille silencieuse.
+  **Test du rapport upstream ajouté** : `scripts/test-upstream.sh` exerce la
+  logique pure de `check-upstream.sh` SANS réseau (via la surcharge
+  testable `SIMPMUSIC_LATEST_TAG`) — v1.7.2→6/6 exit 0, v2.0.0→3/6 exit 1,
+  v3.1.0→3/6 exit 1 — et `ci.yml` le lance sur chaque push : une régression
+  du `pattern_matches` / de l'agrégation des plages casserait le CI avant
+  même d'attendre le workflow hebdomadaire.
 - **Playlists YouTube ajoutées au mapping § 7 + pont** : `PlaylistEntity`
   (playlist YouTube : `id: String`, `title`, `trackCount`, `thumbnails`,
   `tracks`) complète le mapping ; `YoutubePlaylistDraft` → `UnifiedPlaylist`

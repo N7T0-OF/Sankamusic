@@ -315,11 +315,12 @@ déclare une fonctionnalité en `2.x` **sans marqueur de validation**.
   la gate) **ou** variable CI secrète `PHASE2_V2_VALIDATED=true`. Sans l'un des
   deux, une plage `2.x` → **exit 1 -> CI rouge**.
 
-Trois scripts de vérification coexistent donc :
+Quatre scripts de vérification coexistent donc :
 
 | Script | Rôle |
 |--------|------|
 | `scripts/check-upstream.sh` | Détecte la nouvelle version SimpMusic (workflow `upstream-check.yml`, hebdo) et signale une sortie de plage |
+| `scripts/test-upstream.sh` | Couvre la logique pure de `check-upstream.sh` (pattern_matches + agrégation des plages) hors réseau — lancé par `ci.yml` sur chaque push |
 | `scripts/check-phase2-validation.sh` | Imposé par `ci.yml` à chaque push : interdit d'étendre le manifest à `2.x` sans la validation Phase 2 accomplie |
 | `scripts/test-phase2-validation.sh` | Couvre le garde-fou (3 scénarios) — lancé par `ci.yml` AVANT la gate |
 

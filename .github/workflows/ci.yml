@@ -59,6 +59,11 @@ jobs:
         # Couvre le garde-fou : une régression du garde-fou doit casser le CI.
         run: bash scripts/test-phase2-validation.sh
 
+      - name: Test upstream report logic (offline)
+        # Couvre la logique pure de check-upstream.sh (pattern_matches +
+        # agrégation des plages) sans appeler l'API live.
+        run: bash scripts/test-upstream.sh
+
       - name: Phase 2 validation gate
         # Garde-fou : refuse une plage manifest à 2.x sans le marqueur
         # PHASE2_V2_VALIDATED (généré uniquement après le pipeline Phase 2).
