@@ -35,7 +35,10 @@ class DefaultSpaceKaiApi(
 ) : SpaceKaiApi {
 
     private val uiRegistry = UiExtensionRegistry()
-    private val themeEngine = ThemeEngine()
+
+    /** Moteur de thèmes (mode, source de couleur, seed) — état exposé à l'UI. */
+    val themeEngine = ThemeEngine()
+
     private val settingsStore = mutableMapOf<String, String>()
 
     override val uiExtensions: UiExtensionApi = uiRegistry

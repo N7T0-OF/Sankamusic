@@ -88,6 +88,7 @@ private fun MainScreen(onOpenUpdates: () -> Unit) {
         emptyList()
     }
     val tabs = (defaultTabs + pluginTabs).sortedBy { it.priority }
+    val api = if (SpaceKaiApi.isInitialized()) SpaceKaiApi.instance as? DefaultSpaceKaiApi else null
 
     var selectedId by rememberSaveable { mutableStateOf(tabs.firstOrNull()?.id ?: "home") }
 
@@ -100,7 +101,7 @@ private fun MainScreen(onOpenUpdates: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             when (selectedId) {
-                "settings" -> SettingsScreen(onOpenUpdates = onOpenUpdates)
+                "settings" -> SettingsScreen(api = api, onOpenUpdates = onOpenUpdates)
                 "home" -> HomeScreen(onOpenUpdates = onOpenUpdates)
                 else -> PlaceholderTab(tabs.firstOrNull { it.id == selectedId })
             }
@@ -135,16 +136,6 @@ private fun HomeScreen(onOpenUpdates: () -> Unit) {
         style = MaterialTheme.typography.bodyMedium,
     )
     Spacer(Modifier.height(24.dp))
-    Button(onClick = onOpenUpdates) { Text("Mises à jour") }
-}
-
-@Composable
-private fun SettingsScreen(onOpenUpdates: () -> Unit) {
-    Text(
-        text = "Paramètres",
-        style = MaterialTheme.typography.headlineSmall,
-    )
-    Spacer(Modifier.height(16.dp))
     Button(onClick = onOpenUpdates) { Text("Mises à jour") }
 }
 

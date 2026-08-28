@@ -51,6 +51,12 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Écran Paramètres Compose** (`SettingsScreen.kt` dans `:app`) — étape 7 UI :
+  toggle individuel par fonctionnalité du manifest (désactivé si incompatible
+  avec la base SimpMusic installée), sélecteurs thème (mode + source de
+  couleur, via `ThemeApi`), orientation du player (`player.orientation`) et
+  haptique (`haptics.enabled`), bouton Mises à jour. **UI non compilée
+  localement (SDK requis) — vérifiée par le CI.**
 - **Paramètres — fondation Core (étape 7 migration SpaceKai)** : préférences
   typées `Preference<T>` / `StringSettings` / `TypedSettings` (défaut sûr) +
   fabriques boolean/string/enum dans `core/settings/Settings.kt` ; `SpaceKaiFlag`

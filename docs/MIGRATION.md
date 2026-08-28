@@ -202,11 +202,15 @@ flags persistés en chaînes préfixées, `DataStoreManager.TRUE`) :
   manifest, être **compatible** avec la version upstream (sinon désactivée,
   jamais d'APK cassée), et la préférence persistée (défaut =
   `enabledByDefault`) ; `setEnabled` persiste le choix.
-- **Câblage** : `DefaultSpaceKaiApi.typedSettings` (partagé avec `SettingsApi`).
+- **Câblage** : `DefaultSpaceKaiApi.typedSettings` (partagé avec `SettingsApi`)
+  et `themeEngine` exposés ; écran **Paramètres Compose** (`SettingsScreen.kt`
+  dans `:app`) branché sur le manifest : toggle individuel par fonctionnalité
+  (désactivé si incompatible avec la base SimpMusic installée), sélecteurs
+  thème (mode + source de couleur), orientation du player, haptique, Mises à
+  jour. UI non compilée localement (SDK requis) — vérifiée par le CI.
 
-Non porté (à faire) : l'écran Paramètres Compose (toggles des flags, sélecteur
-de thème/mode/orientation — étape 7 UI), le masquage de sections, la
-persistance réelle (DataStore) au lieu de la mémoire.
+Non porté (à faire) : le masquage de sections, la persistance réelle
+(DataStore) au lieu de la mémoire, la couleur custom (champ de saisie du seed).
 
 ### Manifest de fonctionnalités (docs/FEATURE_MANIFEST.md)
 
