@@ -54,24 +54,42 @@ fun featureFlagPreference(featureId: String, enabledByDefault: Boolean): Prefere
 object SpaceKaiFeatureFlags {
 
     fun isEnabled(
-        settings: StringSettings,
+        typed: TypedSettings,
         featureId: String,
         upstreamVersion: String?,
         manifest: SpaceKaiFeaturesManifest = builtInSpaceKaiFeatures,
     ): Boolean {
         val feature = manifest.featureById(featureId) ?: return false
         if (!manifest.isFeatureCompatible(featureId, upstreamVersion)) return false
-        return TypedSettings(settings).get(featureFlagPreference(featureId, feature.enabledByDefault))
+        return typed.get(featureFlagPreference(featureId, feature.enabledByDefault))
     }
 
+    /** Variante sur un [StringSettings] brut (tests, intégrations simples). */
+    fun isEnabled(
+        settings: StringSettings,
+        featureId: String,
+        upstreamVersion: String?,
+        manifest: SpaceKaiFeaturesManifest = builtInSpaceKaiFeatures,
+    ): Boolean = isEnabled(TypedSettings(settings), featureId, upstreamVersion, manifest)
+
     /** Active/désactive une fonctionnalité (persisté). */
+    fun setEnabled(
+        typed: TypedSettings,
+        featureId: String,
+        enabled: Boolean,
+        manifest: SpaceKaiFeaturesManifest = builtInSpaceKaiFeatures,
+    ) {
+        val feature = manifest.featureById(featureId) ?: return
+        typed.set(featureFlagPreference(featureId, feature.enabledByDefault), enabled)
+    }
+
+    /** Variante sur un [StringSettings] brut. */
     fun setEnabled(
         settings: StringSettings,
         featureId: String,
         enabled: Boolean,
         manifest: SpaceKaiFeaturesManifest = builtInSpaceKaiFeatures,
     ) {
-        val feature = manifest.featureById(featureId) ?: return
-        TypedSettings(settings).set(featureFlagPreference(featureId, feature.enabledByDefault), enabled)
+        setEnabled(TypedSettings(settings), featureId, enabled, manifest)
     }
 }
