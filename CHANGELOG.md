@@ -51,6 +51,16 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Constat du blocage toolchain (2026-08-28)** : l'intégration build de la
+  base 2.0.0 est impossible dans la toolchain actuelle — Sankamusic est sur
+  Gradle 8.9 / AGP 8.5.2 / Kotlin 2.0.20 / Compose BOM 2024.09, alors que
+  SimpMusic 2.0.0 exige Gradle 9.5.1 / AGP 9.2.1 / Kotlin 2.4.10 / Compose
+  BOM 2026.08 (+ KMP, material3-expressive alpha). Un sous-module KMP de la
+  base ne compile pas dans ce build. Le mapping (§ 7) et les conversions
+  (`core/bridge/MediaBridgeMappings.kt`) restent prêts et testés sans
+  dépendance ; le câblage final attendra une montée d'outils ou une
+  extraction isolée des modules nécessaires en version compatible
+  (documenté dans UPSTREAM_SYSTEM.md § 7).
 - **Pont player pré-câblé (`core/bridge/MediaBridgeMappings.kt`)** : les
   conversions pures `UnifiedTrack` ↔ `MediaItemDraft` (miroir exact des
   classes réelles `GenericMediaItem`/`GenericMediaMetadata` de la base 2.0.0)

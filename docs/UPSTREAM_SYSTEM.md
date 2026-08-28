@@ -120,8 +120,28 @@ Source : snapshot local `SimpMusic-dev` (2.0.0) + `maxrave-dev/core` cloné
   tant qu'elle ne l'est pas, les sous-adaptateurs échouent explicitement
   (`NotImplementedError` — jamais de comportement simulé).
 
+### Blocage toolchain (constat 2026-08-28) — le mur de l'intégration build
+
+Intégrer la base 2.0.0 comme dépendance compilable est bloqué par la TOOLCHAIN :
+
+| Composant | Sankamusic (build actuel) | SimpMusic 2.0.0 |
+|-----------|---------------------------|------------------|
+| Gradle wrapper | 8.9 | 9.5.1 |
+| AGP | 8.5.2 | 9.2.1 |
+| Kotlin | 2.0.20 | 2.4.10 |
+| Compose BOM | 2024.09.02 | 2026.08.00 (+ material3-expressive 1.5.0-alpha26, KMP) |
+| Android SDK local | aucun | — |
+
+Un sous-module KMP de la base exigeant AGP 9 / Kotlin 2.4 / Gradle 9.5 nepeut pas être compilé dans un build Sankamusic sur AGP 8.5 / Kotlin 2.0 / Gradle 8.9.
+Le mapping et les conversions (`core/bridge/MediaBridgeMappings.kt`) sont prêts
+et testés SANS dépendance (155 tests OK) ; le câblage final des sous-adaptateurs
+restera à faire après une montée d'outils OU une extraction isolée des seuls
+modules nécessaires (domain/`MediaPlayerInterface`/`GenericMediaItem`, data
+`SongEntity`/`LocalPlaylistRepository`) dans une version compatible.
+
 - Version upstream actuelle de référence : **v1.7.0** (base intégrée, Adapter v1) ;
-  **v2.0.0 auditée** le 2026-08-28 (§ 8bis) — intégration après validation
+  **v2.0.0 auditée** le 2026-08-28 (§ 8bis) — intégration build EN SUSPENS
+  (blocage toolchain, voir ci-dessus)
 
 ## 8. Faits vérifiés sur l'API réelle (2026-08-27)
 
