@@ -69,7 +69,11 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   (fichier committé OU variable secrète). Cible le manifest (et NON
   l'Adapter V2 : son existence ne prouve pas 2.x). Vérifié sur 3 scénarios
   (1.7.x→OK, 2.x sans marqueur→refus exit 1, marqueur présent→OK).
-  C'est la fermeture technique du protocole strict.
+  C'est la fermeture technique du protocole strict. **Test du garde-fou
+  ajouté** : `scripts/test-phase2-validation.sh` exerce le garde-fou sur ses
+  3 scénarios contractuels via manifests temporaires (sans toucher au vrai
+  manifest), et `ci.yml` le lance AVANT la gate — une régression du garde-fou
+  casse le CI et empêche toute faille silencieuse.
 - **Playlists YouTube ajoutées au mapping § 7 + pont** : `PlaylistEntity`
   (playlist YouTube : `id: String`, `title`, `trackCount`, `thumbnails`,
   `tracks`) complète le mapping ; `YoutubePlaylistDraft` → `UnifiedPlaylist`

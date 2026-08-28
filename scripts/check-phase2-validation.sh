@@ -42,7 +42,7 @@ echo "  Marqueur attendu : fichier '$GATE_FILE' ($([ -e "$GATE_FILE" ] && echo '
 # qu'on déclare une fonctionnalité compatible 2.x. On cible `FeatureManifest.kt`
 # (builtInSpaceKaiFeatures) et NON l'Adapter (SimpMusicAdapterV2.compatibility
 # = "2.0.x" est légitime : l'existence d'un Adapter ne prouve pas 2.x).
-MANIFEST="core/src/main/java/com/sankamusic/core/api/FeatureManifest.kt"
+MANIFEST="${PHASE2_MANIFEST:-core/src/main/java/com/sankamusic/core/api/FeatureManifest.kt}"
 declare -i found=0
 HITS="$(grep -nE 'upstreamCompatibility *= *"(2\.x|2\.[0-9]+.*x)' "$MANIFEST" 2>/dev/null || true)"
 if [ -n "$HITS" ]; then

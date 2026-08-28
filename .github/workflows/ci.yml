@@ -55,6 +55,10 @@ jobs:
       - name: Run tests
         run: ./gradlew test
 
+      - name: Test the Phase 2 validation gate itself
+        # Couvre le garde-fou : une régression du garde-fou doit casser le CI.
+        run: bash scripts/test-phase2-validation.sh
+
       - name: Phase 2 validation gate
         # Garde-fou : refuse une plage manifest à 2.x sans le marqueur
         # PHASE2_V2_VALIDATED (généré uniquement après le pipeline Phase 2).
