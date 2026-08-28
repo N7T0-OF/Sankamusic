@@ -120,7 +120,7 @@ par `SpaceKaiFeatureFlags` et l'écran Paramètres.
 
 - [x] Écran « Fonctionnalités » dans Paramètres (activation/désactivation individuelles)
 - [ ] Chargement du manifest depuis une ressource JSON (au lieu de la constante)
-- [x] Workflow CI « compatibilité » (`upstream-compat.yml`) : vérifie
+- [x] Workflow CI « compatibilité » (`upstream-check.yml`) : vérifie
       périodiquement la dernière release SimpMusic (`scripts/check-upstream.sh`),
       publie le rapport (artefact `upstream-compat`) et ouvre une issue
       automatique si une fonctionnalité sort de sa plage

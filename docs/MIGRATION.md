@@ -250,7 +250,7 @@ matching de bytecode.
   COMPATIBLE / VERSION_OUT_OF_RANGE / CONTRACT_NOT_SATISFIED /
   UNKNOWN_UPSTREAM / FEATURE_UNKNOWN) — source unique pour `SpaceKaiFeatureFlags`
   et l'écran Paramètres, qui affiche la cause d'incompatibilité exacte.
-- **CI upstream** (`.github/workflows/upstream-compat.yml`, hebdo + manuel) :
+- **CI upstream** (`.github/workflows/upstream-check.yml`, hebdo + manuel) :
   `scripts/check-upstream.sh` vérifie la dernière release SimpMusic contre les
   plages déclarées, publie le rapport en artefact, et ouvre une issue
   automatique si une fonctionnalité sort de sa plage.

@@ -4,7 +4,7 @@
 # (SimpMusic) contre les plages de compatibilité déclarées par les
 # fonctionnalités SpaceKai (docs/FEATURE_MANIFEST.md § 3).
 #
-# Utilisé par .github/workflows/upstream-compat.yml (hebdomadaire + manuel) :
+# Utilisé par .github/workflows/upstream-check.yml (hebdomadaire + manuel) :
 #   - toutes les fonctionnalités compatibles → rapport OK (exit 0)
 #   - au moins une hors plage → rapport d'incompatibilité (exit 1),
 #     le workflow ouvre alors une issue GitHub automatiquement.

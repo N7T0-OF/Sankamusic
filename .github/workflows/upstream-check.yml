@@ -9,6 +9,10 @@
 # Ne compile pas : la verification de CONTRAT par fonctionnalite est faite par
 # le compilateur (adapter -> tests) dans ci.yml. Ici on detecte tot les
 # changements de version qui sortent une fonctionnalite de sa plage declaree.
+#
+# NOTE : rester en ASCII et en lignes simples dans les blocs run: | - le
+# parseur YAML de GitHub echoue (workflow non enregistre, nom = chemin) sur
+# les chaines double-quotees multi-lignes.
 
 name: Upstream compatibility
 
@@ -48,15 +52,5 @@ jobs:
           if gh issue list --state open --search "Upstream SimpMusic : fonctionnalite hors plage" --json number --jq 'length' | grep -q '^[1-9]'; then
             echo "Issue deja ouverte - rien a creer."
           else
-            gh issue create \
-              --title "Upstream SimpMusic : fonctionnalite hors plage" \
-              --body "La derniere release de **maxrave-dev/SimpMusic** sort au moins une fonctionnalite SpaceKai de sa plage de compatibilite declaree.
-
-Voir le rapport complet dans l'artefact **upstream-compat** de ce run.
-
-### A faire
-1. Telecharger le rapport (run -> artefacts).
-2. Mettre a jour l'**adapter** (core/.../update/SimpMusicAdapter.kt) et/ou la plage dans le manifest (core/.../api/FeatureManifest.kt).
-3. Revalider : tests core + CI vert.
-4. Reexecuter ce workflow (workflow_dispatch) pour confirmer le passage au vert."
+            gh issue create --title "Upstream SimpMusic : fonctionnalite hors plage" --body "La derniere release de maxrave-dev/SimpMusic sort au moins une fonctionnalite SpaceKai de sa plage declaree. Rapport complet dans l'artefact upstream-compat de ce run. A faire : mettre a jour l'adapter (core/.../update/SimpMusicAdapter.kt) et/ou le manifest (core/.../api/FeatureManifest.kt), revalider (tests + CI), puis reexecuter ce workflow pour confirmer le passage au vert."
           fi

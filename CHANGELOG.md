@@ -63,7 +63,7 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   exact par fonctionnalité. Invariant testé : tout contrat du manifest intégré
   est satisfait par l'Adapter.
 - **CI upstream** : `scripts/check-upstream.sh` (miroir bash des plages du
-  manifest) + `.github/workflows/upstream-compat.yml` (hebdo + manuel) —
+  manifest) + `.github/workflows/upstream-check.yml` (hebdo + manuel) —
   vérifie la dernière release SimpMusic, publie le rapport en artefact
   `upstream-compat`, ouvre une issue automatique (une seule à la fois) si une
   fonctionnalité sort de sa plage.
