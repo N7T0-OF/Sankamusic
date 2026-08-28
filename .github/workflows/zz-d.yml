@@ -1,0 +1,29 @@
+# En-tete de test
+# avec plusieurs lignes
+#
+# pour verifier si le commentaire casse la registration
+
+name: Zz d
+on:
+  schedule:
+    # commentaire interne
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+permissions:
+  issues: write
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Step
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh issue list --state open --search "x" --json number --jq 'length' | grep -q '^[1-9]'; then
+            echo "skip"
+          else
+            gh issue create --title "t" --body "corps en une ligne"
+          fi
