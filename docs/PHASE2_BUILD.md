@@ -20,7 +20,7 @@ JDK 17+ et IDE builder. Ce document transforme le travail déjà accompli
 - **Conséquence** : l'intégration d'un sous-module KMP de la base nécessite de
   monter la toolchain de Sankamusic (voir § 4 — les deux voies).
 - **Licence** : base ET sous-module `maxrave-dev/core` sont **GNU GPL-3.0**
-  (§ 6). Vérifier les obligations avant toute distribution.
+  (UPSTREAM_SYSTEM.md § 6). Vérifier les obligations avant toute distribution.
 
 Tout ce qui suit s'appuie sur du travail **déjà committé et testé** :
 `SimpMusicAdapterV2`, `AdapterContractIntegrityTest`, le pont des conversions
@@ -83,7 +83,8 @@ du repo `core` (KMP + AGP 9).
 ## 4. Monter la toolchain vers AGP 9 / Kotlin 2.4 / Gradle 9.5
 
 C'est le **prérequis bloquant** (le build actuel est en toolchain 2024).
-Sur un poste équipé, procéder en un commit `[build]` dédié et **laisser valider par le CI** :
+Sur un poste équipé, procéder en un commit `[build]` dédié et **laisser valider
+par le CI** :
 
 1. `gradle/wrapper/gradle-wrapper.properties` → `gradle-9.5.1-bin.zip`.
 2. `gradle/libs.versions.toml` →
@@ -115,7 +116,7 @@ relier en ~5 lignes par sous-adapter :
 // Dans SimpMusicAdapterV2.player :
 // 1. Récupérer MediaPlayerHandler (DI de la base) → handler.player : MediaPlayerInterface
 // 2. Lire handler.simpleMediaState / nowPlaying pour état
-// 3. sleep convertir UnifiedTrack → GenericMediaItem via toMediaItemDraft() :
+// 3. Convertir UnifiedTrack → GenericMediaItem via toMediaItemDraft() :
 //    GenericMediaItem(
 //        mediaId = draft.mediaId, uri = draft.uri,
 //        metadata = GenericMediaMetadata(title=draft.title, artist=draft.artist,
@@ -133,7 +134,7 @@ relier en ~5 lignes par sous-adapter :
 //   SongDraft(videoId, title, artistNames, durationSeconds, thumbnails).toUnifiedTrack("simpmusic")
 ```
 
-### 5c. Playlists
+### 5c. Playlists (locales + YouTube)
 ```kotlin
 // Locales : LocalPlaylistRepository.getAllLocalPlaylists() → par item
 //   LocalPlaylistDraft(id=it.id, title=it.title, thumbnail=it.thumbnail,
@@ -141,43 +142,114 @@ relier en ~5 lignes par sous-adapter :
 // YouTube : PlaylistEntity → YoutubePlaylistDraft(...).toUnifiedPlaylist("simpmusic")
 ```
 
-Après câblage, **passer les contract tests réels** : `SimpMusicAdapterV2Test`
-et `AdapterContractIntegrityTest` doivent tourner avec la base en dépendance.
+---
+
+## 6. 🔒 PROTOCOLE DE VALIDATION (obligatoire — ordre verrouillé)
+
+> **RÈGLE ABSOLUE** : tant que les 3 sous-adaptateurs n'ont PAS réellement
+> **compilé et passé leurs contract tests contre les sources SimpMusic 2.0.0**,
+> **aucune extension des plages du manifest `→ 2.x`**. Aucun raccourci du type
+> « ça semble fonctionner » ne doit exister : la validation est la SEULE porte
+> d'entrée vers `2.x`.
+
+Les étapes **doivent** être exécutées dans l'ordre ; on ne passe à l'étape
+suivante que si la précédente est entièrement verte.
+
+### Étape 1 — Prérequis (machine équipée)
+- [ ] Android SDK présent (`ANDROID_HOME`) + `platforms;android-36`, `build-tools;36.0.0`.
+- [ ] JDK 17 (ou celui requis par AGP 9).
+- [ ] Gradle wrapper à jour (Gradle **9.5.1**, § 4).
+- [ ] AGP **9.2.1** + Kotlin **2.4.10** (libs.versions.toml, § 4).
+- [ ] NDK **si** un module natif de la base l'exige.
+- [ ] source SimpMusic 2.0.0 accessible (snapshot ou clone).
+
+### Étape 2 — Arbre de travail propre
+- [ ] `git status` → **propre** (aucun fichier non committé).
+- [ ] Travailler sur une branche dédiée `feat/phase2-adapter-v2` (jamais
+  directement sur `main` tant que le protocole n'est pas terminé).
+
+### Étape 3 — Câbler les 3 sous-adaptateurs dans `SimpMusicAdapterV2`
+- [ ] **Player** (§ 5a) compilé.
+- [ ] **Library** (§ 5b) compilé.
+- [ ] **Playlists locales** (§ 5c) compilé.
+- [ ] **Playlists YouTube** (§ 5c) compilé.
+- [ ] Le pont `core/bridge/MediaBridgeMappings.kt` reste la SEULE source des conversions.
+
+### Étape 4 — Compilation complète
+- [ ] `./gradlew :core:compileKotlin :core:compileDebugKotlin` OK.
+- [ ] `./gradlew :app:assembleDebug` (ou compile) OK avec la base en dépendance.
+
+### Étape 5 — Contract tests (contre les sources 2.0.0, PAS des fakes)
+- [ ] `SimpMusicAdapterV2Test` vert (compilé contre `MediaPlayerInterface`,
+  `GenericMediaItem`, `SongEntity`, `LocalPlaylistEntity`, `PlaylistEntity`).
+- [ ] `AdapterContractIntegrityTest` vert : chaque contrat déclaré a ses
+  opérations EXERCÉES sur les vraies implémentations de la base (pas simulées).
+- [ ] `MediaBridgeMappingsTest` + `LibraryPlaylistBridgeTest` verts.
+- [ ] Total ≥ **162 tests** attendus (peut monter avec les nouveaux).
+
+### Étape 6 — Build APK
+- [ ] `./gradlew assembleRelease` (via CI si pas de SDK local : push branche)
+  → UN SEUL APK universel signé (RELEASE_GUIDE « unicité »).
+- [ ] CI `ci.yml` **vert** sur la branche montée.
+
+### Étape 7 — Installation + smoke tests sur appareil/émulateur
+Installer l'APK debug du § 6 puis vérifier **chacun** :
+- [ ] **Lancement** (démarre, pas de crash).
+- [ ] **Navigation** (onglets Accueil/Bibliothèque/Recherche/Paramètres + plugins).
+- [ ] **Bibliothèque** (liste des morceaux, conversion `SongEntity` → `UnifiedTrack`).
+- [ ] **Playlists** (locales + YouTube affichées, pas de doublons).
+- [ ] **Player** (play/pause/next/seek, file, état, position/durée).
+- [ ] **Orientation** (mode paysage forcé + restauration, étape 3).
+- [ ] **Paramètres** (thèmes, toggles de fonctionnalités, persistance).
+- [ ] **Haptique** (vibrations quand activé).
+- [ ] **Dynamic Color** (Material You / OLED en sombre).
+
+> Chaque case défaillante = retour à l'étape 3 ou 5 ; JAMAIS de passage au
+> vert tant qu'un smoke test échoue.
+
+### Étape 8 — Rapport de compatibilité (avant extension)
+- [ ] Lancer `bash scripts/check-upstream.sh build/upstream` : le rapport doit
+  indiquer **3/6** (plages encore `1.7.x`) — CONSERVATEUR et attendu.
+  Ce n'est PAS une anomalie : tant qu'on n'a pas étendu, V2 n'est pas « actif ».
+- [ ] Le workflow `upstream-check.yml` reste cohérent avec le manifest (pas de
+  divergence code ↔ doc).
+
+### Étape 9 — SEULEMENT ICI : étendre à `2.x`
+Une fois TOUT le § 6 (étapes 1-8) vert :
+1. `core/api/FeatureManifest.kt` — `builtInSpaceKaiFeatures` :
+   `upstreamCompatibility = "2.0.x"` pour navigation / orientation / player.
+2. `docs/FEATURE_MANIFEST.md` — tableau des plages idem.
+3. `scripts/check-upstream.sh` — miroir bash idem.
+4. Relancer `check-upstream.sh` : **6/6**.
+5. Commit + push → le workflow `upstream-check.yml` repasse au vert.
+6. **Fermer l'issue #1** (`Upstream SimpMusic : fonctionnalite hors plage`),
+   en citant le commit qui étendait les plages. Ne PAS la fermer avant.
+
+### Étape 10 — Vérifications finales (checklist de sortie)
+- [ ] Arbre PROPRE.
+- [ ] `:core` compilé + tests ≥ **162** verts (toolchain 2026).
+- [ ] Contract tests V2 contre la base 2.0.0 verts.
+- [ ] APK debug installé + **tous** les smoke tests passés (§ 6 étape 7).
+- [ ] CI vert (`ci.yml`) sur la branche montée.
+- [ ] `check-upstream.sh` **6/6**.
+- [ ] Workflow upstream vert.
+- [ ] Issue #1 **fermée**.
+- [ ] Licence GPL-3.0 prise en compte (attributions, obligations sources) — UPSTREAM § 6.
 
 ---
 
-## 6. Étendre la compatibilité
+## 7. Pourquoi ce protocole est strict (et correct)
 
-Seulement APRÈS que § 5 compile et passe :
-1. `scripts/check-upstream.sh` — miroir bash → `navigation|2.0.x`,
-   `orientation|2.0.x`, `player|2.0.x` (themes/haptics/dynamic_color restent `*`).
-2. `docs/FEATURE_MANIFEST.md` — tableau des plages `1.7.x` → `2.0.x`.
-3. `core/api/FeatureManifest.kt` — `builtInSpaceKaiFeatures` :
-   `upstreamCompatibility = "2.0.x"` pour les 3 fonctionnalités.
-4. Re-lancer `scripts/check-upstream.sh` : il doit passer **6/6**.
-5. Fermer l'issue #1 (`Upstream SimpMusic : fonctionnalite hors plage`).
-6. **Tester** : `bash scripts/check-upstream.sh build/upstream` + `git add` ...
-   Puis le workflow upstream repasse au vert.
+Le but n'EST PLUS « faire marcher SpaceKai sur 2.0 » en soi : c'est
+**prouver que SpaceKai peut changer d'Adapter sans changer son Core ni ses
+fonctionnalités.**
 
----
-
-## 7. Vérifications finales (checklist)
-
-- [ ] `./gradlew :core:test` vert (**162 tests attendus**) sur la toolchain montée.
-- [ ] `SimpMusicAdapterV2Test` + `AdapterContractIntegrityTest` passent avec la base en dépendance.
-- [ ] CI vert (`ci.yml` → `assembleRelease` signé).
-- [ ] Workflow upstream vert (`upstream-check.yml` → `6/6`, Dev à Dev).
-- [ ] `check-upstream.sh` 6/6.
-- [ ] Licence GPL-3.0 prise en compte (attributions, obligations sources) — § 6.
-- [ ] ARBRE PROPRE (aucun fichier non committé parasite).
-
----
-
-## 8. Pourquoi ce découpage est correct
-
-Le découpage respecte le principe « le Core ne bouge pas » : toute la
-complexité de la base 2.0.0 est confinée dans `SimpMusicAdapterV2` (Adapter).
-Les fonctionnalités SpaceKai, `SpaceKaiApi`, `SpaceKaiFeatureFlags`,
-`TypedSettings` et les plugins **restent inchangés** : la migration 1.x → 2.x
-est un test grandeur nature de l'architecture — c'est la démonstration du
-« SpaceKai Bridge ».
+- `SimpMusicAdapterV2` confine TOUTE la complexité de la base 2.0.0 ;
+  `SpaceKaiApi`, `FeatureManifest`, `SpaceKaiFeatureFlags`, `TypedSettings` et
+  les plugins **restent inchangés**.
+- La séquence compile → contract tests → APK → smoke tests → plages verrouille
+  chaque niveau AVANT la suite : on n'étend `2.x` que **prouvé**, jamais
+  « à vue de nez ».
+- Une future SimpMusic **3.0** deviendra simplement `SimpMusicAdapterV3` — le
+  même Core et les mêmes fonctionnalités — sans transformer le projet en fork :
+  c'est la démonstration du « Bridge ».

@@ -56,8 +56,13 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   d'intégration (sous-module git / includeBuild local / publication Maven),
   montée de la toolchain vers AGP 9 / Kotlin 2.4 / Gradle 9.5 (voie
   alternative : extraction isolée des seules classes nécessaires), câblage
-  des 3 sous-adaptateurs via le pont déjà testé (~5 lignes chacun), extension
-  des plages à `2.0.x`, checklist finale. Rattaché au ROADMAP Phase 2.
+  des 3 sous-adaptateurs via le pont déjà testé (~5 lignes chacun).
+  **Révisé : protocole de validation strict verrouillé** (§ 6) — ordre
+  obligatoire compile → contract tests (contre la base réelle, pas des fakes)
+  → build APK → smoke tests (9 points dont navigation/player/paramètres/
+  haptique/Dynamic Color) → rapport de compatibilité 3/6 → **seulement ensuite**
+  extension des plages `2.x` + fermeture de l'issue #1. Interdit d'étendre
+  `2.x` au seul motif « ça semble fonctionner ». Rattaché au ROADMAP Phase 2.
 - **Playlists YouTube ajoutées au mapping § 7 + pont** : `PlaylistEntity`
   (playlist YouTube : `id: String`, `title`, `trackCount`, `thumbnails`,
   `tracks`) complète le mapping ; `YoutubePlaylistDraft` → `UnifiedPlaylist`
