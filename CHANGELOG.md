@@ -51,6 +51,13 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Paramètres — fondation Core (étape 7 migration SpaceKai)** : préférences
+  typées `Preference<T>` / `StringSettings` / `TypedSettings` (défaut sûr) +
+  fabriques boolean/string/enum dans `core/settings/Settings.kt` ; `SpaceKaiFlag`
+  (port des 8 clés SpaceKai-OLD) et `SpaceKaiFeatureFlags.isEnabled/setEnabled`
+  (manifest + compatibilité upstream + préférence persistée, défaut =
+  `enabledByDefault`) dans `core/settings/SpaceKaiFlags.kt` ;
+  `DefaultSpaceKaiApi.typedSettings` (partagé avec `SettingsApi`).
 - **Manifest de fonctionnalités SpaceKai** (idée patches.json des propositions
   ReVanced/BetterDiscord) : `SpaceKaiFeature` + `SpaceKaiFeaturesManifest`
   (`@Serializable`, JSON round-trip) dans `core/api/FeatureManifest.kt` — chaque
@@ -114,7 +121,7 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   4 secrets release.yml, cohérence vérifiée (re-décodage + keytool -list) ; jamais commité.
 
 ### Notes de vérification ([Unreleased])
-- 111 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
+- 126 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
   `UiExtensionRegistryTest` (navigation), `UpdateEngineTest` (13 — upstream via
   adapter), `SimpMusicAdapterTest` (5), `ThemeEngineTest` (11 — base+couche,
   mode, source), `ParseThemeColorHexTest` (5), `SpaceKaiThemeTokensOverlayTest` (5),
@@ -122,7 +129,8 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   `PlayerControllerTest` (19 — transitions, file, bornes, erreurs propres),
   `HapticsTest` (9 — parse, défaut, round-trip, parité, gate),
   `DynamicColorTest` (7 — stratégie, repli, seed, OLED),
-  `FeatureManifestTest` (15 — validation, patterns, filtrage, JSON),
+  `FeatureManifestTest` (13 — validation, patterns, filtrage, JSON),
+  `SettingsTest` (15 — préférences, typées, flags, état des fonctionnalités),
   plugin `HelloSpaceKaiPluginTest` (4), thème `ExampleThemeTest` (5 — dont AMOLED).
   Compilation `:core` + `:plugins:hellospacekai` + `:themes:exampletheme` propres.
 - Module `:app` (Compose : bottom nav, écran Mises à jour, DefaultSpaceKaiApi) :

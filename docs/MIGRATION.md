@@ -1,6 +1,6 @@
 # Migration — De SpaceKai-OLD vers Sankamusic
 
-- **Statut** : 🟢 Étapes 1-3, 5 (haptique) et 6 (Dynamic Color) faites ; étape 4 (player) partielle — modèle Core fait, moteur audio/UI à venir
+- **Statut** : 🟢 Étapes 1-3, 5-7 (haptique, Dynamic Color, paramètres) faites ; étape 4 (player) partielle — modèle Core fait, moteur audio/UI à venir
 - **Document lié** : `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`
 
 ## 1. Objectif
@@ -48,7 +48,7 @@ on **réimplémente** — jamais on force une intégration fragile.
 | Téléchargement Wi-Fi | 🟢 Core |  |
 | Widgets | 🟣 Plugin |  |
 | Updater | 🟢 Core (UpdateManager) |  |
-| Paramètres | 🟢 Core |  |
+| Paramètres | 🟢 Core | ✅ étape 7 faite (préférences typées + flags ; écran UI à venir) |
 
 ## 4. Ordre de migration (indicatif)
 
@@ -181,6 +181,32 @@ effet) : l'intention est portée par `ThemeColorSource.WALLPAPER` (étape 2).
 Non porté (à faire) : le rendu effectif par l'UI — `dynamicDarkColorScheme` /
 `dynamicLightColorScheme` Android 12+, mapping tokens → MaterialTheme Compose
 et le toggle Paramètres (étape 7).
+
+### Étape 7 — Paramètres (faite : fondation Core)
+
+Porté depuis SpaceKai-OLD (`SpaceKaiSettingsSection` / `SpaceKaiFeatures` — 8
+flags persistés en chaînes préfixées, `DataStoreManager.TRUE`) :
+
+- **Préférences typées** : `Preference<T>` (clé, défaut, parse tolérant,
+  sérialisation) + `StringSettings` (store de chaînes) + `TypedSettings`
+  (accès typé, défaut sûr) dans `core/settings/Settings.kt`. Fabriques :
+  `booleanPreference` ("true"/"false", "1"/"0", "on"/"off"),
+  `stringPreference`, `enumPreference` (parse/serialize fournis).
+- **Flags SpaceKai-OLD** : `SpaceKaiFlag` — les 8 clés portées
+  (`spotify_sync`, `custom_navigation`, `minimalistic_navigation`,
+  `dynamic_color`, `landscape_player`, `haptics`, `download_wifi_only`,
+  `custom_player_info`) avec leur lien vers le manifest quand la
+  fonctionnalité est migrée (ex. `custom_navigation` → `navigation`).
+- **État des fonctionnalités** : `SpaceKaiFeatureFlags.isEnabled(settings,
+  featureId, upstreamVersion)` — la fonctionnalité doit exister dans le
+  manifest, être **compatible** avec la version upstream (sinon désactivée,
+  jamais d'APK cassée), et la préférence persistée (défaut =
+  `enabledByDefault`) ; `setEnabled` persiste le choix.
+- **Câblage** : `DefaultSpaceKaiApi.typedSettings` (partagé avec `SettingsApi`).
+
+Non porté (à faire) : l'écran Paramètres Compose (toggles des flags, sélecteur
+de thème/mode/orientation — étape 7 UI), le masquage de sections, la
+persistance réelle (DataStore) au lieu de la mémoire.
 
 ### Manifest de fonctionnalités (docs/FEATURE_MANIFEST.md)
 

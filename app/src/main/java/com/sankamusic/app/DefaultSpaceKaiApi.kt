@@ -20,6 +20,8 @@ import com.sankamusic.core.ThemeEngine
 import com.sankamusic.core.UiExtensionRegistry
 import com.sankamusic.core.player.PlayerController
 import com.sankamusic.core.player.PlayerStatus
+import com.sankamusic.core.settings.StringSettings
+import com.sankamusic.core.settings.TypedSettings
 
 /**
  * Implémentation squelette de la [SpaceKaiApi] — permet de démarrer le
@@ -34,8 +36,18 @@ class DefaultSpaceKaiApi(
 
     private val uiRegistry = UiExtensionRegistry()
     private val themeEngine = ThemeEngine()
+    private val settingsStore = mutableMapOf<String, String>()
 
     override val uiExtensions: UiExtensionApi = uiRegistry
+
+    /** Accès typé aux préférences (étape 7 — docs/MIGRATION.md), partagé avec [settings]. */
+    val typedSettings = TypedSettings(object : StringSettings {
+        override fun get(key: String): String? = settingsStore[key]
+
+        override fun set(key: String, value: String) {
+            settingsStore[key] = value
+        }
+    })
 
     /**
      * Contrôleur de lecture (étape 4 migration — docs/MIGRATION.md) : machine à
@@ -90,12 +102,10 @@ class DefaultSpaceKaiApi(
     }
 
     override val settings = object : SettingsApi {
-        private val store = mutableMapOf<String, String>()
-
-        override suspend fun get(key: String): String? = store[key]
+        override suspend fun get(key: String): String? = settingsStore[key]
 
         override suspend fun set(key: String, value: String) {
-            store[key] = value
+            settingsStore[key] = value
         }
     }
 
