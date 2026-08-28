@@ -83,4 +83,7 @@ fun playerOrientationModeFromFeatureFlag(landscapePlayer: Boolean): PlayerOrient
 object SettingsKeys {
     /** Mode d'orientation du player : valeur de [PlayerOrientationMode.toPreferenceValue]. */
     const val PLAYER_ORIENTATION = "player.orientation"
+
+    /** Retour haptique : valeur de `hapticsPreferenceValue` (`"on"` / `"off"`). */
+    const val HAPTICS_ENABLED = "haptics.enabled"
 }

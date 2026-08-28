@@ -51,6 +51,12 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Vibration / haptique (étape 5 migration SpaceKai)** : `HapticType`
+  (LONG_PRESS/CONFIRM/TEXT_HANDLE_MOVE) et `HapticsSettings(enabled = false)`
+  dans `core/api/Haptics.kt` ; réglage persistable `haptics.enabled`
+  (`"on"`/`"off"`, parse tolérant, défaut sûr), parité avec le flag
+  SpaceKai-OLD `haptics`, décision pure `shouldFireHaptic` (port de
+  `HapticsSpaceKai.onClick`).
 - **Player — machine à états (étape 4 migration SpaceKai, modèle Core)** :
   `PlayerStatus` (IDLE/PLAYING/PAUSED/ERROR) + `PlayerSnapshot` et
   `PlayerController` pur (play, playQueue, pause/resume/toggle, next/previous,
@@ -93,12 +99,13 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   4 secrets release.yml, cohérence vérifiée (re-décodage + keytool -list) ; jamais commité.
 
 ### Notes de vérification ([Unreleased])
-- 80 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
+- 91 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
   `UiExtensionRegistryTest` (navigation), `UpdateEngineTest` (13 — upstream via
   adapter), `SimpMusicAdapterTest` (5), `ThemeEngineTest` (11 — base+couche,
   mode, source), `ParseThemeColorHexTest` (5), `SpaceKaiThemeTokensOverlayTest` (5),
   `PlayerOrientationTest` (9 — décision, parse, round-trip, parité flag),
-  `PlayerControllerTest` (17 — transitions, file, bornes, erreurs propres),
+  `PlayerControllerTest` (19 — transitions, file, bornes, erreurs propres),
+  `HapticsTest` (9 — parse, défaut, round-trip, parité, gate),
   plugin `HelloSpaceKaiPluginTest` (4), thème `ExampleThemeTest` (5 — dont AMOLED).
   Compilation `:core` + `:plugins:hellospacekai` + `:themes:exampletheme` propres.
 - Module `:app` (Compose : bottom nav, écran Mises à jour, DefaultSpaceKaiApi) :

@@ -1,6 +1,6 @@
 # Migration — De SpaceKai-OLD vers Sankamusic
 
-- **Statut** : 🟢 Étapes 1-3 faites ; étape 4 (player) partielle — modèle Core fait, moteur audio/UI à venir
+- **Statut** : 🟢 Étapes 1-3 et 5 (haptique) faites ; étape 4 (player) partielle — modèle Core fait, moteur audio/UI à venir
 - **Document lié** : `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`
 
 ## 1. Objectif
@@ -41,7 +41,7 @@ on **réimplémente** — jamais on force une intégration fragile.
 | Dynamic Color | 🎨 Theme API | 🟡 partiel (source WALLPAPER déclarée, rendu UI à relier) |
 | Orientation paysage (player) | 🟢 Core | ✅ étape 3 faite (modèle + réglage ; rendu UI étape 4) |
 | Player | 🟢 Core | 🟡 étape 4 partielle (machine à états + file faite ; audio/UI à venir) |
-| Vibration | 🟢 Core |  |
+| Vibration | 🟢 Core | ✅ étape 5 faite (modèle + réglage ; déclenchement réel UI) |
 | Spotify (OAuth PKCE, playlists) | 🟣 Plugin |  |
 | Apple Music | 🟣 Plugin |  |
 | Deezer | 🟣 Plugin |  |
@@ -141,6 +141,24 @@ streaming, service en arrière-plan, notification), les **écrans** (Now Playing
 mini-player, plein écran, file visible), le swipe, la lecture paysage effective
 (étape 3), les actions player des plugins (déjà modélisées via
 `UiExtensionApi.registerPlayerAction`).
+
+### Étape 5 — Vibration / haptique (faite)
+
+Porté depuis SpaceKai-OLD (`spacekai/features/haptics/HapticsSpaceKai.kt` — flag
+`haptics`, `onClick` qui ne vibre que si le flag est actif, no-op sinon) :
+
+- **Modèle** : `HapticType` (LONG_PRESS / CONFIRM / TEXT_HANDLE_MOVE, port des
+  valeurs Compose `HapticFeedbackType` — usage réel LONG_PRESS sur les clics)
+  et `HapticsSettings(enabled = false)` dans `core/api/Haptics.kt`.
+- **Réglage persistable** : clé `haptics.enabled` (`SettingsKeys`), valeurs
+  `"on"` / `"off"` (`hapticsPreferenceValue` / `parseHapticsEnabled` tolérant,
+  `effectiveHapticsEnabled` → défaut sûr désactivé).
+- **Parité flag** : `hapticsEnabledFromFeatureFlag(haptics)` et décision pure
+  `shouldFireHaptic(enabled)` (l'UI déclenche la vibration réelle uniquement si
+  vrai — `LocalHapticFeedback`, no-op sur Desktop comme dans l'ancien code).
+
+Non porté (à faire) : le déclenchement réel par l'UI (hook dans les handlers de
+clic des écrans — Now Playing, navigation) et le toggle Paramètres (étape 7).
 
 ## 5. Gestion des données existantes
 
