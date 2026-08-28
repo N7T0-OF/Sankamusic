@@ -59,13 +59,21 @@ data class PlayerAction(
 interface UiExtensionApi {
     fun registerNavigationTab(tab: NavigationTab)
     fun removeNavigationTab(id: String)
+    /** Onglets déclarés par les plugins actifs, triés par priorité croissante. */
+    fun navigationTabs(): List<NavigationTab>
 
     fun registerHomeSection(section: HomeSection)
     fun removeHomeSection(id: String)
+    /** Sections Home déclarées par les plugins actifs, triées par priorité. */
+    fun homeSections(): List<HomeSection>
 
     fun registerSettingsEntry(entry: SettingsEntry)
     fun removeSettingsEntry(id: String)
+    /** Entrées Settings déclarées par les plugins actifs, triées par priorité. */
+    fun settingsEntries(): List<SettingsEntry>
 
     fun registerPlayerAction(action: PlayerAction)
     fun removePlayerAction(id: String)
+    /** Actions player déclarées par les plugins actifs, triées par priorité. */
+    fun playerActions(): List<PlayerAction>
 }

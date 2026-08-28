@@ -48,13 +48,13 @@ class UiExtensionRegistry : UiExtensionApi {
         playerActions.remove(id)
     }
 
-    fun navigationTabs(): List<NavigationTab> = navigationTabs.values.sortedBy { it.priority }
+    override fun navigationTabs(): List<NavigationTab> = navigationTabs.values.sortedBy { it.priority }
 
-    fun homeSections(): List<HomeSection> = homeSections.values.sortedBy { it.priority }
+    override fun homeSections(): List<HomeSection> = homeSections.values.sortedBy { it.priority }
 
-    fun settingsEntries(): List<SettingsEntry> = settingsEntries.values.sortedBy { it.priority }
+    override fun settingsEntries(): List<SettingsEntry> = settingsEntries.values.sortedBy { it.priority }
 
-    fun playerActions(): List<PlayerAction> = playerActions.values.sortedBy { it.priority }
+    override fun playerActions(): List<PlayerAction> = playerActions.values.sortedBy { it.priority }
 
     private fun <T> putUnique(
         map: MutableMap<String, T>,

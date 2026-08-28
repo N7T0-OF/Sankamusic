@@ -5,6 +5,7 @@ import com.sankamusic.core.api.DownloadsApi
 import com.sankamusic.core.api.HomeSection
 import com.sankamusic.core.api.LibraryApi
 import com.sankamusic.core.api.NavigationApi
+import com.sankamusic.core.api.NavigationTab
 import com.sankamusic.core.api.NetworkApi
 import com.sankamusic.core.api.PlayerAction
 import com.sankamusic.core.api.PlayerApi
@@ -77,18 +78,32 @@ class HelloSpaceKaiPluginTest {
         assertEquals("Hello SpaceKai", api.sections.first().title)
         assertEquals(1, api.entries.size)
         assertEquals(HelloSpaceKaiPlugin.SETTINGS_ENTRY_ID, api.entries.first().id)
+        assertEquals(1, api.tabs.size)
+        assertEquals(HelloSpaceKaiPlugin.NAV_TAB_ID, api.tabs.first().id)
 
         assertTrue(engine.disable(HelloSpaceKaiPlugin.ID).isSuccess)
         assertTrue(api.sections.isEmpty())
         assertTrue(api.entries.isEmpty())
+        assertTrue(api.tabs.isEmpty())
     }
 
     /** Fausse implémentation minimale de la SpaceKai API (test uniquement). */
     private class FakeSpaceKaiApi : SpaceKaiApi {
         val sections = mutableListOf<HomeSection>()
         val entries = mutableListOf<SettingsEntry>()
+        val tabs = mutableListOf<NavigationTab>()
 
         override val uiExtensions = object : UiExtensionApi {
+            override fun registerNavigationTab(tab: NavigationTab) {
+                tabs += tab
+            }
+
+            override fun removeNavigationTab(id: String) {
+                tabs.removeAll { it.id == id }
+            }
+
+            override fun navigationTabs(): List<NavigationTab> = tabs.toList()
+
             override fun registerHomeSection(section: HomeSection) {
                 sections += section
             }
@@ -96,6 +111,8 @@ class HelloSpaceKaiPluginTest {
             override fun removeHomeSection(id: String) {
                 sections.removeAll { it.id == id }
             }
+
+            override fun homeSections(): List<HomeSection> = sections.toList()
 
             override fun registerSettingsEntry(entry: SettingsEntry) {
                 entries += entry
@@ -105,9 +122,13 @@ class HelloSpaceKaiPluginTest {
                 entries.removeAll { it.id == id }
             }
 
+            override fun settingsEntries(): List<SettingsEntry> = entries.toList()
+
             override fun registerPlayerAction(action: PlayerAction) = Unit
 
             override fun removePlayerAction(id: String) = Unit
+
+            override fun playerActions(): List<PlayerAction> = emptyList()
         }
 
         override val player = object : PlayerApi {
