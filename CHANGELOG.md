@@ -51,6 +51,13 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Pont complet des 3 sous-adaptateurs (`core/bridge/MediaBridgeMappings.kt`)** :
+  en plus du player, les conversions pures library (`SongDraft` ↔
+  `UnifiedTrack`, miroir de `SongEntity`) et playlists
+  (`LocalPlaylistDraft` → `UnifiedPlaylist`, miroir de `LocalPlaylistEntity`)
+  sont implémentées et testées sans dépendance. `LibraryPlaylistBridgeTest`
+  (5). Utilise uniquement les champs réels — pas de copie du code GPL-3.0
+  (§ 6). **160 tests OK.**
 - **Licence des dépendances vérifiée (2026-08-28, UPSTREAM_SYSTEM.md § 6)** :
   la base `maxrave-dev/SimpMusic` ET le sous-module `maxrave-dev/core` sont
   tous deux **GNU GPL v3** (Licence.txt à la racine des deux repos). Le risque
@@ -208,7 +215,7 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   4 secrets release.yml, cohérence vérifiée (re-décodage + keytool -list) ; jamais commité.
 
 ### Notes de vérification ([Unreleased])
-- 155 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
+- 160 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
   `UiExtensionRegistryTest` (navigation), `UpdateEngineTest` (13 — upstream via
   adapter), `SimpMusicAdapterTest` (8 — info, plage, pré-releases, **contrats**,
   invariant manifest↔adapter), `SimpMusicAdapterV2Test` (5 — info 2.0.0, plage,
