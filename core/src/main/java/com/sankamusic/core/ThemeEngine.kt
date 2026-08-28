@@ -4,6 +4,10 @@ import com.sankamusic.core.api.SpaceKaiThemeTokens
 import com.sankamusic.core.api.ThemeColorSource
 import com.sankamusic.core.api.ThemeDefinition
 import com.sankamusic.core.api.ThemeMode
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 /**
  * Moteur de thèmes (prototype Phase 2 — voir docs/THEME_SYSTEM.md).
@@ -30,6 +34,11 @@ class ThemeEngine {
     private var colorSource: ThemeColorSource = ThemeColorSource.DEFAULT
     private var customSeedColor: Long? = null
 
+    private val _state = MutableStateFlow(ThemeState())
+
+    /** État réactif du moteur (mode, source, seed, tokens du thème actif) — consommé par l'UI. */
+    val state: StateFlow<ThemeState> = _state.asStateFlow()
+
     /** Enregistre un thème après validation de sa définition. */
     fun register(theme: ThemeDefinition): Result<Unit> {
         val errors = theme.validationErrors()
@@ -53,7 +62,9 @@ class ThemeEngine {
             ?: return Result.failure(NoSuchElementException("Thème inconnu : $id"))
         activeId = id
         val base = if (theme.base == "light") lightBase else darkBase
-        return Result.success(base.overlay(theme.tokens))
+        val tokens = base.overlay(theme.tokens)
+        _state.update { it.copy(activeTokens = tokens) }
+        return Result.success(tokens)
     }
 
     /** Thème actuellement actif, ou null si aucun. */
@@ -65,6 +76,7 @@ class ThemeEngine {
 
     fun setMode(mode: ThemeMode) {
         this.mode = mode
+        _state.update { it.copy(mode = mode) }
     }
 
     fun mode(): ThemeMode = mode
@@ -82,6 +94,7 @@ class ThemeEngine {
         }
         this.colorSource = source
         this.customSeedColor = customSeedColor
+        _state.update { it.copy(colorSource = source, customSeedColor = customSeedColor) }
         return Result.success(Unit)
     }
 
@@ -104,4 +117,22 @@ class ThemeEngine {
         onSurface = 0xFFE0E0E0,
         error = 0xFFCF6679,
     )
+
+    /** Tokens de la base claire (défauts Material 3) — exposés à l'UI. */
+    fun lightBaseTokens(): SpaceKaiThemeTokens = lightBase
+
+    /** Tokens de la base sombre — exposés à l'UI. */
+    fun darkBaseTokens(): SpaceKaiThemeTokens = darkBase
 }
+
+/**
+ * État observable du [ThemeEngine] (mode, source de couleur, seed, tokens du
+ * thème actif après fusion base+couche) — consommé par l'UI (SankamusicTheme).
+ */
+data class ThemeState(
+    val mode: ThemeMode = ThemeMode.DARK,
+    val colorSource: ThemeColorSource = ThemeColorSource.DEFAULT,
+    val customSeedColor: Long? = null,
+    /** Tokens du thème actif (`base.overlay(thème)`) ; null si aucun thème activé. */
+    val activeTokens: SpaceKaiThemeTokens? = null,
+)

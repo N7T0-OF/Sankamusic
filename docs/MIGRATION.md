@@ -212,6 +212,22 @@ flags persistés en chaînes préfixées, `DataStoreManager.TRUE`) :
 Non porté (à faire) : le masquage de sections, la persistance réelle
 (DataStore) au lieu de la mémoire, la couleur custom (champ de saisie du seed).
 
+### Rendu des thèmes dans l'UI Compose (faite)
+
+`SankamusicTheme` (`app/.../SankamusicTheme.kt`) mappe l'état réactif du
+`ThemeEngine` (nouveau `ThemeState` + `StateFlow`, exposé via
+`themeEngine.state`) vers le `MaterialTheme` Compose :
+
+- **Mode** clair / sombre / système (`isSystemInDarkTheme`) ;
+- **Dynamic Color** Android 12+ : source WALLPAPER → `dynamicDarkColorScheme` /
+  `dynamicLightColorScheme` (règle OLED : fond/surfaces noirs purs en sombre) ;
+- **Tokens → ColorScheme** : `base.overlay(thème)` (ou base claire/sombre)
+  mappé vers `darkColorScheme`/`lightColorScheme` (primary, secondary,
+  background, surface, onSurface, error), OLED appliqué en sombre.
+
+`MainActivity` est enveloppé par `SankamusicTheme(api)` ; les changements de
+mode/source/couleur dans Paramètres se reflètent immédiatement (recomposition).
+
 ### Manifest de fonctionnalités (docs/FEATURE_MANIFEST.md)
 
 Chaque étape migrée est déclarée dans le manifest intégré `builtInSpaceKaiFeatures`

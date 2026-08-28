@@ -28,6 +28,8 @@ android {
 
 dependencies {
     implementation(libs.kotlinx.serialization.json)
+    // État réactif du moteur de thèmes (StateFlow consommé par l'UI).
+    implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.core)

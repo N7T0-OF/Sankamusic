@@ -54,7 +54,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MaterialTheme {
+            val api = if (SpaceKaiApi.isInitialized()) SpaceKaiApi.instance as? DefaultSpaceKaiApi else null
+            SankamusicTheme(api = api) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     var showUpdates by rememberSaveable { mutableStateOf(false) }
                     if (showUpdates) {
