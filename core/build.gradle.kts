@@ -11,7 +11,8 @@ plugins {
 
 android {
     namespace = "com.sankamusic.core"
-    compileSdk = 35
+    // Source unique de vérité : compileSdk pivoté depuis libs.versions.toml (androidSdk).
+    compileSdk = libs.versions.androidSdk.get().toInt()
 
     defaultConfig {
         minSdk = 26

@@ -1,13 +1,16 @@
 # Version catalog — Sankamusic
 # Toutes les versions de dépendances sont centralisées ici (une seule source).
 
+# Toolchain actuelle : 2024 (Phase 2 → montée vers Gradle 9.5/AGP 9.2/Kotlin 2.4/
+# Compose BOM 2026.08, et androidSdk → "36"). Voir docs/PHASE2_BUILD.md § 4.
 [versions]
-agp = "8.5.2"
-kotlin = "2.0.20"
+agp = "8.5.2"          # Phase 2 → "9.2.1"
+kotlin = "2.0.20"       # Phase 2 → "2.4.10"
+androidSdk = "35"       # Phase 2 → "36"  (compileSdk/targetSdk + SDK du CI)
 coreKtx = "1.13.1"
 lifecycleRuntimeKtx = "2.8.6"
 activityCompose = "1.9.2"
-composeBom = "2024.09.02"
+composeBom = "2024.09.02"  # Phase 2 → "2026.08.00"
 junit = "4.13.2"
 kotlinxSerialization = "1.7.3"
 kotlinxCoroutines = "1.8.1"

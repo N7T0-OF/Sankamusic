@@ -51,6 +51,13 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Préparation CI à la Phase 2 (2026-08-28)** : `androidSdk` centralisé dans
+  `gradle/libs.versions.toml` (source unique, `"35"` aujourd'hui, point unique
+  vers `"36"` à la Phase 2) et utilisé par `core`/`app` (`compileSdk`, `targetSdk`)
+  et par le workflow `ci.yml` (SDK installé dérivé du catalog via `cut -d'"'
+  -f2`, robuste aux commentaires mentionnant d'autres valeurs).  Passage à la
+  nouvelle toolchain = un seul point à changer (`docs/PHASE2_BUILD.md` § 4).
+  **Non-compilation réelle ici (SDK absent) — vérifiée par le CI.**
 - **Guide de montage build Phase 2 (`docs/PHASE2_BUILD.md`)** : procédure
   exécutable pour un poste Android équipé — prérequis SDK/JDK, 3 options
   d'intégration (sous-module git / includeBuild local / publication Maven),

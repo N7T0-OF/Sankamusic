@@ -45,7 +45,8 @@ private val ciSigning = loadCiSigning()
 
 android {
     namespace = "com.sankamusic.app"
-    compileSdk = 35
+    // Source unique de vérité : compileSdk pivoté depuis libs.versions.toml (androidSdk).
+    compileSdk = libs.versions.androidSdk.get().toInt()
 
     // Signing config injectée depuis l'env CI — déclarée dans `signingConfigs {}`
     // où `storeFile` / `storePassword` / `keyAlias` / `keyPassword` résolvent bien
@@ -64,7 +65,7 @@ android {
     defaultConfig {
         applicationId = "com.sankamusic.app"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = libs.versions.androidSdk.get().toInt()
         versionCode = sankamusicVersionCode
         versionName = sankamusicVersion
 
