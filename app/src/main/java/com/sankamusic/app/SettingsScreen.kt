@@ -14,12 +14,12 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.toMutableStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -81,9 +81,11 @@ fun SettingsScreen(
     var orientation by rememberSaveable { mutableStateOf(typed.get(orientationPreference)) }
     var hapticsOn by rememberSaveable { mutableStateOf(typed.get(hapticsPreference)) }
     val featureStates = remember {
-        manifest.features
-            .associate { feature -> feature.id to SpaceKaiFeatureFlags.isEnabled(typed, feature.id, upstreamVersion) }
-            .toMutableStateMap()
+        mutableStateMapOf<String, Boolean>().apply {
+            manifest.features.forEach { feature ->
+                this[feature.id] = SpaceKaiFeatureFlags.isEnabled(typed, feature.id, upstreamVersion)
+            }
+        }
     }
 
     LazyColumn(
