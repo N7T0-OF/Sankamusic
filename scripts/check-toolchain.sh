@@ -15,10 +15,16 @@
 #
 # Usage : bash scripts/check-toolchain.sh
 #   (À exécuter sur le poste Android équipé, puis coller la sortie complète.)
+#
+# Surcharges (pour tests uniquement, jamais utilisées en production) :
+#   CHECK_TOOLCHAIN_CATALOG  chemin du version catalog
+#   CHECK_TOOLCHAIN_WRAPPER  chemin du gradle-wrapper.properties (défaut gradle/wrapper/...)
+#   CHECK_TOOLCHAIN_GIT      force le résultat Git : "clean" ou "dirty" (sinon, réel via git)
 
 set -uo pipefail
 
 CATALOG="${CHECK_TOOLCHAIN_CATALOG:-gradle/libs.versions.toml}"
+WRAPPER_FILE="${CHECK_TOOLCHAIN_WRAPPER:-gradle/wrapper/gradle-wrapper.properties}"
 commit_ok=1
 
 # ── Petites helpers ─────────────────────────────────────────────────────
@@ -83,7 +89,7 @@ else
 fi
 
 # 5. Gradle wrapper
-WRAP="$(grep -oE 'gradle-[0-9.]+-bin\.zip' gradle/wrapper/gradle-wrapper.properties 2>/dev/null | head -1)"
+WRAP="$(grep -oE 'gradle-[0-9.]+-bin\.zip' "$WRAPPER_FILE" 2>/dev/null | head -1)"
 if [ -n "$WRAP" ]; then
   report "Gradle wrapper" "PASS" "wrapper $WRAP"
 else
@@ -101,16 +107,20 @@ for pair in "AGP:$AGP_WANT" "Kotlin:$KOTLIN_WANT" "BOM:$BOM_WANT"; do
 done
 
 # 9. État Git
-if git rev-parse --git-dir >/dev/null 2>&1; then
-  HEAD="$(git rev-parse --short HEAD)"
-  if [ -z "$(git status --porcelain)" ]; then
-    report "Git" "PASS" "$HEAD, arbre propre"
-  else
-    report "Git" "FAIL" "$HEAD, arbre NON propre"
-  fi
-else
-  report "Git" "FAIL" "pas de dépôt git"
-fi
+case "${CHECK_TOOLCHAIN_GIT:-}" in
+  clean) report "Git" "PASS" "(forcé) arbre propre" ;;
+  dirty) report "Git" "FAIL" "(forcé) arbre NON propre" ;;
+  *) if git rev-parse --git-dir >/dev/null 2>&1; then
+       HEAD="$(git rev-parse --short HEAD)"
+       if [ -z "$(git status --porcelain)" ]; then
+         report "Git" "PASS" "$HEAD, arbre propre"
+       else
+         report "Git" "FAIL" "$HEAD, arbre NON propre"
+       fi
+     else
+       report "Git" "FAIL" "pas de dépôt git"
+     fi ;;
+esac
 
 echo
 echo "--------------------------------------------------------------"

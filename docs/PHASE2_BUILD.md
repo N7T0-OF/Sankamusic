@@ -205,6 +205,8 @@ suivante que si la précédente est entièrement verte.
 > PASS/FAIL ligne par ligne (JDK, SDK/android-36, adb/sdkmanager, Gradle,
 > AGP, Kotlin, BOM, Git). Sortie → coller l'intégralité du rapport, exit 0
 > (toutes vertes) pour poursuivre, sinon exit 1 (une case rouge = stop).
+> Le script est lui-même protégé par `scripts/test-toolchain.sh` (env absent→
+> rc=1, conforme→rc=0, partiel→rc=1), lancé par le CI sur chaque push.
 - [ ] Android SDK présent (`ANDROID_HOME`) + `platforms;android-36`, `build-tools;36.0.0`.
 - [ ] JDK 17 (ou celui requis par AGP 9).
 - [ ] Gradle wrapper à jour (Gradle **9.5.1**, § 4).

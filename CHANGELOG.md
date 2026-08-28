@@ -62,8 +62,9 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   rapport PASS/FAIL ligne par ligne de l'étape 1 (JDK, SDK/android-N,
   adb/sdkmanager, Gradle wrapper, AGP/Kotlin/BOM depuis le catalog, état Git).
   Sortie : coller le rapport complet → exit 0 = toutes vertes, exit 1 = une
-  case rouge → stop. Référencé dans `PHASE2_BUILD.md` étape 1 ; syntaxe
-  vérifiée par le CI (`bash -n`).
+  case rouge → stop. Référencé dans `PHASE2_BUILD.md` étape 1 ; protégé par
+  `scripts/test-toolchain.sh` (3 scénarios : env absent→rc=1, conforme→rc=0,
+  partiel→rc=1) lancé par le CI.
 - **Guide de montage build Phase 2 (`docs/PHASE2_BUILD.md`)** : procédure
   exécutable pour un poste Android équipé — prérequis SDK/JDK, 3 options
   d'intégration (sous-module git / includeBuild local / publication Maven),
