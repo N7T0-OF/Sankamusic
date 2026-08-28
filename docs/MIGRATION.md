@@ -238,6 +238,23 @@ une nouvelle version upstream est simplement désactivée (jamais d'APK cassée)
 La détection d'architecture reste faite par le compilateur + l'adapter, pas par
 matching de bytecode.
 
+### Contrats d'API + rapport de compatibilité (docs/FEATURE_MANIFEST.md § 3)
+
+- Chaque fonctionnalité peut déclarer un **contrat** (`contract` : navigation-api,
+  theme-api, orientation-api, player-api, haptics-api, dynamic-color-api) :
+  l'API SpaceKai stable dont elle dépend. La compatibilité exige alors AUSSI
+  que l'adapter fournisse ce contrat (`UpstreamAdapter.satisfiesContract`) —
+  indépendamment des numéros de version SimpMusic : c'est le « Bridge » qui
+  absorbe les changements d'architecture upstream sans toucher aux fonctionnalités.
+- `CompatibilityReporter` produit un rapport par fonctionnalité (statuts
+  COMPATIBLE / VERSION_OUT_OF_RANGE / CONTRACT_NOT_SATISFIED /
+  UNKNOWN_UPSTREAM / FEATURE_UNKNOWN) — source unique pour `SpaceKaiFeatureFlags`
+  et l'écran Paramètres, qui affiche la cause d'incompatibilité exacte.
+- **CI upstream** (`.github/workflows/upstream-compat.yml`, hebdo + manuel) :
+  `scripts/check-upstream.sh` vérifie la dernière release SimpMusic contre les
+  plages déclarées, publie le rapport en artefact, et ouvre une issue
+  automatique si une fonctionnalité sort de sa plage.
+
 ## 5. Gestion des données existantes
 
 - La migration de l'ancienne base de données vers la nouvelle doit être **testée** :

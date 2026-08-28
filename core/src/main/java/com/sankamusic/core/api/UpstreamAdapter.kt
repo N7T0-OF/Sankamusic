@@ -25,7 +25,17 @@ interface UpstreamAdapter {
 
     /** Vrai si cet Adapter couvre la version upstream donnée. */
     fun isCompatibleWith(upstreamVersion: String): Boolean
+
+    /**
+     * Vrai si cet Adapter fournit l'API du contrat donné (docs/FEATURE_MANIFEST.md
+     * § 3 — compatibilité sémantique par fonctionnalité, indépendante des
+     * numéros de version). Défaut : faux (un Adapter doit déclarer ses contrats).
+     */
+    fun satisfiesContract(contractId: String): Boolean = false
 }
+
+/** Contrat de compatibilité : id stable d'une API fournie par l'Adapter. */
+data class CompatibilityContract(val id: String)
 
 /** Informations de compatibilité connues du système (docs/UPSTREAM_SYSTEM.md § 3). */
 data class UpstreamInfo(

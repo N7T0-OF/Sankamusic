@@ -1,6 +1,7 @@
 package com.sankamusic.core.settings
 
 import com.sankamusic.core.api.SpaceKaiFeaturesManifest
+import com.sankamusic.core.api.UpstreamAdapter
 import com.sankamusic.core.api.builtInSpaceKaiFeatures
 
 /**
@@ -63,6 +64,31 @@ object SpaceKaiFeatureFlags {
         if (!manifest.isFeatureCompatible(featureId, upstreamVersion)) return false
         return typed.get(featureFlagPreference(featureId, feature.enabledByDefault))
     }
+
+    /**
+     * Variante avec Adapter : la compatibilité exige AUSSI que le contrat de la
+     * fonctionnalité soit fourni par l'Adapter (docs/FEATURE_MANIFEST.md § 3).
+     */
+    fun isEnabled(
+        typed: TypedSettings,
+        featureId: String,
+        upstreamVersion: String?,
+        adapter: UpstreamAdapter?,
+        manifest: SpaceKaiFeaturesManifest = builtInSpaceKaiFeatures,
+    ): Boolean {
+        val feature = manifest.featureById(featureId) ?: return false
+        if (!manifest.isFeatureCompatible(featureId, upstreamVersion, adapter)) return false
+        return typed.get(featureFlagPreference(featureId, feature.enabledByDefault))
+    }
+
+    /** Variante sur un [StringSettings] brut. */
+    fun isEnabled(
+        settings: StringSettings,
+        featureId: String,
+        upstreamVersion: String?,
+        adapter: UpstreamAdapter?,
+        manifest: SpaceKaiFeaturesManifest = builtInSpaceKaiFeatures,
+    ): Boolean = isEnabled(TypedSettings(settings), featureId, upstreamVersion, adapter, manifest)
 
     /** Variante sur un [StringSettings] brut (tests, intégrations simples). */
     fun isEnabled(

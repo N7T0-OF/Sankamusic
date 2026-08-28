@@ -36,6 +36,12 @@ data class SpaceKaiFeature(
      * ou une version exacte `"1.7.0"`.
      */
     val upstreamCompatibility: String = "*",
+    /**
+     * Contrat d'API requis, satisfait par l'Adapter (docs/FEATURE_MANIFEST.md § 3) :
+     * même si la version upstream est dans la plage, la fonctionnalité n'est
+     * compatible que si l'Adapter fournit ce contrat. `null` = pas de contrat.
+     */
+    val contract: String? = null,
 )
 
 /** Manifest versionné des fonctionnalités SpaceKai (sérialisable en JSON). */
@@ -80,6 +86,41 @@ data class SpaceKaiFeaturesManifest(
     /** Fonctionnalités compatibles avec la version upstream donnée (les autres sont à désactiver). */
     fun compatibleFeatures(upstreamVersion: String?): List<SpaceKaiFeature> =
         features.filter { upstreamMatches(it.upstreamCompatibility, upstreamVersion) }
+
+    /**
+     * Compatibilité complète : la version upstream doit être dans la plage ET,
+     * si la fonctionnalité déclare un contrat, l'Adapter doit le satisfaire.
+     */
+    fun isFeatureCompatible(
+        featureId: String,
+        upstreamVersion: String?,
+        adapter: UpstreamAdapter?,
+    ): Boolean {
+        val feature = featureById(featureId) ?: return false
+        if (!upstreamMatches(feature.upstreamCompatibility, upstreamVersion)) return false
+        val contract = feature.contract ?: return true
+        // Conservateur : contrat déclaré sans Adapter → non compatible (on ne peut pas confirmer).
+        return adapter != null && adapter.satisfiesContract(contract)
+    }
+}
+
+/**
+ * Ids stables des contrats SpaceKai (docs/FEATURE_MANIFEST.md § 3) : l'API que
+ * l'[UpstreamAdapter] doit fournir pour qu'une fonctionnalité soit compatible,
+ * indépendamment des numéros de version SimpMusic. Le manifest déclare ces ids
+ * (`SpaceKaiFeature.contract`), l'Adapter déclare ceux qu'il fournit.
+ */
+object SpaceKaiContracts {
+    const val NAVIGATION = "navigation-api"
+    const val THEME = "theme-api"
+    const val ORIENTATION = "orientation-api"
+    const val PLAYER = "player-api"
+    const val HAPTICS = "haptics-api"
+    const val DYNAMIC_COLOR = "dynamic-color-api"
+
+    /** Tous les contrats fournis par l'Adapter SimpMusic v1 (étapes 1-6 migrées). */
+    val SIMPMUSIC_ADAPTER_V1: Set<String> =
+        setOf(NAVIGATION, THEME, ORIENTATION, PLAYER, HAPTICS, DYNAMIC_COLOR)
 }
 
 /** Vrai si un pattern de compatibilité est syntaxiquement valide. */
@@ -121,6 +162,7 @@ val builtInSpaceKaiFeatures: SpaceKaiFeaturesManifest = SpaceKaiFeaturesManifest
             description = "Onglets extensibles (étape 1 migration)",
             enabledByDefault = true,
             upstreamCompatibility = "1.7.x",
+            contract = SpaceKaiContracts.NAVIGATION,
         ),
         SpaceKaiFeature(
             id = "themes",
@@ -128,6 +170,7 @@ val builtInSpaceKaiFeatures: SpaceKaiFeaturesManifest = SpaceKaiFeaturesManifest
             description = "Mode, source de couleur, overlay base+couche (étape 2)",
             enabledByDefault = true,
             upstreamCompatibility = "*",
+            contract = SpaceKaiContracts.THEME,
         ),
         SpaceKaiFeature(
             id = "orientation",
@@ -135,6 +178,7 @@ val builtInSpaceKaiFeatures: SpaceKaiFeaturesManifest = SpaceKaiFeaturesManifest
             description = "Politique d'orientation du player (étape 3)",
             enabledByDefault = true,
             upstreamCompatibility = "1.7.x",
+            contract = SpaceKaiContracts.ORIENTATION,
         ),
         SpaceKaiFeature(
             id = "player",
@@ -142,6 +186,7 @@ val builtInSpaceKaiFeatures: SpaceKaiFeaturesManifest = SpaceKaiFeaturesManifest
             description = "Machine à états + file d'attente (étape 4)",
             enabledByDefault = true,
             upstreamCompatibility = "1.7.x",
+            contract = SpaceKaiContracts.PLAYER,
         ),
         SpaceKaiFeature(
             id = "haptics",
@@ -149,6 +194,7 @@ val builtInSpaceKaiFeatures: SpaceKaiFeaturesManifest = SpaceKaiFeaturesManifest
             description = "Retour haptique (étape 5)",
             enabledByDefault = false,
             upstreamCompatibility = "*",
+            contract = SpaceKaiContracts.HAPTICS,
         ),
         SpaceKaiFeature(
             id = "dynamic_color",
@@ -156,6 +202,7 @@ val builtInSpaceKaiFeatures: SpaceKaiFeaturesManifest = SpaceKaiFeaturesManifest
             description = "Palette Material You + règle OLED (étape 6)",
             enabledByDefault = true,
             upstreamCompatibility = "*",
+            contract = SpaceKaiContracts.DYNAMIC_COLOR,
         ),
     ),
 )

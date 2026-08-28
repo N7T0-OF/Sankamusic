@@ -33,7 +33,9 @@ import com.sankamusic.core.api.toPreferenceValue
 import com.sankamusic.core.settings.SpaceKaiFeatureFlags
 import com.sankamusic.core.settings.booleanPreference
 import com.sankamusic.core.settings.enumPreference
+import com.sankamusic.core.update.CompatibilityStatus
 import com.sankamusic.core.update.SimpMusicAdapter
+import com.sankamusic.core.update.featureCompatibility
 import kotlinx.coroutines.launch
 
 /** Préférence persistée de l'orientation du player (étape 3). */
@@ -72,7 +74,8 @@ fun SettingsScreen(
     }
 
     val typed = api.typedSettings
-    val upstreamVersion = SimpMusicAdapter().info.version
+    val adapter = remember { SimpMusicAdapter() }
+    val upstreamVersion = adapter.info.version
     val manifest = builtInSpaceKaiFeatures
 
     // États locaux (réactivité Compose) initialisés depuis l'API.
@@ -83,7 +86,7 @@ fun SettingsScreen(
     val featureStates = remember {
         mutableStateMapOf<String, Boolean>().apply {
             manifest.features.forEach { feature ->
-                this[feature.id] = SpaceKaiFeatureFlags.isEnabled(typed, feature.id, upstreamVersion)
+                this[feature.id] = SpaceKaiFeatureFlags.isEnabled(typed, feature.id, upstreamVersion, adapter)
             }
         }
     }
@@ -99,23 +102,30 @@ fun SettingsScreen(
             Text("Fonctionnalités SpaceKai", style = MaterialTheme.typography.titleMedium)
         }
         manifest.features.forEach { feature ->
-            val compatible = manifest.isFeatureCompatible(feature.id, upstreamVersion)
+            val compat = featureCompatibility(manifest, feature, upstreamVersion, adapter)
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(feature.name, style = MaterialTheme.typography.bodyLarge)
                         Text(
-                            text = if (compatible) {
-                                "Compatible SimpMusic $upstreamVersion"
-                            } else {
-                                "Incompatible avec SimpMusic $upstreamVersion — désactivée"
+                            text = when (compat.status) {
+                                CompatibilityStatus.COMPATIBLE ->
+                                    "Compatible SimpMusic $upstreamVersion"
+                                CompatibilityStatus.VERSION_OUT_OF_RANGE ->
+                                    "Incompatible : SimpMusic $upstreamVersion hors de ${feature.upstreamCompatibility}"
+                                CompatibilityStatus.CONTRACT_NOT_SATISFIED ->
+                                    "Incompatible : contrat '${feature.contract}' non fourni par l'Adapter"
+                                CompatibilityStatus.UNKNOWN_UPSTREAM ->
+                                    "Version upstream inconnue — désactivée"
+                                CompatibilityStatus.FEATURE_UNKNOWN ->
+                                    "Fonctionnalité inconnue du manifest"
                             },
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
                     Switch(
-                        checked = compatible && (featureStates[feature.id] ?: false),
-                        enabled = compatible,
+                        checked = compat.compatible && (featureStates[feature.id] ?: false),
+                        enabled = compat.compatible,
                         onCheckedChange = { on ->
                             featureStates[feature.id] = on
                             SpaceKaiFeatureFlags.setEnabled(typed, feature.id, on, manifest)

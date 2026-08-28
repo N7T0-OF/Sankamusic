@@ -1,5 +1,7 @@
 package com.sankamusic.core.update
 
+import com.sankamusic.core.api.SpaceKaiContracts
+import com.sankamusic.core.api.builtInSpaceKaiFeatures
 import com.sankamusic.core.api.model.UnifiedTrack
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -42,6 +44,36 @@ class SimpMusicAdapterTest {
         assertFalse(adapter.isCompatibleWith("1.7.0-rc1"))
         assertFalse(adapter.isCompatibleWith("TBD"))
         assertFalse(adapter.isCompatibleWith(""))
+    }
+
+    @Test
+    fun `satisfies all migrated SpaceKai contracts`() {
+        // L'Adapter v1 fournit les 6 contrats des fonctionnalités migrées (étapes 1-6).
+        SpaceKaiContracts.SIMPMUSIC_ADAPTER_V1.forEach { contract ->
+            assertTrue("contrat '$contract' devrait être satisfait", adapter.satisfiesContract(contract))
+        }
+    }
+
+    @Test
+    fun `does not satisfy unknown contracts`() {
+        assertFalse(adapter.satisfiesContract("unknown-contract"))
+        assertFalse(adapter.satisfiesContract(""))
+    }
+
+    @Test
+    fun `built-in manifest contracts are all covered by adapter v1`() {
+        // Invariant anti-dérive : tout contrat déclaré dans le manifest intégré
+        // doit être fourni par l'Adapter, sinon la fonctionnalité serait
+        // silencieusement désactivée au runtime.
+        builtInSpaceKaiFeatures.features.forEach { feature ->
+            val contract = feature.contract
+            if (contract != null) {
+                assertTrue(
+                    "contrat '$contract' de '${feature.id}' non satisfait par l'Adapter v1",
+                    adapter.satisfiesContract(contract),
+                )
+            }
+        }
     }
 
     @Test

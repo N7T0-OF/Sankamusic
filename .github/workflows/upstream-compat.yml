@@ -1,0 +1,62 @@
+# Upstream compatibility — Surveillance de la base SimpMusic
+#
+# Exécute scripts/check-upstream.sh contre la dernière release de
+# maxrave-dev/SimpMusic (hebdomadaire + manuel) :
+#   - compatible  → rapport téléchargeable (artefact upstream-compat)
+#   - incompatible→ rapport + issue GitHub automatique (jamais de release
+#                   Sankamusic basée sur une version upstream non vérifiée)
+#
+# Ne compile pas : la vérification de CONTRAT par fonctionnalité est faite par
+# le compilateur (adapter → tests) dans ci.yml. Ici on détecte tôt les
+# changements de version qui sortent une fonctionnalité de sa plage déclarée.
+
+name: Upstream compatibility
+
+on:
+  schedule:
+    # Tous les lundis à 06:00 UTC
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check latest SimpMusic release compatibility
+        id: check
+        run: bash scripts/check-upstream.sh build/upstream
+
+      - name: Upload compatibility report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: upstream-compat
+          path: build/upstream/upstream-compat.txt
+
+      - name: Open issue on incompatibility (once)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Ne pas dupliquer l'issue si une est déjà ouverte avec le même titre.
+          if gh issue list --state open --search "Upstream SimpMusic : fonctionnalité hors plage" --json number --jq 'length' | grep -q '^[1-9]'; then
+            echo "Issue déjà ouverte — rien à créer."
+          else
+            gh issue create \
+              --title "Upstream SimpMusic : fonctionnalité hors plage" \
+              --body "La dernière release de **maxrave-dev/SimpMusic** sort au moins une fonctionnalité SpaceKai de sa plage de compatibilité déclarée.
+
+Voir le rapport complet dans l'artefact **upstream-compat** de ce run.
+
+### À faire
+1. Télécharger le rapport (run → artefacts).
+2. Mettre à jour l'**adapter** (core/.../update/SimpMusicAdapter.kt) et/ou la plage dans le manifest (core/.../api/FeatureManifest.kt).
+3. Revalider : tests core + CI vert.
+4. Réexécuter ce workflow (workflow_dispatch) pour confirmer le passage au vert."
+          fi

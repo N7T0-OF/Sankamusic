@@ -63,6 +63,46 @@ Règles (conservatrices, comme `UPSTREAM_SYSTEM.md`) :
 > (`UPSTREAM_SYSTEM.md`). Si l'adapter ne compile plus contre une nouvelle
 > version de SimpMusic, le build échoue FORT — jamais en silence.
 
+### Contrats d'API (Compatibility Contracts)
+
+Au-delà de la version, chaque fonctionnalité peut déclarer un **contrat**
+(`SpaceKaiFeature.contract`, ex. `"player-api"`) : l'API SpaceKai stable dont
+elle dépend. La compatibilité exige alors AUSSI que l'adapter fournisse ce
+contrat (`UpstreamAdapter.satisfiesContract`) — indépendamment des numéros de
+version SimpMusic. C'est le « SpaceKai Bridge » des propositions : les
+fonctionnalités ne connaissent que le contrat, l'adapter absorbe les
+changements d'architecture upstream.
+
+```kotlin
+// FeatureManifest.kt
+val contract: String? = null   // null = pas de contrat (plage suffit)
+
+// UpstreamAdapter.kt
+fun satisfiesContract(contractId: String): Boolean = false
+```
+
+Ids stables définis dans `SpaceKaiContracts` (navigation-api, theme-api,
+orientation-api, player-api, haptics-api, dynamic-color-api) ; l'Adapter v1
+les fournit tous. **Invariant testé** : tout contrat du manifest intégré doit
+être satisfait par l'Adapter (`SimpMusicAdapterTest`).
+
+### Rapport de compatibilité
+
+`core/update/CompatibilityReport.kt` produit le rapport par fonctionnalité
+(`CompatibilityReporter.report(manifest, version, adapter)`), avec un statut
+précis pour chaque feature :
+
+| Statut | Sens |
+|--------|------|
+| `COMPATIBLE` | version dans la plage ET contrat satisfait |
+| `VERSION_OUT_OF_RANGE` | version hors plage déclarée |
+| `CONTRACT_NOT_SATISFIED` | version dans la plage, contrat non fourni |
+| `UNKNOWN_UPSTREAM` | version inconnue → jamais de fausse compatibilité |
+| `FEATURE_UNKNOWN` | id inconnu du manifest |
+
+Résumé lisible (`6/6 features compatible`) ; c'est la source unique utilisée
+par `SpaceKaiFeatureFlags` et l'écran Paramètres.
+
 ## 4. Manifest intégré
 
 `builtInSpaceKaiFeatures` (Core) — miroir de `docs/MIGRATION.md` :
@@ -78,7 +118,9 @@ Règles (conservatrices, comme `UPSTREAM_SYSTEM.md`) :
 
 ## 5. À venir
 
-- [ ] Écran « Fonctionnalités » dans Paramètres (activation/désactivation individuelles)
+- [x] Écran « Fonctionnalités » dans Paramètres (activation/désactivation individuelles)
 - [ ] Chargement du manifest depuis une ressource JSON (au lieu de la constante)
-- [ ] Workflow CI « compatibilité » : vérifier périodiquement la dernière release
-      SimpMusic et rapporter les fonctionnalités hors plage (issues automatiques)
+- [x] Workflow CI « compatibilité » (`upstream-compat.yml`) : vérifie
+      périodiquement la dernière release SimpMusic (`scripts/check-upstream.sh`),
+      publie le rapport (artefact `upstream-compat`) et ouvre une issue
+      automatique si une fonctionnalité sort de sa plage

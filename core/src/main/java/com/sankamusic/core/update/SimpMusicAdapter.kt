@@ -3,6 +3,7 @@ package com.sankamusic.core.update
 import com.sankamusic.core.api.LibraryAdapter
 import com.sankamusic.core.api.MusicPlayerAdapter
 import com.sankamusic.core.api.PlaylistAdapter
+import com.sankamusic.core.api.SpaceKaiContracts
 import com.sankamusic.core.api.UpstreamAdapter
 import com.sankamusic.core.api.UpstreamInfo
 import com.sankamusic.core.api.model.UnifiedPlaylist
@@ -44,6 +45,16 @@ class SimpMusicAdapter : UpstreamAdapter {
         // Stable uniquement (jamais de pré-release) et couvert par la plage 1.7.x.
         return version.prerelease == null && version.major == 1 && version.minor == 7
     }
+
+    /**
+     * Contrats SpaceKai fournis par cet Adapter (docs/FEATURE_MANIFEST.md § 3) :
+     * les 6 fonctionnalités migrées (étapes 1-6). Si une fonctionnalité du
+     * manifest déclare un contrat absent d'ici, elle est désactivée — le
+     * compilateur et les contract tests restent le garde-fou (jamais de fausse
+     * compatibilité silencieuse).
+     */
+    override fun satisfiesContract(contractId: String): Boolean =
+        contractId in SpaceKaiContracts.SIMPMUSIC_ADAPTER_V1
 
     /** Sous-adaptateur non relié : échec explicite, jamais de comportement simulé. */
     private class NotLinked(private val what: String) :

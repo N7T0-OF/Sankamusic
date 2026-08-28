@@ -51,6 +51,27 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Contrats d'API + rapport de compatibilité** (Compatibility Contracts des
+  propositions Bridge/ReVanced) : `SpaceKaiFeature.contract` + ids stables
+  `SpaceKaiContracts` (navigation-api…dynamic-color-api),
+  `UpstreamAdapter.satisfiesContract` (Adapter v1 : 6/6 contrats),
+  `isFeatureCompatible(id, version, adapter)` (nullable, conservateur),
+  `CompatibilityReport`/`CompatibilityReporter` (`core/update/CompatibilityReport.kt`)
+  avec statuts COMPATIBLE / VERSION_OUT_OF_RANGE / CONTRACT_NOT_SATISFIED /
+  UNKNOWN_UPSTREAM / FEATURE_UNKNOWN et résumé `6/6 features compatible` ;
+  `SpaceKaiFeatureFlags.isEnabled(…, adapter)` ; écran Paramètres : statut
+  exact par fonctionnalité. Invariant testé : tout contrat du manifest intégré
+  est satisfait par l'Adapter.
+- **CI upstream** : `scripts/check-upstream.sh` (miroir bash des plages du
+  manifest) + `.github/workflows/upstream-compat.yml` (hebdo + manuel) —
+  vérifie la dernière release SimpMusic, publie le rapport en artefact
+  `upstream-compat`, ouvre une issue automatique (une seule à la fois) si une
+  fonctionnalité sort de sa plage.
+  **Premier constat réel (2026-08-28) : SimpMusic v2.0.0 est sortie** quelques
+  heures après le commit — navigation, orientation et player (plage `1.7.x`)
+  sortent de plage et sont désactivées ; thèmes, haptique, Dynamic Color
+  (`*`) restent compatibles. Comportement voulu : l'adapter devra être
+  vérifié contre l'architecture 2.0.0 avant d'étendre sa plage.
 - **Rendu des thèmes dans l'UI Compose** : `SankamusicTheme`
   (`app/.../SankamusicTheme.kt`) mappe l'état réactif du `ThemeEngine` (nouveau
   `ThemeState` + `StateFlow` — coroutines en `implementation` dans `:core`) vers
@@ -135,9 +156,12 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   4 secrets release.yml, cohérence vérifiée (re-décodage + keytool -list) ; jamais commité.
 
 ### Notes de vérification ([Unreleased])
-- 129 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
+- 141 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
   `UiExtensionRegistryTest` (navigation), `UpdateEngineTest` (13 — upstream via
-  adapter), `SimpMusicAdapterTest` (5),  `ThemeEngineTest` (11 — base+couche, mode, source), `ThemeEngineStateTest` (3 — StateFlow réactif), `ParseThemeColorHexTest` (5), `SpaceKaiThemeTokensOverlayTest` (5),
+  adapter), `SimpMusicAdapterTest` (8 — info, plage, pré-releases, **contrats**,
+  invariant manifest↔adapter), `CompatibilityReportTest` (9 — statuts, contrat
+  manquant, plage, conservatisme, manifest intégré),
+  `ThemeEngineTest` (11 — base+couche, mode, source), `ThemeEngineStateTest` (3 — StateFlow réactif), `ParseThemeColorHexTest` (5), `SpaceKaiThemeTokensOverlayTest` (5),
   `PlayerOrientationTest` (9 — décision, parse, round-trip, parité flag),
   `PlayerControllerTest` (19 — transitions, file, bornes, erreurs propres),
   `HapticsTest` (9 — parse, défaut, round-trip, parité, gate),
