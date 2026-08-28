@@ -29,6 +29,7 @@ Thumbs.db
 *.p12
 keystore*/
 signing/
+.tmp-signing/          # sortie de scripts/make-dev-keystore.sh (keystore + base64)
 
 # Le jar du wrapper Gradle doit rester versionné (il n'est pas un secret)
 !gradle/wrapper/gradle-wrapper.jar
