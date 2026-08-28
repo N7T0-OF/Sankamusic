@@ -1,20 +1,20 @@
-# Upstream compatibility — Surveillance de la base SimpMusic
+# Upstream compatibility - surveillance de la base SimpMusic
 #
-# Exécute scripts/check-upstream.sh contre la dernière release de
+# Execute scripts/check-upstream.sh contre la derniere release de
 # maxrave-dev/SimpMusic (hebdomadaire + manuel) :
-#   - compatible  → rapport téléchargeable (artefact upstream-compat)
-#   - incompatible→ rapport + issue GitHub automatique (jamais de release
-#                   Sankamusic basée sur une version upstream non vérifiée)
+#   - compatible   -> rapport telechargeable (artefact upstream-compat)
+#   - incompatible -> rapport + issue GitHub automatique (jamais de release
+#                     Sankamusic basee sur une version upstream non verifiee)
 #
-# Ne compile pas : la vérification de CONTRAT par fonctionnalité est faite par
-# le compilateur (adapter → tests) dans ci.yml. Ici on détecte tôt les
-# changements de version qui sortent une fonctionnalité de sa plage déclarée.
+# Ne compile pas : la verification de CONTRAT par fonctionnalite est faite par
+# le compilateur (adapter -> tests) dans ci.yml. Ici on detecte tot les
+# changements de version qui sortent une fonctionnalite de sa plage declaree.
 
 name: Upstream compatibility
 
 on:
   schedule:
-    # Tous les lundis à 06:00 UTC
+    # Tous les lundis a 06:00 UTC
     - cron: '0 6 * * 1'
   workflow_dispatch:
 
@@ -44,19 +44,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Ne pas dupliquer l'issue si une est déjà ouverte avec le même titre.
-          if gh issue list --state open --search "Upstream SimpMusic : fonctionnalité hors plage" --json number --jq 'length' | grep -q '^[1-9]'; then
-            echo "Issue déjà ouverte — rien à créer."
+          # Ne pas dupliquer l'issue si une est deja ouverte avec le meme titre.
+          if gh issue list --state open --search "Upstream SimpMusic : fonctionnalite hors plage" --json number --jq 'length' | grep -q '^[1-9]'; then
+            echo "Issue deja ouverte - rien a creer."
           else
             gh issue create \
-              --title "Upstream SimpMusic : fonctionnalité hors plage" \
-              --body "La dernière release de **maxrave-dev/SimpMusic** sort au moins une fonctionnalité SpaceKai de sa plage de compatibilité déclarée.
+              --title "Upstream SimpMusic : fonctionnalite hors plage" \
+              --body "La derniere release de **maxrave-dev/SimpMusic** sort au moins une fonctionnalite SpaceKai de sa plage de compatibilite declaree.
 
 Voir le rapport complet dans l'artefact **upstream-compat** de ce run.
 
-### À faire
-1. Télécharger le rapport (run → artefacts).
-2. Mettre à jour l'**adapter** (core/.../update/SimpMusicAdapter.kt) et/ou la plage dans le manifest (core/.../api/FeatureManifest.kt).
+### A faire
+1. Telecharger le rapport (run -> artefacts).
+2. Mettre a jour l'**adapter** (core/.../update/SimpMusicAdapter.kt) et/ou la plage dans le manifest (core/.../api/FeatureManifest.kt).
 3. Revalider : tests core + CI vert.
-4. Réexécuter ce workflow (workflow_dispatch) pour confirmer le passage au vert."
+4. Reexecuter ce workflow (workflow_dispatch) pour confirmer le passage au vert."
           fi
