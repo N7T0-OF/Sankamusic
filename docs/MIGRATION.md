@@ -1,6 +1,6 @@
 # Migration — De SpaceKai-OLD vers Sankamusic
 
-- **Statut** : 🟢 Étapes 1 (navigation), 2 (thèmes) et 3 (orientation) faites — étapes suivantes à poursuivre
+- **Statut** : 🟢 Étapes 1-3 faites ; étape 4 (player) partielle — modèle Core fait, moteur audio/UI à venir
 - **Document lié** : `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`
 
 ## 1. Objectif
@@ -40,6 +40,7 @@ on **réimplémente** — jamais on force une intégration fragile.
 | Thèmes | 🎨 Theme API | ✅ étape 2 faite (mode, source, overlay) |
 | Dynamic Color | 🎨 Theme API | 🟡 partiel (source WALLPAPER déclarée, rendu UI à relier) |
 | Orientation paysage (player) | 🟢 Core | ✅ étape 3 faite (modèle + réglage ; rendu UI étape 4) |
+| Player | 🟢 Core | 🟡 étape 4 partielle (machine à états + file faite ; audio/UI à venir) |
 | Vibration | 🟢 Core |  |
 | Spotify (OAuth PKCE, playlists) | 🟣 Plugin |  |
 | Apple Music | 🟣 Plugin |  |
@@ -118,6 +119,28 @@ Porté depuis SpaceKai-OLD (`expect/ui/Orientation.kt`, flag `landscape_player`,
 Non porté (à faire) : l'application effective de l'orientation par l'UI du
 player (étape 4 — `requestedOrientation` Android, plein écran immersif,
 restauration à la sortie), et le toggle dans l'écran Paramètres (étape 7).
+
+### Étape 4 — Player (partielle : modèle Core fait)
+
+Porté depuis SpaceKai-OLD (SharedViewModel / NowPlayingScreen) : la **machine à
+états** du player, sans dépendance audio/Android.
+
+- **Modèle** : `PlayerStatus` (IDLE / PLAYING / PAUSED / ERROR) et
+  `PlayerSnapshot` (statut, file, index courant, piste courante, position,
+  durée, message d'erreur) dans `core/player/PlayerController.kt`.
+- **Contrôleur pur** : `PlayerController` — `play`, `playQueue` (avec index de
+  départ), `pause`, `resume`, `togglePlayPause`, `next`, `previous`,
+  `seekToIndex`, `seekTo`, `setDuration`, `enqueue`, `removeAt`, `clear`,
+  `reportError`. Toute commande invalide échoue PROPREMENT sans changer l'état
+  (`next` en fin de file, `previous` en tête, `seekTo` négatif, file vide).
+- **Câblage** : `DefaultSpaceKaiApi.playerController` (public) ; le squelette
+  `PlayerApi` (isPlaying / play / pause / resume) est branché sur le contrôleur.
+
+Non porté (à faire) : le **moteur audio réel** (ExoPlayer/media3 : décodage,
+streaming, service en arrière-plan, notification), les **écrans** (Now Playing,
+mini-player, plein écran, file visible), le swipe, la lecture paysage effective
+(étape 3), les actions player des plugins (déjà modélisées via
+`UiExtensionApi.registerPlayerAction`).
 
 ## 5. Gestion des données existantes
 

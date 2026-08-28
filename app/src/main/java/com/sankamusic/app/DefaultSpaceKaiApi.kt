@@ -18,6 +18,8 @@ import com.sankamusic.core.api.model.UnifiedPlaylist
 import com.sankamusic.core.api.model.UnifiedTrack
 import com.sankamusic.core.ThemeEngine
 import com.sankamusic.core.UiExtensionRegistry
+import com.sankamusic.core.player.PlayerController
+import com.sankamusic.core.player.PlayerStatus
 
 /**
  * Implémentation squelette de la [SpaceKaiApi] — permet de démarrer le
@@ -35,11 +37,28 @@ class DefaultSpaceKaiApi(
 
     override val uiExtensions: UiExtensionApi = uiRegistry
 
+    /**
+     * Contrôleur de lecture (étape 4 migration — docs/MIGRATION.md) : machine à
+     * états pure + file d'attente. Le moteur audio réel (ExoPlayer/media3) et
+     * l'UI du player le consommeront (étape 4 UI).
+     */
+    val playerController = PlayerController()
+
     override val player = object : PlayerApi {
-        override val isPlaying: Boolean get() = false
-        override suspend fun play(track: UnifiedTrack) = Unit
-        override suspend fun pause() = Unit
-        override suspend fun resume() = Unit
+        override val isPlaying: Boolean
+            get() = playerController.snapshot().status == PlayerStatus.PLAYING
+
+        override suspend fun play(track: UnifiedTrack) {
+            playerController.play(track)
+        }
+
+        override suspend fun pause() {
+            playerController.pause()
+        }
+
+        override suspend fun resume() {
+            playerController.resume()
+        }
     }
 
     override val library = object : LibraryApi {

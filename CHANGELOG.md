@@ -51,6 +51,14 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Player — machine à états (étape 4 migration SpaceKai, modèle Core)** :
+  `PlayerStatus` (IDLE/PLAYING/PAUSED/ERROR) + `PlayerSnapshot` et
+  `PlayerController` pur (play, playQueue, pause/resume/toggle, next/previous,
+  seekToIndex/seekTo, enqueue/removeAt/clear, reportError) dans
+  `core/player/PlayerController.kt` — aucune dépendance audio/Android, toute
+  commande invalide échoue proprement sans changer l'état.
+  `DefaultSpaceKaiApi.playerController` exposé ; `PlayerApi` squelettique
+  branché sur le contrôleur. Moteur audio (ExoPlayer) et écrans à venir.
 - **Orientation paysage du player (étape 3 migration SpaceKai)** : `Orientation`
   (PORTRAIT/LANDSCAPE/UNSPECIFIED) et `PlayerOrientationMode`
   (FOLLOW_SYSTEM/FORCE_LANDSCAPE) dans `core/api/PlayerOrientation.kt` ;
@@ -85,11 +93,12 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   4 secrets release.yml, cohérence vérifiée (re-décodage + keytool -list) ; jamais commité.
 
 ### Notes de vérification ([Unreleased])
-- 63 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
+- 80 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
   `UiExtensionRegistryTest` (navigation), `UpdateEngineTest` (13 — upstream via
   adapter), `SimpMusicAdapterTest` (5), `ThemeEngineTest` (11 — base+couche,
   mode, source), `ParseThemeColorHexTest` (5), `SpaceKaiThemeTokensOverlayTest` (5),
   `PlayerOrientationTest` (9 — décision, parse, round-trip, parité flag),
+  `PlayerControllerTest` (17 — transitions, file, bornes, erreurs propres),
   plugin `HelloSpaceKaiPluginTest` (4), thème `ExampleThemeTest` (5 — dont AMOLED).
   Compilation `:core` + `:plugins:hellospacekai` + `:themes:exampletheme` propres.
 - Module `:app` (Compose : bottom nav, écran Mises à jour, DefaultSpaceKaiApi) :
