@@ -51,16 +51,24 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
-- **Adapter v2 + vérification SimpMusic 2.0.0 (2026-08-28)** : sortie de
-  v2.0.0 détectée par le workflow upstream (issue auto), puis audit source
-  (snapshot local 2.0.0 + sous-module `maxrave-dev/core`) confirmant les 6
-  points d'intégration des contrats (BottomNavScreen + onglets conditionnels,
-  AppTheme avec liquidGlassEnabled, FullscreenPlayer landscape force/restore,
-  moteur media3 extrait dans le sous-module). `SimpMusicAdapter` passe en v2
-  (version 2.0.0, plage `2.0.x`) ; plages du manifest navigation/orientation/
-  player `1.7.x` → `2.0.x` ; miroir bash à jour → `check-upstream.sh` 6/6.
-  Tests adaptés (SimpMusicAdapterTest, CompatibilityReportTest, SettingsTest,
-  FeatureManifestTest). **141 tests OK.**
+- **SimpMusicAdapterV2 + invariant des contrats (2026-08-28)** : le premier
+  test de résistance de l'architecture. Sortie de v2.0.0 détectée par le
+  workflow upstream (issue #1, rouverte : l'incompatibilité est réelle tant
+  que V2 n'est pas validée) → audit source (snapshot local 2.0.0 +
+  sous-module `maxrave-dev/core`) confirmant les 6 points d'intégration des
+  contrats (BottomNavScreen + onglets conditionnels, AppTheme avec
+  liquidGlassEnabled, FullscreenPlayer landscape force/restore, moteur media3
+  extrait, dynamic color + OLED). **`SimpMusicAdapterV2` créé** (2.0.0, plage
+  `2.0.x`, adapterVersion 2) SANS toucher au Core (SpaceKaiApi, features,
+  flags, TypedSettings, plugins inchangés). **Invariant**
+  (`AdapterContractIntegrityTest`) : jamais de contrat déclaré sans opérations
+  réellement implémentées — chaque contrat est exercé sur les vraies
+  implémentations (registre, ThemeEngine, PlayerController…), plus les
+  vérifications « contrat connu » et « contrat du manifest déclaré par
+  l'adapter ». ⚠️ **Les plages du manifest restent `1.7.x`** : l'extension ne
+  se fera qu'après validation des contract tests + build Phase 2 contre la
+  source 2.0.0 (`check-upstream.sh` reste 3/6, issue ouverte).
+  **150 tests OK.**
 - **Contrats d'API + rapport de compatibilité** (Compatibility Contracts des
   propositions Bridge/ReVanced) : `SpaceKaiFeature.contract` + ids stables
   `SpaceKaiContracts` (navigation-api…dynamic-color-api),
@@ -80,11 +88,10 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   **Premier constat réel (2026-08-28) : SimpMusic v2.0.0 est sortie** quelques
   heures après le commit — navigation, orientation et player (plage `1.7.x`)
   sortent de plage et sont désactivées ; thèmes, haptique, Dynamic Color
-  (`*`) restent compatibles. **Résolu le même jour** : audit source v2.0.0
-  (UPSTREAM_SYSTEM.md § 8bis) — les 6 points d'intégration des contrats
-  existent toujours ; `SimpMusicAdapter` v2 (2.0.0, plage `2.0.x`), plages du
-  manifest passées à `2.0.x`, script mirror à jour → workflow 6/6, issue
-  close.
+  (`*`) restent compatibles. L'audit source confirme les points d'intégration
+  mais **les plages ne sont PAS étendues** : la validation (contract tests +
+  build Phase 2) décidera seule du passage à `2.x`. Issue #1 rouverte — le
+  workflow reste vigilant.
 - **Rendu des thèmes dans l'UI Compose** : `SankamusicTheme`
   (`app/.../SankamusicTheme.kt`) mappe l'état réactif du `ThemeEngine` (nouveau
   `ThemeState` + `StateFlow` — coroutines en `implementation` dans `:core`) vers
@@ -169,11 +176,14 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   4 secrets release.yml, cohérence vérifiée (re-décodage + keytool -list) ; jamais commité.
 
 ### Notes de vérification ([Unreleased])
-- 141 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
+- 150 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
   `UiExtensionRegistryTest` (navigation), `UpdateEngineTest` (13 — upstream via
   adapter), `SimpMusicAdapterTest` (8 — info, plage, pré-releases, **contrats**,
-  invariant manifest↔adapter), `CompatibilityReportTest` (9 — statuts, contrat
-  manquant, plage, conservatisme, manifest intégré),
+  invariant manifest↔adapter), `SimpMusicAdapterV2Test` (5 — info 2.0.0, plage,
+  contrats, sous-adaptateurs non reliés), `AdapterContractIntegrityTest` (3 —
+  **invariant : jamais de contrat déclaré sans opérations fonctionnelles**),
+  `CompatibilityReportTest` (10 — statuts, contrat manquant, plage, conservatisme,
+  manifest intégré, V2 n'étend pas les plages),
   `ThemeEngineTest` (11 — base+couche, mode, source), `ThemeEngineStateTest` (3 — StateFlow réactif), `ParseThemeColorHexTest` (5), `SpaceKaiThemeTokensOverlayTest` (5),
   `PlayerOrientationTest` (9 — décision, parse, round-trip, parité flag),
   `PlayerControllerTest` (19 — transitions, file, bornes, erreurs propres),

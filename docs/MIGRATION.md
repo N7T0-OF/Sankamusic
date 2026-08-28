@@ -255,11 +255,14 @@ matching de bytecode.
   plages déclarées, publie le rapport en artefact, et ouvre une issue
   automatique si une fonctionnalité sort de sa plage.
 - **Vérification réelle contre SimpMusic 2.0.0 (2026-08-28)** : la sortie de
-  v2.0.0 a déclenché l'alarme (issue auto) puis l'audit source a confirmé que
-  les 6 points d'intégration des contrats existent toujours dans
+  v2.0.0 a déclenché l'alarme (issue #1, rouverte) puis l'audit source a
+  confirmé que les 6 points d'intégration des contrats existent toujours dans
   l'architecture 2.0.0 (restructuration KMP, moteur déplacé dans le
   sous-module `maxrave-dev/core`) — `docs/UPSTREAM_SYSTEM.md` § 8bis.
-  `SimpMusicAdapter` v2 + plages `2.0.x` : le workflow repasse au vert 6/6.
+  **`SimpMusicAdapterV2` créé (2.0.0/2.0.x) sans toucher au Core.** Les
+  plages du manifest restent `1.7.x` : l'extension à `2.x` n'aura lieu
+  qu'après validation des contract tests + build Phase 2 (le workflow
+  upstream reste 3/6 tant que c'est le cas).
 
 ## 5. Gestion des données existantes
 

@@ -109,16 +109,18 @@ par `SpaceKaiFeatureFlags` et l'écran Paramètres.
 
 | id | Fonctionnalité | Compat upstream | Défaut |
 |----|----------------|-----------------|--------|
-| `navigation` | Navigation personnalisable (étape 1) | `2.0.x` | on |
+| `navigation` | Navigation personnalisable (étape 1) | `1.7.x` | on |
 | `themes` | Thèmes — mode, source, overlay (étape 2) | `*` | on |
-| `orientation` | Orientation paysage du player (étape 3) | `2.0.x` | on |
-| `player` | Player — machine à états + file (étape 4) | `2.0.x` | on |
+| `orientation` | Orientation paysage du player (étape 3) | `1.7.x` | on |
+| `player` | Player — machine à états + file (étape 4) | `1.7.x` | on |
 | `haptics` | Vibration (étape 5) | `*` | off |
 | `dynamic_color` | Dynamic Color + OLED (étape 6) | `*` | on |
 
-> Plages passées à `2.0.x` le 2026-08-28 après l'audit source SimpMusic
-> v2.0.0 (`docs/UPSTREAM_SYSTEM.md` § 8bis) : les points d'intégration des
-> contrats existent toujours dans l'architecture 2.0.0.
+> ⚠️ **Les plages restent `1.7.x` malgré l'audit 2.0.0** (2026-08-28) :
+> `SimpMusicAdapterV2` existe (2.0.0 audité, `docs/UPSTREAM_SYSTEM.md` § 8bis)
+> mais **l'extension des plages n'est faite qu'après validation** — contract
+> tests (`AdapterContractIntegrityTest`) + build Phase 2 contre la source
+> 2.0.0. L'existence d'un Adapter ne prouve pas la compatibilité.
 
 ## 5. À venir
 

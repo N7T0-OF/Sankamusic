@@ -77,7 +77,8 @@ UPSTREAM
 
 - Liste des dépendances réelles de SimpMusic (Gradle) : _(vide)_
 - Mapping Adapter ↔ classes SimpMusic : _(vide)_
-- Version upstream actuelle de référence : **v2.0.0** (source auditée le 2026-08-28 — § 8bis)
+- Version upstream actuelle de référence : **v1.7.0** (base intégrée, Adapter v1) ;
+  **v2.0.0 auditée** le 2026-08-28 (§ 8bis) — intégration après validation
 
 ## 8. Faits vérifiés sur l'API réelle (2026-08-27)
 
@@ -116,8 +117,12 @@ passée à **v2.0.0** (publiée le 2026-08-28T17:36Z). La source a été audité
 | haptique | ajout SpaceKai (la base n'en a pas — rien à casser) | ✅ |
 | dynamic color | `platformDynamicColorScheme` + `rememberDynamicColorScheme(seed, isDark, isAmoled)` + OLED | ✅ |
 
-- **Conséquence** : `SimpMusicAdapter` passe en **v2** (version 2.0.0, plage
-  `2.0.x`, adapterVersion 2) ; les plages du manifest des fonctionnalités
-  navigation / orientation / player passent de `1.7.x` à `2.0.x`.
+- **Conséquence** : **`SimpMusicAdapterV2`** créé (version 2.0.0, plage
+  `2.0.x`, adapterVersion 2) — premier test de résistance de l'architecture,
+  sans toucher au Core. ⚠️ **Les plages du manifest restent `1.7.x`**
+  (navigation / orientation / player) : l'existence d'un Adapter ne prouve
+  pas la compatibilité — l'extension à `2.x` ne se fera qu'après validation
+  des contract tests (`AdapterContractIntegrityTest`) et du build Phase 2
+  contre la source 2.0.0.
 - ⚠️ Le sous-module `core` est un repo séparé (`maxrave-dev/core`, branche
   `multiplatform`) : à intégrer avec le clone (submodule) en Phase 2.

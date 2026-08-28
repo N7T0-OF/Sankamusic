@@ -118,9 +118,26 @@ object SpaceKaiContracts {
     const val HAPTICS = "haptics-api"
     const val DYNAMIC_COLOR = "dynamic-color-api"
 
-    /** Tous les contrats fournis par l'Adapter SimpMusic v1 (étapes 1-6 migrées). */
+    /** Tous les contrats fournis par les Adapters SimpMusic v1/v2 (étapes 1-6 migrées). */
     val SIMPMUSIC_ADAPTER_V1: Set<String> =
         setOf(NAVIGATION, THEME, ORIENTATION, PLAYER, HAPTICS, DYNAMIC_COLOR)
+
+    /**
+     * Opérations de l'API SpaceKai requises par chaque contrat — utilisé par
+     * [com.sankamusic.core.update.AdapterContractIntegrityTest] (docs/
+     * FEATURE_MANIFEST.md § 3) : **un Adapter ne doit jamais déclarer un
+     * contrat sans implémenter réellement ses opérations.** Liste vide =
+     * contrat inconnu (une déclaration dessus est une erreur).
+     */
+    fun requiredOperations(contractId: String): List<String> = when (contractId) {
+        NAVIGATION -> listOf("registerNavigationTab", "navigationTabs", "removeNavigationTab")
+        THEME -> listOf("setMode", "setColorSource", "activate", "lightBaseTokens", "darkBaseTokens")
+        ORIENTATION -> listOf("resolvePlayerOrientation", "parsePlayerOrientationMode", "effectivePlayerOrientationMode")
+        PLAYER -> listOf("play", "playQueue", "pause", "resume", "togglePlayPause", "next", "seekTo", "enqueue", "snapshot")
+        HAPTICS -> listOf("shouldFireHaptic", "effectiveHapticsEnabled", "parseHapticsEnabled")
+        DYNAMIC_COLOR -> listOf("resolveColorSchemeStrategy", "effectiveSeedColor", "withOledPinning")
+        else -> emptyList()
+    }
 }
 
 /** Vrai si un pattern de compatibilité est syntaxiquement valide. */
@@ -159,9 +176,9 @@ val builtInSpaceKaiFeatures: SpaceKaiFeaturesManifest = SpaceKaiFeaturesManifest
         SpaceKaiFeature(
             id = "navigation",
             name = "Navigation personnalisable",
-            description = "Onglets extensibles (étape 1 migration) — vérifié sur 2.0.0 (BottomNavScreen + onglets conditionnels)",
+            description = "Onglets extensibles (étape 1 migration)",
             enabledByDefault = true,
-            upstreamCompatibility = "2.0.x",
+            upstreamCompatibility = "1.7.x",
             contract = SpaceKaiContracts.NAVIGATION,
         ),
         SpaceKaiFeature(
@@ -175,17 +192,17 @@ val builtInSpaceKaiFeatures: SpaceKaiFeaturesManifest = SpaceKaiFeaturesManifest
         SpaceKaiFeature(
             id = "orientation",
             name = "Orientation paysage",
-            description = "Politique d'orientation du player (étape 3) — vérifié sur 2.0.0 (FullscreenPlayer force/restaure)",
+            description = "Politique d'orientation du player (étape 3)",
             enabledByDefault = true,
-            upstreamCompatibility = "2.0.x",
+            upstreamCompatibility = "1.7.x",
             contract = SpaceKaiContracts.ORIENTATION,
         ),
         SpaceKaiFeature(
             id = "player",
             name = "Player",
-            description = "Machine à états + file d'attente (étape 4) — moteur 2.0.0 dans maxrave-dev/core/media3",
+            description = "Machine à états + file d'attente (étape 4)",
             enabledByDefault = true,
-            upstreamCompatibility = "2.0.x",
+            upstreamCompatibility = "1.7.x",
             contract = SpaceKaiContracts.PLAYER,
         ),
         SpaceKaiFeature(
