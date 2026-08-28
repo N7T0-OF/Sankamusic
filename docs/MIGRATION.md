@@ -1,6 +1,6 @@
 # Migration — De SpaceKai-OLD vers Sankamusic
 
-- **Statut** : 🟢 Étapes 1-3 et 5 (haptique) faites ; étape 4 (player) partielle — modèle Core fait, moteur audio/UI à venir
+- **Statut** : 🟢 Étapes 1-3, 5 (haptique) et 6 (Dynamic Color) faites ; étape 4 (player) partielle — modèle Core fait, moteur audio/UI à venir
 - **Document lié** : `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`
 
 ## 1. Objectif
@@ -38,7 +38,7 @@ on **réimplémente** — jamais on force une intégration fragile.
 |----------------|-----------------|-----------------|
 | Navigation personnalisable | 🟢 Core | ✅ étape 1 faite |
 | Thèmes | 🎨 Theme API | ✅ étape 2 faite (mode, source, overlay) |
-| Dynamic Color | 🎨 Theme API | 🟡 partiel (source WALLPAPER déclarée, rendu UI à relier) |
+| Dynamic Color | 🎨 Theme API | ✅ étape 6 faite (décision de palette + OLED ; rendu UI à relier) |
 | Orientation paysage (player) | 🟢 Core | ✅ étape 3 faite (modèle + réglage ; rendu UI étape 4) |
 | Player | 🟢 Core | 🟡 étape 4 partielle (machine à états + file faite ; audio/UI à venir) |
 | Vibration | 🟢 Core | ✅ étape 5 faite (modèle + réglage ; déclenchement réel UI) |
@@ -159,6 +159,28 @@ Porté depuis SpaceKai-OLD (`spacekai/features/haptics/HapticsSpaceKai.kt` — f
 
 Non porté (à faire) : le déclenchement réel par l'UI (hook dans les handlers de
 clic des écrans — Now Playing, navigation) et le toggle Paramètres (étape 7).
+
+### Étape 6 — Dynamic Color (faite)
+
+Porté de SimpMusic/SpaceKai-OLD (`AppTheme` — `THEME_COLOR_WALLPAPER` →
+`platformDynamicColorScheme` Material You, `rememberDynamicColorScheme` par
+graine, `isWallpaperDynamicColorSupported()` = Android 12+, règle OLED) :
+
+- **Décision pure** : `resolveColorSchemeStrategy(source, dynamicColorSupported)`
+  → `ColorSchemeStrategy` (WALLPAPER_DYNAMIC / SEED_GENERATED) — repli sûr :
+  WALLPAPER sans support → palette par graine, jamais d'écran cassé.
+- **Graine effective** : `effectiveSeedColor(source, customSeed)` (CUSTOM →
+  seed custom ; sinon graine par défaut de l'app).
+- **Règle OLED** : `SpaceKaiThemeTokens.withOledPinning(isDark)` — en sombre,
+  fond/surfaces noirs purs (port de `dynamicDarkColorScheme(...).copy(...)`
+  et `isAmoled = true`).
+
+⚠️ Le flag SpaceKai-OLD `dynamic_color` n'était **pas câblé** (toggle sans
+effet) : l'intention est portée par `ThemeColorSource.WALLPAPER` (étape 2).
+
+Non porté (à faire) : le rendu effectif par l'UI — `dynamicDarkColorScheme` /
+`dynamicLightColorScheme` Android 12+, mapping tokens → MaterialTheme Compose
+et le toggle Paramètres (étape 7).
 
 ## 5. Gestion des données existantes
 

@@ -51,6 +51,14 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Dynamic Color (étape 6 migration SpaceKai)** : `ColorSchemeStrategy`
+  (WALLPAPER_DYNAMIC / SEED_GENERATED) + `resolveColorSchemeStrategy(source,
+  dynamicColorSupported)` (repli sûr : WALLPAPER sans support → palette par
+  graine), `effectiveSeedColor` (CUSTOM → seed custom) et règle OLED
+  `SpaceKaiThemeTokens.withOledPinning(isDark)` dans `core/api/DynamicColor.kt`
+  — port de `AppTheme` (Material You, `isWallpaperDynamicColorSupported`,
+  `isAmoled`). Le flag SpaceKai-OLD `dynamic_color` était non câblé : l'intention
+  est portée par `ThemeColorSource.WALLPAPER` (étape 2).
 - **Vibration / haptique (étape 5 migration SpaceKai)** : `HapticType`
   (LONG_PRESS/CONFIRM/TEXT_HANDLE_MOVE) et `HapticsSettings(enabled = false)`
   dans `core/api/Haptics.kt` ; réglage persistable `haptics.enabled`
@@ -99,13 +107,14 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   4 secrets release.yml, cohérence vérifiée (re-décodage + keytool -list) ; jamais commité.
 
 ### Notes de vérification ([Unreleased])
-- 91 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
+- 98 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
   `UiExtensionRegistryTest` (navigation), `UpdateEngineTest` (13 — upstream via
   adapter), `SimpMusicAdapterTest` (5), `ThemeEngineTest` (11 — base+couche,
   mode, source), `ParseThemeColorHexTest` (5), `SpaceKaiThemeTokensOverlayTest` (5),
   `PlayerOrientationTest` (9 — décision, parse, round-trip, parité flag),
   `PlayerControllerTest` (19 — transitions, file, bornes, erreurs propres),
   `HapticsTest` (9 — parse, défaut, round-trip, parité, gate),
+  `DynamicColorTest` (7 — stratégie, repli, seed, OLED),
   plugin `HelloSpaceKaiPluginTest` (4), thème `ExampleThemeTest` (5 — dont AMOLED).
   Compilation `:core` + `:plugins:hellospacekai` + `:themes:exampletheme` propres.
 - Module `:app` (Compose : bottom nav, écran Mises à jour, DefaultSpaceKaiApi) :
