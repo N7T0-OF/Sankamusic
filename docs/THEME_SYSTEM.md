@@ -1,7 +1,8 @@
 # Système de thèmes — Sankamusic
 
-- **Statut** : 🟡 Squelette — à compléter après analyse (inspiration conceptuelle BetterDiscord)
-- **Document lié** : `docs/ARCHITECTURE.md`, `docs/PLUGIN_SYSTEM.md`
+- **Statut** : 🟢 Étape 2 (migration SpaceKai) faite — mode, source de couleur,
+  overlay « base + couche » ; rendu MaterialTheme Compose à relier par l'UI (Phase 2/3)
+- **Document lié** : `docs/ARCHITECTURE.md`, `docs/PLUGIN_SYSTEM.md`, `docs/MIGRATION.md`
 
 ## 1. Objectif
 
@@ -28,6 +29,14 @@ Système central de personnalisation (conceptuel) :
 
 Un thème = un ensemble de valeurs de tokens + règles de remplacement.
 
+**Modèle « base + couche » (BetterDiscord)** : chaque thème s'applique sur une
+**base** (`ThemeDefinition.base` : `"dark"` ou `"light"`) et n'écrase que les
+champs qu'il modifie explicitement — `base.overlay(tokens)` dans
+[`ThemeEngine.activate`] (seuls les champs ≠ valeurs par défaut sont remplacés,
+le reste de la base est conservé). Exemple : le thème `AMOLED` du module
+`:themes:exampletheme` ne surcharge que fond/surfaces (noir pur) et garde les
+couleurs, formes et typographie de la base sombre.
+
 ## 3. Structure d'un thème (conceptuelle)
 
 ```json
@@ -50,9 +59,24 @@ navigation, player, widgets.
 
 ## 4. Dynamic Color Android + clair/sombre
 
-- Support du **Dynamic Color** Android (Material You) quand disponible.
-- Modes **clair / sombre** gérés par tokens, pas par duplication d'écrans.
-- Un même composant s'adapte aux deux modes.
+Porté depuis SpaceKai-OLD (`AppTheme` : themeMode / themeColorSource /
+customThemeColor) dans `core/api/ThemeSettings.kt` :
+
+- **Mode** : `ThemeMode` — LIGHT / DARK / SYSTEM, retenu par le `ThemeEngine`
+  (défaut DARK, comme SpaceKai-OLD). Modes gérés par tokens, pas par duplication
+  d'écrans.
+- **Source de couleur** : `ThemeColorSource` — DEFAULT (graine de l'app),
+  **WALLPAPER (Dynamic Color Android / Material You)** et CUSTOM (couleur de
+  graine choisie par l'utilisateur, parsée par `parseThemeColorHex`
+  « RRGGBB »/« AARRGGBB »). Une source CUSTOM exige un seed : sans lui, échec
+  propre (`ThemeEngine.setColorSource`), l'état ne change jamais en cas d'erreur.
+- **Bases intégrées** : palette claire (défauts Material 3) et palette sombre
+  (Material 3 dark, fond/surfaces AMOLED-friendly) dans le `ThemeEngine` ;
+  `activate` retourne `base.overlay(tokens)`.
+
+⚠️ Le **rendu effectif** (mapping tokens → MaterialTheme Compose, Dynamic Color
+via `platformDynamicColorScheme`-équivalent, mode clair/sombre appliqué) est
+assuré par l'UI du Core — pas encore relié (étape ultérieure).
 
 ## 5. Édition en direct (Live Editing)
 

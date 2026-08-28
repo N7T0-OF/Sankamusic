@@ -10,10 +10,13 @@ import com.sankamusic.core.api.SettingsApi
 import com.sankamusic.core.api.SpaceKaiApi
 import com.sankamusic.core.api.SpaceKaiThemeTokens
 import com.sankamusic.core.api.ThemeApi
+import com.sankamusic.core.api.ThemeColorSource
+import com.sankamusic.core.api.ThemeMode
 import com.sankamusic.core.api.UiExtensionApi
 import com.sankamusic.core.api.model.UnifiedAlbum
 import com.sankamusic.core.api.model.UnifiedPlaylist
 import com.sankamusic.core.api.model.UnifiedTrack
+import com.sankamusic.core.ThemeEngine
 import com.sankamusic.core.UiExtensionRegistry
 
 /**
@@ -28,6 +31,7 @@ class DefaultSpaceKaiApi(
 ) : SpaceKaiApi {
 
     private val uiRegistry = UiExtensionRegistry()
+    private val themeEngine = ThemeEngine()
 
     override val uiExtensions: UiExtensionApi = uiRegistry
 
@@ -53,7 +57,17 @@ class DefaultSpaceKaiApi(
     }
 
     override val theme = object : ThemeApi {
+        // Application des tokens → MaterialTheme Compose : assurée par l'UI du
+        // Core (Phase 2/3, docs/THEME_SYSTEM.md § 5/6). Le moteur retient l'état.
         override suspend fun apply(tokens: SpaceKaiThemeTokens) = Unit
+
+        override suspend fun setMode(mode: ThemeMode) {
+            themeEngine.setMode(mode)
+        }
+
+        override suspend fun setColorSource(source: ThemeColorSource, customSeedColor: Long?) {
+            themeEngine.setColorSource(source, customSeedColor)
+        }
     }
 
     override val settings = object : SettingsApi {

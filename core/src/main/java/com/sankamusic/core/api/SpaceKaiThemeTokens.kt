@@ -30,6 +30,33 @@ data class SpaceKaiThemeTokens(
     // Player
     val playerOverlayOpacity: Float = 0f,
 ) {
-    /** Applique un autre jeu de tokens par-dessus celui-ci (fusion). */
-    fun overlay(other: SpaceKaiThemeTokens): SpaceKaiThemeTokens = other
+    /**
+     * Applique un autre jeu de tokens par-dessus celui-ci (fusion).
+     *
+     * Modèle « base + couche » (BetterDiscord) : un thème n'écrase que les
+     * champs qu'il modifie explicitement (≠ valeurs par défaut) ; le reste de
+     * la base est conservé. `base.overlay(thème)` = base avec les
+     * personnalisations du thème.
+     */
+    fun overlay(other: SpaceKaiThemeTokens): SpaceKaiThemeTokens {
+        val d = SpaceKaiThemeTokens()
+        fun <T> pick(base: T, override: T, default: T): T = if (override != default) override else base
+        return copy(
+            primary = pick(primary, other.primary, d.primary),
+            onPrimary = pick(onPrimary, other.onPrimary, d.onPrimary),
+            secondary = pick(secondary, other.secondary, d.secondary),
+            background = pick(background, other.background, d.background),
+            surface = pick(surface, other.surface, d.surface),
+            onSurface = pick(onSurface, other.onSurface, d.onSurface),
+            error = pick(error, other.error, d.error),
+            surfaceElevation = pick(surfaceElevation, other.surfaceElevation, d.surfaceElevation),
+            surfaceOpacity = pick(surfaceOpacity, other.surfaceOpacity, d.surfaceOpacity),
+            radiusCard = pick(radiusCard, other.radiusCard, d.radiusCard),
+            radiusLarge = pick(radiusLarge, other.radiusLarge, d.radiusLarge),
+            navigationStyle = pick(navigationStyle, other.navigationStyle, d.navigationStyle),
+            titleSize = pick(titleSize, other.titleSize, d.titleSize),
+            bodySize = pick(bodySize, other.bodySize, d.bodySize),
+            playerOverlayOpacity = pick(playerOverlayOpacity, other.playerOverlayOpacity, d.playerOverlayOpacity),
+        )
+    }
 }

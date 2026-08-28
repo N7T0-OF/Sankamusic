@@ -1,6 +1,6 @@
 # Migration — De SpaceKai-OLD vers Sankamusic
 
-- **Statut** : 🟢 Étape 1 (navigation) faite — étapes suivantes à poursuivre
+- **Statut** : 🟢 Étapes 1 (navigation) et 2 (thèmes) faites — étapes suivantes à poursuivre
 - **Document lié** : `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`
 
 ## 1. Objectif
@@ -36,9 +36,9 @@ on **réimplémente** — jamais on force une intégration fragile.
 
 | Fonctionnalité | Décision prévue | Notes d'analyse |
 |----------------|-----------------|-----------------|
-| Navigation personnalisable | 🟢 Core |  |
-| Thèmes | 🎨 Theme API |  |
-| Dynamic Color | 🎨 Theme API |  |
+| Navigation personnalisable | 🟢 Core | ✅ étape 1 faite |
+| Thèmes | 🎨 Theme API | ✅ étape 2 faite (mode, source, overlay) |
+| Dynamic Color | 🎨 Theme API | 🟡 partiel (source WALLPAPER déclarée, rendu UI à relier) |
 | Orientation paysage (player) | 🟢 Core |  |
 | Vibration | 🟢 Core |  |
 | Spotify (OAuth PKCE, playlists) | 🟣 Plugin |  |
@@ -73,6 +73,29 @@ Portée depuis SpaceKai-OLD (`customNavigation`) :
 
 Non porté (à faire dans une étape ultérieure) : swipe horizontal sur la barre
 pour sauter de piste (dépend du player), variante minimaliste, icônes custom.
+
+### Étape 2 — Thèmes (faite)
+
+Porté depuis SpaceKai-OLD (`AppTheme` : themeMode / themeColorSource /
+customThemeColor, `parseThemeColorHex`) :
+
+- **Mode** : `ThemeMode` (LIGHT / DARK / SYSTEM) dans `core/api/ThemeSettings.kt`,
+  retenu par `ThemeEngine` (`setMode`/`mode`).
+- **Source de couleur** : `ThemeColorSource` (DEFAULT / WALLPAPER / CUSTOM) +
+  couleur de graine custom (seed), `parseThemeColorHex` ("RRGGBB"/"AARRGGBB"),
+  validation (CUSTOM exige un seed, échec propre). Le WALLPAPER = Dynamic Color
+  Android (rendu Material You à relier par l'UI).
+- **Modèle « base + couche »** : `SpaceKaiThemeTokens.overlay(other)` fusionne
+  réellement (seuls les champs ≠ défauts sont remplacés) ; `ThemeEngine.activate`
+  retourne `base.overlay(tokens)` avec bases clair/sombre intégrées selon
+  `ThemeDefinition.base`.
+- **Câblage** : `ThemeApi` étendu (`setMode`, `setColorSource`), `DefaultSpaceKaiApi`
+  branché sur le vrai `ThemeEngine`. Thème `AMOLED` minimal ajouté au module
+  `:themes:exampletheme` (démo overlay : fond/surfaces noirs sur base sombre).
+
+Non porté (à faire dans une étape ultérieure) : rendu MaterialTheme Compose des
+tokens (mapping UI du Core), Dynamic Color effectif (WALLPAPER), live editing
+(Theme Editor), modes de navigation glass/translucent.
 
 ## 5. Gestion des données existantes
 

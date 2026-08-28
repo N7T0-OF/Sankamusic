@@ -66,6 +66,15 @@ interface NavigationApi {
 interface ThemeApi {
     /** Applique des tokens de thème (permission THEME_MODIFY requise). */
     suspend fun apply(tokens: SpaceKaiThemeTokens)
+
+    /** Mode clair / sombre / système (porté de SpaceKai-OLD — docs/THEME_SYSTEM.md § 4). */
+    suspend fun setMode(mode: ThemeMode) = Unit
+
+    /**
+     * Source de couleur : [ThemeColorSource.DEFAULT] (graine), [ThemeColorSource.WALLPAPER]
+     * (Dynamic Color Android) ou [ThemeColorSource.CUSTOM] (seed custom, voir [parseThemeColorHex]).
+     */
+    suspend fun setColorSource(source: ThemeColorSource, customSeedColor: Long? = null) = Unit
 }
 
 interface SettingsApi {

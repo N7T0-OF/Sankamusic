@@ -15,6 +15,31 @@ import com.sankamusic.core.api.ThemeDefinition
  * ⚠️ Le mapping vers MaterialTheme Compose (couleurs Material 3, Dynamic Color,
  * live editing) sera fait par l'UI du Core en Phase 2/3.
  */
+/**
+ * Thème AMOLED minimal (démo du modèle « base + couche », docs/THEME_SYSTEM.md § 2).
+ *
+ * Ne surcharge que le fond et les surfaces (noir pur OLED) : le reste de la
+ * base sombre (couleurs, formes, typographie…) est conservé par
+ * `SpaceKaiThemeTokens.overlay` lors de l'activation.
+ */
+object AmoledTheme {
+
+    const val ID = "com.souanpt.spacekai.theme.amoled"
+
+    val definition = ThemeDefinition(
+        id = ID,
+        name = "AMOLED",
+        version = "1.0.0",
+        apiVersion = 1,
+        base = "dark",
+        tokens = SpaceKaiThemeTokens(
+            background = 0xFF000000,
+            surface = 0xFF000000,
+            onSurface = 0xFFFFFFFF,
+        ),
+    )
+}
+
 object ExampleTheme {
 
     const val ID = "com.souanpt.spacekai.theme.example"

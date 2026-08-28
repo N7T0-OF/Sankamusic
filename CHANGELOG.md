@@ -51,6 +51,14 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Thèmes (étape 2 migration SpaceKai)** : `ThemeMode` (LIGHT/DARK/SYSTEM) et
+  `ThemeColorSource` (DEFAULT/WALLPAPER/CUSTOM) + `parseThemeColorHex` portés de
+  SpaceKai-OLD (`AppTheme`). `SpaceKaiThemeTokens.overlay()` fusionne réellement
+  (« base + couche » : seuls les champs ≠ défauts sont remplacés) ; `ThemeEngine`
+  intègre bases clair/sombre, mode, source de couleur + seed custom (CUSTOM sans
+  seed → échec propre) et `activate` retourne `base.overlay(tokens)`. `ThemeApi`
+  étendu (`setMode`, `setColorSource`), `DefaultSpaceKaiApi` branché sur le vrai
+  `ThemeEngine`. Thème `AMOLED` minimal ajouté (`:themes:exampletheme`).
 - **Navigation (étape 1 migration SpaceKai)** : `NavigationTab` + `UiExtensionRegistry.navigationTabs()`
   (onglets extensibles, triés par priorité) ; barre de navigation Compose dans `MainActivity`
   (Accueil / Bibliothèque / Recherche / Paramètres + onglets plugins) ; `HelloSpaceKaiPlugin`
@@ -71,11 +79,14 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   4 secrets release.yml, cohérence vérifiée (re-décodage + keytool -list) ; jamais commité.
 
 ### Notes de vérification ([Unreleased])
-- 24 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
+- 54 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
   `UiExtensionRegistryTest` (navigation), `UpdateEngineTest` (13 — upstream via
-  adapter), `SimpMusicAdapterTest` (5). Compilation `:core` main+test propre.
-- Module `:app` (Compose : bottom nav, écran Mises à jour) : **non compilé**
-  localement — SDK Android requis (vérifié par le CI après push).
+  adapter), `SimpMusicAdapterTest` (5), `ThemeEngineTest` (11 — base+couche,
+  mode, source), `ParseThemeColorHexTest` (5), `SpaceKaiThemeTokensOverlayTest` (5),
+  plugin `HelloSpaceKaiPluginTest` (4), thème `ExampleThemeTest` (5 — dont AMOLED).
+  Compilation `:core` + `:plugins:hellospacekai` + `:themes:exampletheme` propres.
+- Module `:app` (Compose : bottom nav, écran Mises à jour, DefaultSpaceKaiApi) :
+  **non compilé** localement — SDK Android requis (vérifié par le CI après push).
 
 ### Corrigé
 - **CI rendu vert (verrou v0.1.0 levé)** — cause du 0s `Run tests` nommée : `gradlew` et

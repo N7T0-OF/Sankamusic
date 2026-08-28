@@ -26,6 +26,19 @@ class ExampleThemeTest {
     }
 
     @Test
+    fun `amoled theme activates and merges over the dark base`() {
+        val engine = ThemeEngine()
+        assertTrue(engine.register(AmoledTheme.definition).isSuccess)
+        val tokens = engine.activate(AmoledTheme.ID).getOrNull()!!
+        // Couche AMOLED : fond/surfaces noirs purs.
+        assertEquals(0xFF000000L, tokens.background)
+        assertEquals(0xFF000000L, tokens.surface)
+        // Base sombre conservée sur les champs non surchargés.
+        assertEquals(0xFFBB86FCL, tokens.primary)
+        assertEquals(12f, tokens.radiusCard)
+    }
+
+    @Test
     fun `colors are valid ARGB values`() {
         val t = ExampleTheme.definition.tokens
         val colors = listOf(t.primary, t.onPrimary, t.secondary, t.background, t.surface, t.onSurface, t.error)
