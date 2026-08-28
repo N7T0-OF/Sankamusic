@@ -51,6 +51,11 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Pont player pré-câblé (`core/bridge/MediaBridgeMappings.kt`)** : les
+  conversions pures `UnifiedTrack` ↔ `MediaItemDraft` (miroir exact des
+  classes réelles `GenericMediaItem`/`GenericMediaMetadata` de la base 2.0.0)
+  sont implémentées et testées SANS dépendance — le câblage final Phase 2 se
+  réduit à 5 lignes dans l'Adapter V2. `MediaBridgeMappingsTest` (5).
 - **Mapping Adapter ↔ classes SimpMusic 2.0.0 (2026-08-28)** : source
   complétée (`maxrave-dev/core` cloné, branche multiplatform) et audit des
   classes réelles pour les 3 sous-adaptateurs — `player` →
@@ -188,7 +193,7 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   4 secrets release.yml, cohérence vérifiée (re-décodage + keytool -list) ; jamais commité.
 
 ### Notes de vérification ([Unreleased])
-- 150 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
+- 155 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
   `UiExtensionRegistryTest` (navigation), `UpdateEngineTest` (13 — upstream via
   adapter), `SimpMusicAdapterTest` (8 — info, plage, pré-releases, **contrats**,
   invariant manifest↔adapter), `SimpMusicAdapterV2Test` (5 — info 2.0.0, plage,

@@ -111,6 +111,11 @@ Source : snapshot local `SimpMusic-dev` (2.0.0) + `maxrave-dev/core` cloné
   (ou API), conversion vers `UnifiedTrack`.
 - `SimpMusicAdapterV2.playlists` → `LocalPlaylistRepository.getAllLocalPlaylists()`
   conversion vers `UnifiedPlaylist`.
+- **Pré-câblé (2026-08-28)** : les conversions player pures sont déjà
+  implémentées et testées dans `core/bridge/MediaBridgeMappings.kt`
+  (`UnifiedTrack` ↔ `MediaItemDraft`, miroir de `GenericMediaItem`/
+  `GenericMediaMetadata`) — il ne restera que le câblage final (~5 lignes)
+  dans l'Adapter V2.
 - Les conversions sont pures et testables une fois la dépendance présente ;
   tant qu'elle ne l'est pas, les sous-adaptateurs échouent explicitement
   (`NotImplementedError` — jamais de comportement simulé).
