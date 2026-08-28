@@ -51,6 +51,12 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Orientation paysage du player (étape 3 migration SpaceKai)** : `Orientation`
+  (PORTRAIT/LANDSCAPE/UNSPECIFIED) et `PlayerOrientationMode`
+  (FOLLOW_SYSTEM/FORCE_LANDSCAPE) dans `core/api/PlayerOrientation.kt` ;
+  `resolvePlayerOrientation(mode, current)` (décision pure), préférence
+  persistable `player.orientation` (`"system"`/`"landscape"`, parse tolérant,
+  défaut sûr), parité avec le flag SpaceKai-OLD `landscape_player`.
 - **Thèmes (étape 2 migration SpaceKai)** : `ThemeMode` (LIGHT/DARK/SYSTEM) et
   `ThemeColorSource` (DEFAULT/WALLPAPER/CUSTOM) + `parseThemeColorHex` portés de
   SpaceKai-OLD (`AppTheme`). `SpaceKaiThemeTokens.overlay()` fusionne réellement
@@ -79,10 +85,11 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   4 secrets release.yml, cohérence vérifiée (re-décodage + keytool -list) ; jamais commité.
 
 ### Notes de vérification ([Unreleased])
-- 54 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
+- 63 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
   `UiExtensionRegistryTest` (navigation), `UpdateEngineTest` (13 — upstream via
   adapter), `SimpMusicAdapterTest` (5), `ThemeEngineTest` (11 — base+couche,
   mode, source), `ParseThemeColorHexTest` (5), `SpaceKaiThemeTokensOverlayTest` (5),
+  `PlayerOrientationTest` (9 — décision, parse, round-trip, parité flag),
   plugin `HelloSpaceKaiPluginTest` (4), thème `ExampleThemeTest` (5 — dont AMOLED).
   Compilation `:core` + `:plugins:hellospacekai` + `:themes:exampletheme` propres.
 - Module `:app` (Compose : bottom nav, écran Mises à jour, DefaultSpaceKaiApi) :

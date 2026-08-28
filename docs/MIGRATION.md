@@ -1,6 +1,6 @@
 # Migration — De SpaceKai-OLD vers Sankamusic
 
-- **Statut** : 🟢 Étapes 1 (navigation) et 2 (thèmes) faites — étapes suivantes à poursuivre
+- **Statut** : 🟢 Étapes 1 (navigation), 2 (thèmes) et 3 (orientation) faites — étapes suivantes à poursuivre
 - **Document lié** : `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`
 
 ## 1. Objectif
@@ -39,7 +39,7 @@ on **réimplémente** — jamais on force une intégration fragile.
 | Navigation personnalisable | 🟢 Core | ✅ étape 1 faite |
 | Thèmes | 🎨 Theme API | ✅ étape 2 faite (mode, source, overlay) |
 | Dynamic Color | 🎨 Theme API | 🟡 partiel (source WALLPAPER déclarée, rendu UI à relier) |
-| Orientation paysage (player) | 🟢 Core |  |
+| Orientation paysage (player) | 🟢 Core | ✅ étape 3 faite (modèle + réglage ; rendu UI étape 4) |
 | Vibration | 🟢 Core |  |
 | Spotify (OAuth PKCE, playlists) | 🟣 Plugin |  |
 | Apple Music | 🟣 Plugin |  |
@@ -96,6 +96,28 @@ customThemeColor, `parseThemeColorHex`) :
 Non porté (à faire dans une étape ultérieure) : rendu MaterialTheme Compose des
 tokens (mapping UI du Core), Dynamic Color effectif (WALLPAPER), live editing
 (Theme Editor), modes de navigation glass/translucent.
+
+### Étape 3 — Orientation paysage du player (faite)
+
+Porté depuis SpaceKai-OLD (`expect/ui/Orientation.kt`, flag `landscape_player`,
+`FullscreenPlayer.android.kt` — force `SCREEN_ORIENTATION_LANDSCAPE` en plein
+écran et restaure l'orientation d'origine à la sortie) :
+
+- **Modèle** : `Orientation` (PORTRAIT / LANDSCAPE / UNSPECIFIED) et
+  `PlayerOrientationMode` (FOLLOW_SYSTEM / FORCE_LANDSCAPE) dans
+  `core/api/PlayerOrientation.kt`.
+- **Décision pure** : `resolvePlayerOrientation(mode, current)` — en
+  FORCE_LANDSCAPE le player est toujours en paysage, sinon il suit l'orientation
+  courante (testée).
+- **Réglage persistable** : clé `player.orientation` (`SettingsKeys`),
+  valeurs `"system"` / `"landscape"` (`toPreferenceValue` /
+  `parsePlayerOrientationMode`, `effectivePlayerOrientationMode` → défaut sûr).
+- **Parité flag** : `playerOrientationModeFromFeatureFlag(landscapePlayer)` —
+  le booléen SpaceKai-OLD `landscape_player` mappe sur FORCE_LANDSCAPE.
+
+Non porté (à faire) : l'application effective de l'orientation par l'UI du
+player (étape 4 — `requestedOrientation` Android, plein écran immersif,
+restauration à la sortie), et le toggle dans l'écran Paramètres (étape 7).
 
 ## 5. Gestion des données existantes
 
