@@ -103,8 +103,12 @@ class SimpMusicAdapter : UpstreamAdapter {
  * build Phase 2 contre la source 2.0.0. Jusque-là, `navigation`/`orientation`/
  * `player` restent en `1.7.x` et le workflow upstream reste vigilant.
  *
- * Les sous-adaptateurs (player / library / playlists) ne sont pas encore
- * reliés (Phase 2) — échec explicite, jamais de comportement simulé.
+ * Le MAPPING des sous-adaptateurs vers les classes réelles 2.0.0 est
+ * documenté (docs/UPSTREAM_SYSTEM.md § 7, audit source) : `player` →
+ * `MediaPlayerInterface`/`MediaPlayerHandler` + `GenericMediaItem`,
+ * `library` → `SongEntity`/`CommonRepository`, `playlists` →
+ * `LocalPlaylistRepository`. Les sous-adaptateurs ne sont pas encore RELIÉS
+ * (Phase 2 — build contre la base) : échec explicite, jamais simulé.
  */
 class SimpMusicAdapterV2 : UpstreamAdapter {
 

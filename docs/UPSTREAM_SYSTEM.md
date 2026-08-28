@@ -73,10 +73,48 @@ UPSTREAM
 - [ ] Quelles parties sont impossibles à isoler (dépendances en dur) ?
 - [ ] Licences : que peut-on réutiliser, avec quels crédits obligatoires ?
 
-## 7. À compléter
+## 7. Mapping Adapter ↔ classes SimpMusic 2.0.0 (audit source 2026-08-28)
 
-- Liste des dépendances réelles de SimpMusic (Gradle) : _(vide)_
-- Mapping Adapter ↔ classes SimpMusic : _(vide)_
+Source : snapshot local `SimpMusic-dev` (2.0.0) + `maxrave-dev/core` cloné
+(branche `multiplatform`) — packages et signatures réels.
+
+### Player (sous-adaptateur `MusicPlayerAdapter`)
+
+| API SpaceKai | Classe réelle SimpMusic 2.0.0 | Détail |
+|--------------|-------------------------------|--------|
+| `play(track)` / `pause()` / `resume()` / `isPlaying` | `com.maxrave.domain.mediaservice.player.MediaPlayerInterface` | Contrat réel : `play()`, `pause()`, `stop()`, `seekTo(positionMs)`, `seekTo(index, pos)`, `seekBack/Forward/Next/Previous`, `prepare()`, `setMediaItem/addMediaItem/removeMediaItem/moveMediaItem/clearMediaItems/replaceMediaItem`, `getMediaItemAt`, `getCurrentMediaTimeLine`, `getUnshuffledIndex`, `isPlaying` |
+| — | `com.maxrave.media3.exoplayer.ExoPlayerAdapter` (Android) | Implémentation media3/ExoPlayer de l'interface (constructeur `(exoPlayer: ExoPlayer)` + `MediaPlayerListener`)
+| — | `com.simpmusic.media_jvm.mpv.MpvPlayerAdapter` (desktop) | Implémentation MPV côté desktop
+| `UnifiedTrack` → item de lecture | `com.maxrave.domain.data.player.GenericMediaItem` | `GenericMediaItem(mediaId, uri, metadata: GenericMediaMetadata, customCacheKey)` — mapping : `mediaId = track.id`, `metadata` = titre/artistes/pochette
+| État du player | `com.maxrave.domain.mediaservice.handler.MediaPlayerHandler` | Handler consommé par l'app (`BaseViewModel`) : `player`, `StateFlow`s (`simpleMediaState`, `nowPlaying`, `queueData`, `controlState`, `nowPlayingState`, `currentSongIndex`…), `onPlayerEvent`, `toggleLike`, `addMediaItemList`, `playMediaItemInMediaSource` |
+
+### Bibliothèque (`LibraryAdapter`)
+
+| API SpaceKai | Classe réelle SimpMusic 2.0.0 | Détail |
+|--------------|-------------------------------|--------|
+| `tracks()` → `UnifiedTrack` | `com.maxrave.domain.data.entities.SongEntity` | Modèle réel de la bibliothèque : `videoId`, `title`, `artistId`/`artistName`, `duration`/`durationSeconds`, `thumbnails`, `inLibrary`… (table Room)
+| — | `com.maxrave.domain.repository.CommonRepository` | Accès base locale (cookies, notifications, récents) ; la bibliothèque de morceaux s'appuie sur la base locale + l'API YouTube Music (`HomeRepository`, parsers)
+
+### Playlists (`PlaylistAdapter`)
+
+| API SpaceKai | Classe réelle SimpMusic 2.0.0 | Détail |
+|--------------|-------------------------------|--------|
+| `playlists()` → `UnifiedPlaylist` | `com.maxrave.domain.repository.LocalPlaylistRepository` | `getAllLocalPlaylists(): Flow<List<LocalPlaylistEntity>>`, `getLocalPlaylist(id)`, `updateLocalPlaylistTracks`…
+| — | `com.maxrave.domain.data.entities.PlaylistEntity` / `LocalPlaylistEntity` | Modèles réels (playlists YouTube + locales)
+
+### Implémentation prévue (Phase 2 — build contre la base)
+
+- `SimpMusicAdapterV2.player` → `MusicPlayerAdapter` implémenté sur
+  `MediaPlayerHandler.player` (conversion `UnifiedTrack` ↔ `GenericMediaItem`),
+  avec `MediaPlayerListener` pour alimenter position/durée du `PlayerController`.
+- `SimpMusicAdapterV2.library` → lecture des `SongEntity` de la base locale
+  (ou API), conversion vers `UnifiedTrack`.
+- `SimpMusicAdapterV2.playlists` → `LocalPlaylistRepository.getAllLocalPlaylists()`
+  conversion vers `UnifiedPlaylist`.
+- Les conversions sont pures et testables une fois la dépendance présente ;
+  tant qu'elle ne l'est pas, les sous-adaptateurs échouent explicitement
+  (`NotImplementedError` — jamais de comportement simulé).
+
 - Version upstream actuelle de référence : **v1.7.0** (base intégrée, Adapter v1) ;
   **v2.0.0 auditée** le 2026-08-28 (§ 8bis) — intégration après validation
 

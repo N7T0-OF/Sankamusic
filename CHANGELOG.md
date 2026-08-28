@@ -51,6 +51,18 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Mapping Adapter ↔ classes SimpMusic 2.0.0 (2026-08-28)** : source
+  complétée (`maxrave-dev/core` cloné, branche multiplatform) et audit des
+  classes réelles pour les 3 sous-adaptateurs — `player` →
+  `MediaPlayerInterface` (`play/pause/stop/seekTo/file`) implémentée par
+  `ExoPlayerAdapter` (media3) / `MpvPlayerAdapter` (desktop), `GenericMediaItem`
+  comme item unifié, `MediaPlayerHandler` comme état/événements ; `library` →
+  `SongEntity` + `CommonRepository` ; `playlists` → `LocalPlaylistRepository`.
+  Remplit la case « Mapping Adapter ↔ classes SimpMusic » de
+  `docs/UPSTREAM_SYSTEM.md` § 7 avec le plan d'implémentation Phase 2
+  (conversions pures `UnifiedTrack` ↔ `GenericMediaItem` une fois la
+  dépendance présente). Aucun changement Core : les sous-adaptateurs restent
+  à échec explicite tant que le build contre la base n'existe pas.
 - **SimpMusicAdapterV2 + invariant des contrats (2026-08-28)** : le premier
   test de résistance de l'architecture. Sortie de v2.0.0 détectée par le
   workflow upstream (issue #1, rouverte : l'incompatibilité est réelle tant
