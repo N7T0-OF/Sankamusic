@@ -51,6 +51,11 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Playlists YouTube ajoutées au mapping § 7 + pont** : `PlaylistEntity`
+  (playlist YouTube : `id: String`, `title`, `trackCount`, `thumbnails`,
+  `tracks`) complète le mapping ; `YoutubePlaylistDraft` → `UnifiedPlaylist`
+  ajouté à `core/bridge/MediaBridgeMappings.kt` (conversion teste, 2 nouveaux
+  tests). **162 tests OK.**
 - **Pont complet des 3 sous-adaptateurs (`core/bridge/MediaBridgeMappings.kt`)** :
   en plus du player, les conversions pures library (`SongDraft` ↔
   `UnifiedTrack`, miroir de `SongEntity`) et playlists
@@ -215,7 +220,7 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   4 secrets release.yml, cohérence vérifiée (re-décodage + keytool -list) ; jamais commité.
 
 ### Notes de vérification ([Unreleased])
-- 160 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
+- 162 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
   `UiExtensionRegistryTest` (navigation), `UpdateEngineTest` (13 — upstream via
   adapter), `SimpMusicAdapterTest` (8 — info, plage, pré-releases, **contrats**,
   invariant manifest↔adapter), `SimpMusicAdapterV2Test` (5 — info 2.0.0, plage,

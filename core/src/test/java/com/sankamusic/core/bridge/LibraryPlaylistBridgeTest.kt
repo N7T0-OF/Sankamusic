@@ -76,4 +76,26 @@ class LibraryPlaylistBridgeTest {
         val playlist = LocalPlaylistDraft(id = 1L, title = "Empty").toUnifiedPlaylist(provider = "simpmusic")
         assertEquals(emptyList<String>(), playlist.trackIds)
     }
+
+    @Test
+    fun `youtube playlist draft maps to a unified playlist`() {
+        val draft = YoutubePlaylistDraft(
+            id = "PLabc",
+            title = "My Mix",
+            trackCount = 12,
+            thumbnail = "https://e.com/mix.jpg",
+            tracks = listOf("a", "b"),
+        )
+        val playlist = draft.toUnifiedPlaylist(provider = "simpmusic")
+        assertEquals("PLabc", playlist.id)
+        assertEquals("My Mix", playlist.name)
+        assertEquals(listOf("a", "b"), playlist.trackIds)
+        assertEquals("simpmusic", playlist.provider)
+    }
+
+    @Test
+    fun `youtube playlist draft defaults track count and keeps empty tracks`() {
+        val playlist = YoutubePlaylistDraft(id = "PL", title = "T").toUnifiedPlaylist(provider = "simpmusic")
+        assertEquals(0, playlist.trackIds.size)
+    }
 }

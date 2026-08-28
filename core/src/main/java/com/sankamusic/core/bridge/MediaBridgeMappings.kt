@@ -124,3 +124,24 @@ fun LocalPlaylistDraft.toUnifiedPlaylist(provider: String): UnifiedPlaylist = Un
     trackIds = tracks ?: emptyList(),
     provider = provider,
 )
+
+/**
+ * Brouillon neutre d'une playlist YouTube — miroir des champs de
+ * `PlaylistEntity` utiles (`id: String`, `title`, `trackCount`, `thumbnails`,
+ * `tracks`).
+ */
+data class YoutubePlaylistDraft(
+    val id: String,
+    val title: String,
+    val trackCount: Int = 0,
+    val thumbnail: String? = null,
+    val tracks: List<String>? = null,
+)
+
+/** Conversion `PlaylistEntity` (YouTube, via brouillon) → `UnifiedPlaylist`. */
+fun YoutubePlaylistDraft.toUnifiedPlaylist(provider: String): UnifiedPlaylist = UnifiedPlaylist(
+    id = id,
+    name = title,
+    trackIds = tracks ?: emptyList(),
+    provider = provider,
+)

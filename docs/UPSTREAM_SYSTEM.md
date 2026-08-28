@@ -108,8 +108,10 @@ Source : snapshot local `SimpMusic-dev` (2.0.0) + `maxrave-dev/core` cloné
 
 | API SpaceKai | Classe réelle SimpMusic 2.0.0 | Détail |
 |--------------|-------------------------------|--------|
-| `playlists()` → `UnifiedPlaylist` | `com.maxrave.domain.repository.LocalPlaylistRepository` | `getAllLocalPlaylists(): Flow<List<LocalPlaylistEntity>>`, `getLocalPlaylist(id)`, `updateLocalPlaylistTracks`…
-| — | `com.maxrave.domain.data.entities.PlaylistEntity` / `LocalPlaylistEntity` | Modèles réels (playlists YouTube + locales)
+| `playlists()` → `UnifiedPlaylist` | `com.maxrave.domain.repository.LocalPlaylistRepository` | Playlists LOCALES : `getAllLocalPlaylists(): Flow<List<LocalPlaylistEntity>>`, `getLocalPlaylist(id)`, `updateLocalPlaylistTracks`…
+| — | `com.maxrave.domain.data.entities.LocalPlaylistEntity` | Modèle local : `id: Long`, `title`, `thumbnail`, `tracks: List<String>?`
+| — | `com.maxrave.domain.data.entities.PlaylistEntity` | Playlists YOUTUBE (depuis le compte) : `id: String`, `author`, `title`, `trackCount`, `tracks`, `thumbnails`, `liked`, `inLibrary`…
+| (optionnel) | `com.maxrave.domain.repository.HomeRepository` / `LibraryPlaylistPagingSource` | Accès aux playlists YouTube via la home / paging de la bibliothèque
 
 ### Implémentation prévue (Phase 2 — build contre la base)
 
