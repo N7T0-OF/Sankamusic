@@ -68,10 +68,19 @@ UPSTREAM
 
 ## 6. Risques à documenter après analyse
 
+- [x] **Licences (vérifié sur les sources, 2026-08-28)** : la base
+  `maxrave-dev/SimpMusic` ET le sous-module `maxrave-dev/core` sont tous les
+  deux **GNU GPL v3** (Licence.txt vérifiée à la racine des deux repos).
+  Conséquences : (1) toute intégration/redistribution d'un composant dérivé
+  ou compilé de la base doit être sous licence compatible GPL-3.0 et publier
+  la source (obligation copyleft) ; (2) une couche de bridged/plugins au
+  niveau SOURCE qui ne lie pas le code SimpMusic peut rester sous sa propre
+  licence, mais toute présence d'APK compilé de SimpMusic (même partielle)
+  active le copyleft. À valider/compléter par une lecture juridique avant
+  toute distribution publique.
 - [ ] Quelles classes/API SimpMusic sont réellement utilisées par Sankamusic ?
 - [ ] Quelles parties de SimpMusic changent le plus souvent entre versions ?
 - [ ] Quelles parties sont impossibles à isoler (dépendances en dur) ?
-- [ ] Licences : que peut-on réutiliser, avec quels crédits obligatoires ?
 
 ## 7. Mapping Adapter ↔ classes SimpMusic 2.0.0 (audit source 2026-08-28)
 

@@ -51,6 +51,11 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Licence des dépendances vérifiée (2026-08-28, UPSTREAM_SYSTEM.md § 6)** :
+  la base `maxrave-dev/SimpMusic` ET le sous-module `maxrave-dev/core` sont
+  tous deux **GNU GPL v3** (Licence.txt à la racine des deux repos). Le risque
+  copyleft est documenté : toute intégration/compilation d'un composant de la
+  base active la GPL-3.0 ; à valider juridiquement avant toute distribution.
 - **Constat du blocage toolchain (2026-08-28)** : l'intégration build de la
   base 2.0.0 est impossible dans la toolchain actuelle — Sankamusic est sur
   Gradle 8.9 / AGP 8.5.2 / Kotlin 2.0.20 / Compose BOM 2024.09, alors que
