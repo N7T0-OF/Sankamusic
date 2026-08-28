@@ -1,6 +1,7 @@
 package com.sankamusic.plugins.hellospacekai
 
 import com.sankamusic.core.api.HomeSection
+import com.sankamusic.core.api.NavigationTab
 import com.sankamusic.core.api.Permissions
 import com.sankamusic.core.api.PluginManifest
 import com.sankamusic.core.api.SettingsEntry
@@ -45,6 +46,9 @@ class HelloSpaceKaiPlugin : SpaceKaiPlugin {
         if (!SpaceKaiApi.isInitialized()) return
 
         val ui = SpaceKaiApi.instance.uiExtensions
+        ui.registerNavigationTab(
+            NavigationTab(id = NAV_TAB_ID, label = "Hello", priority = 40, iconName = "hello"),
+        )
         ui.registerHomeSection(
             HomeSection(id = HOME_SECTION_ID, title = "Hello SpaceKai", priority = 10),
         )
@@ -62,6 +66,7 @@ class HelloSpaceKaiPlugin : SpaceKaiPlugin {
         if (!SpaceKaiApi.isInitialized()) return
 
         val ui = SpaceKaiApi.instance.uiExtensions
+        ui.removeNavigationTab(NAV_TAB_ID)
         ui.removeHomeSection(HOME_SECTION_ID)
         ui.removeSettingsEntry(SETTINGS_ENTRY_ID)
     }
@@ -74,5 +79,6 @@ class HelloSpaceKaiPlugin : SpaceKaiPlugin {
 
         const val HOME_SECTION_ID = "$ID.home"
         const val SETTINGS_ENTRY_ID = "$ID.settings"
+        const val NAV_TAB_ID = "$ID.tab"
     }
 }

@@ -1,7 +1,11 @@
 package com.sankamusic.core.update
 
+import com.sankamusic.core.api.LibraryAdapter
+import com.sankamusic.core.api.MusicPlayerAdapter
 import com.sankamusic.core.api.PluginManifest
+import com.sankamusic.core.api.PlaylistAdapter
 import com.sankamusic.core.api.UpdateState
+import com.sankamusic.core.api.UpstreamAdapter
 import com.sankamusic.core.api.UpstreamCompatibilityState
 import com.sankamusic.core.api.UpstreamInfo
 import kotlinx.coroutines.runBlocking
@@ -43,18 +47,13 @@ class UpdateEngineTest {
         installed: String = "0.1.0",
         sankamusic: List<GitHubRelease> = emptyList(),
         upstream: List<GitHubRelease> = emptyList(),
-        upstreamInstalled: String = "1.7.2",
+        adapter: UpstreamAdapter = FakeAdapter(),
         plugins: List<PluginManifest> = emptyList(),
         latestVersions: Map<String, String> = emptyMap(),
         fetch: suspend (GitHubRelease.Asset) -> String? = { null },
     ) = UpdateEngine(
         installedVersion = SemVer.parse(installed)!!,
-        upstreamInfo = UpstreamInfo(
-            repository = "owner/SimpMusic",
-            version = upstreamInstalled,
-            adapterVersion = 1,
-            compatibility = "1.7.x",
-        ),
+        upstreamAdapter = adapter,
         releasesClient = FakeClient(
             mapOf(
                 "N7T0-OF/Sankamusic" to sankamusic,
@@ -67,6 +66,26 @@ class UpdateEngineTest {
         latestPluginVersion = { id -> latestVersions[id] },
         fetchAssetContent = fetch,
     )
+
+    /** Adapter factice : couvre 1.7.x, version intégrée 1.7.2. */
+    private class FakeAdapter : UpstreamAdapter {
+        override val info = UpstreamInfo(
+            repository = "owner/SimpMusic",
+            version = "1.7.2",
+            adapterVersion = 1,
+            compatibility = "1.7.x",
+        )
+        override val player: MusicPlayerAdapter
+            get() = throw AssertionError("non utilisé")
+        override val library: LibraryAdapter
+            get() = throw AssertionError("non utilisé")
+        override val playlists: PlaylistAdapter
+            get() = throw AssertionError("non utilisé")
+        override fun isCompatibleWith(upstreamVersion: String): Boolean {
+            val v = SemVer.parse(upstreamVersion) ?: return false
+            return v.prerelease == null && v.major == 1 && v.minor == 7
+        }
+    }
 
     // ── 1. Core Sankamusic ─────────────────────────────────────────────
 
@@ -142,17 +161,18 @@ class UpdateEngineTest {
     // ── 3. Compatibilité upstream SimpMusic ────────────────────────────
 
     @Test
-    fun `upstream compatible when available not newer`() = runBlocking {
-        val engine = engine(upstreamInstalled = "1.7.2", upstream = listOf(release("v1.7.2")))
+    fun `upstream compatible when available version is covered by adapter`() = runBlocking {
+        val engine = engine(upstream = listOf(release("v1.7.2")))
         val status = engine.checkUpstreamCompatibility()
         assertEquals(UpstreamCompatibilityState.COMPATIBLE, status.state)
         assertEquals("1.7.2", status.availableUpstreamVersion)
         assertEquals("1.7.x", status.compatibility)
+        assertEquals(1, status.adapterVersion)
     }
 
     @Test
-    fun `upstream needs adapter update when newer available`() = runBlocking {
-        val engine = engine(upstreamInstalled = "1.7.2", upstream = listOf(release("v1.8.0")))
+    fun `upstream needs adapter update when available version not covered`() = runBlocking {
+        val engine = engine(upstream = listOf(release("v1.8.0")))
         val status = engine.checkUpstreamCompatibility()
         assertEquals(UpstreamCompatibilityState.NEEDS_ADAPTER_UPDATE, status.state)
         assertEquals("1.8.0", status.availableUpstreamVersion)
@@ -161,7 +181,7 @@ class UpdateEngineTest {
 
     @Test
     fun `upstream conservative incompatibility when source unreachable`() = runBlocking {
-        val engine = engine(upstreamInstalled = "1.7.2", upstream = emptyList())
+        val engine = engine(upstream = emptyList())
         assertEquals(UpstreamCompatibilityState.INCOMPATIBLE, engine.checkUpstreamCompatibility().state)
     }
 

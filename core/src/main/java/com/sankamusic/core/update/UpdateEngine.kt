@@ -5,8 +5,8 @@ import com.sankamusic.core.api.PluginUpdate
 import com.sankamusic.core.api.UpdateManager
 import com.sankamusic.core.api.UpdateState
 import com.sankamusic.core.api.UpdateStatus
+import com.sankamusic.core.api.UpstreamAdapter
 import com.sankamusic.core.api.UpstreamCompatibilityState
-import com.sankamusic.core.api.UpstreamInfo
 import com.sankamusic.core.api.UpstreamStatus
 
 /**
@@ -23,7 +23,7 @@ import com.sankamusic.core.api.UpstreamStatus
  */
 class UpdateEngine(
     private val installedVersion: SemVer,
-    private val upstreamInfo: UpstreamInfo,
+    private val upstreamAdapter: UpstreamAdapter,
     private val releasesClient: GitHubReleasesClient,
     private val sankamusicRepository: String,
     private val upstreamRepository: String,
@@ -76,21 +76,22 @@ class UpdateEngine(
     // ── 3. Compatibilité upstream SimpMusic ────────────────────────────
 
     override suspend fun checkUpstreamCompatibility(): UpstreamStatus {
-        val installed = SemVer.parse(upstreamInfo.version)
         val latest = latestStableRelease(upstreamRepository)?.version
         val state = when {
-            // Conservateur : source injoignable ou version locale invalide → on ne
-            // peut pas confirmer la compatibilité → aucune mise à jour upstream.
-            installed == null || latest == null -> UpstreamCompatibilityState.INCOMPATIBLE
-            latest <= installed -> UpstreamCompatibilityState.COMPATIBLE
+            // Conservateur : source injoignable → on ne peut pas confirmer la
+            // compatibilité → aucune mise à jour upstream.
+            latest == null -> UpstreamCompatibilityState.INCOMPATIBLE
+            // La version disponible est couverte par l'Adapter actuel → compatible.
+            upstreamAdapter.isCompatibleWith(latest.toString()) -> UpstreamCompatibilityState.COMPATIBLE
+            // Version upstream non couverte → l'Adapter doit être vérifié/mis à jour.
             else -> UpstreamCompatibilityState.NEEDS_ADAPTER_UPDATE
         }
         return UpstreamStatus(
-            upstreamName = upstreamInfo.repository,
-            installedUpstreamVersion = upstreamInfo.version,
+            upstreamName = upstreamAdapter.info.repository,
+            installedUpstreamVersion = upstreamAdapter.info.version,
             availableUpstreamVersion = latest?.toString(),
-            adapterVersion = upstreamInfo.adapterVersion,
-            compatibility = upstreamInfo.compatibility,
+            adapterVersion = upstreamAdapter.info.adapterVersion,
+            compatibility = upstreamAdapter.info.compatibility,
             state = state,
         )
     }

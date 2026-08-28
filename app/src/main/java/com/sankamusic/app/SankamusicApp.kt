@@ -5,9 +5,9 @@ import android.util.Log
 import com.sankamusic.core.PluginEngine
 import com.sankamusic.core.api.NetworkApi
 import com.sankamusic.core.api.SpaceKaiApi
-import com.sankamusic.core.api.UpstreamInfo
 import com.sankamusic.core.update.HttpGitHubReleasesClient
 import com.sankamusic.core.update.SemVer
+import com.sankamusic.core.update.SimpMusicAdapter
 import com.sankamusic.core.update.UpdateEngine
 import com.sankamusic.plugins.hellospacekai.HelloSpaceKaiPlugin
 
@@ -35,15 +35,10 @@ class SankamusicApp : Application() {
     val updateEngine: UpdateEngine by lazy {
         UpdateEngine(
             installedVersion = SemVer.parse(BuildConfig.SANKAMUSIC_VERSION)!!,
-            upstreamInfo = UpstreamInfo(
-                repository = "maxrave-dev/SimpMusic",
-                // "TBD" tant que la base SimpMusic n'est pas réellement intégrée
-                // (UpstreamAdapter, Phase 2) : la compatibilité affichera INCOMPATIBLE,
-                // ce qui est le comportement conservateur voulu.
-                version = BuildConfig.SANKAMUSIC_UPSTREAM_VERSION,
-                adapterVersion = 1,
-                compatibility = "inconnue",
-            ),
+            // Adapter v1 de la base SimpMusic (docs/UPSTREAM_SYSTEM.md) : source
+            // unique de vérité de l'état upstream. La compatibilité est vérifiable
+            // (plage 1.7.x) ; hors plage → NEEDS_ADAPTER_UPDATE.
+            upstreamAdapter = SimpMusicAdapter(),
             releasesClient = HttpGitHubReleasesClient(network),
             sankamusicRepository = "N7T0-OF/Sankamusic",
             upstreamRepository = "maxrave-dev/SimpMusic",

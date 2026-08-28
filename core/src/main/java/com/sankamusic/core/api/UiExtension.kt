@@ -2,12 +2,30 @@ package com.sankamusic.core.api
 
 /**
  * Points d'extension UI de la plateforme (voir docs/THEME_SYSTEM.md § 7 et
- * docs/PLUGIN_SYSTEM.md § 8) : sections Home, entrées Settings, actions player.
+ * docs/PLUGIN_SYSTEM.md § 8) : onglets de navigation, sections Home,
+ * entrées Settings, actions player.
  *
  * Les plugins déclarent des extensions (via [UiExtensionApi]) ; l'UI du Core
  * les affiche selon la priorité. Aucune dépendance Compose ici : ce sont des
  * déclarations pures, le rendu est assuré par l'UI (Phase 2/3).
+ *
+ * La navigation reprend le modèle de l'ancien SpaceKai (customNavigation,
+ * docs/MIGRATION.md étape 1) : onglets extensibles, ordonnés par priorité,
+ * icône résolue par l'UI via [NavigationTab.iconName].
  */
+
+/**
+ * Onglet de la barre de navigation inférieure (ex. "Accueil", "Bibliothèque").
+ * L'ordre d'affichage est la priorité croissante (les plus petits d'abord).
+ */
+data class NavigationTab(
+    val id: String,
+    val label: String,
+    /** Ordre d'affichage (croissant ; les plus petits d'abord). */
+    val priority: Int = 100,
+    /** Nom d'icône résolu par l'UI (convention : "home", "library", "search", "settings"…). */
+    val iconName: String = "default",
+)
 
 /** Section affichée sur l'écran d'accueil (ex. "Most Played", "Spotify Playlists"). */
 data class HomeSection(
@@ -39,6 +57,9 @@ data class PlayerAction(
  * (NAVIGATION_MODIFY, THEME_MODIFY…) avant de transmettre à l'UI.
  */
 interface UiExtensionApi {
+    fun registerNavigationTab(tab: NavigationTab)
+    fun removeNavigationTab(id: String)
+
     fun registerHomeSection(section: HomeSection)
     fun removeHomeSection(id: String)
 

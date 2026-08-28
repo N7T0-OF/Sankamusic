@@ -1,6 +1,6 @@
 # Système upstream — SimpMusic
 
-- **Statut** : 🟡 Squelette — à compléter après analyse de SimpMusic
+- **Statut** : 🟢 Base déclarée (Adapter v1) — sous-adaptateurs à relier après audit
 - **Document lié** : `docs/ARCHITECTURE.md`, `docs/UPDATE_SYSTEM.md`
 
 ## 1. Objectif
@@ -19,10 +19,10 @@ SimpMusic v2 → Adapter v2 → API Sankamusic (stable)
 Sankamusic ne connaît **que** l'Adapter. Si l'API upstream change, seul l'Adapter doit
 être adapté **autant que possible** ; le Core reste stable.
 
-## 3. Modèle de compatibilité (à compléter)
+## 3. Modèle de compatibilité
 
-Informations que le système doit connaître (valeurs de référence vérifiées le
-2026-08-27 contre l'API GitHub réelle) :
+Informations que le système connaît (valeurs de référence vérifiées le
+2026-08-27 contre l'API GitHub réelle, codées dans `SimpMusicAdapter`) :
 
 ```text
 UPSTREAM
@@ -40,18 +40,19 @@ UPSTREAM
 
 ## 4. Sous-adaptateurs envisagés
 
-| Adaptateur | Rôle |
-|------------|------|
-| `MusicPlayerAdapter` | lecture, file d'attente, contrôles |
-| `LibraryAdapter` | bibliothèque |
-| `PlaylistAdapter` | playlists |
-| `NavigationAdapter` | navigation |
-| `ThemeAdapter` | thèmes |
-| `SettingsAdapter` | paramètres |
-| `DownloadAdapter` | téléchargements |
+| Adaptateur | Rôle | État |
+|------------|------|------|
+| `MusicPlayerAdapter` | lecture, file d'attente, contrôles | 🔴 non relié (échec explicite) |
+| `LibraryAdapter` | bibliothèque | 🔴 non relié (échec explicite) |
+| `PlaylistAdapter` | playlists | 🔴 non relié (échec explicite) |
+| `NavigationAdapter` | navigation | à analyser |
+| `ThemeAdapter` | thèmes | à analyser |
+| `SettingsAdapter` | paramètres | à analyser |
+| `DownloadAdapter` | téléchargements | à analyser |
 
-> À réviser après analyse réelle de SimpMusic : certains adaptateurs peuvent être inutiles
-> ou insuffisants. **Ne pas en créer artificiellement.**
+> Les sous-adaptateurs non reliés lèvent `NotImplementedError` (jamais de
+> comportement simulé). À réviser après analyse réelle de SimpMusic : certains
+> adaptateurs peuvent être inutiles ou insuffisants. **Ne pas en créer artificiellement.**
 
 ## 5. Processus de mise à jour upstream
 

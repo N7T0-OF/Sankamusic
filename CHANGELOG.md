@@ -51,6 +51,15 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Navigation (étape 1 migration SpaceKai)** : `NavigationTab` + `UiExtensionRegistry.navigationTabs()`
+  (onglets extensibles, triés par priorité) ; barre de navigation Compose dans `MainActivity`
+  (Accueil / Bibliothèque / Recherche / Paramètres + onglets plugins) ; `HelloSpaceKaiPlugin`
+  ajoute un onglet « Hello » en démonstration. Icônes Material (`material-icons-core`).
+- **UpstreamAdapter réel** : `SimpMusicAdapter` (core) — déclare la base intégrée
+  `maxrave-dev/SimpMusic` v1.7.0 (vérifiée 2026-08-27), plage de compatibilité 1.7.x,
+  `isCompatibleWith` testé. `UpdateEngine` branché sur l'adapter : la compatibilité
+  upstream est désormais **vérifiable** (COMPATIBLE / NEEDS_ADAPTER_UPDATE / INCOMPATIBLE),
+  plus de « TBD ». Sous-adaptateurs (player/library/playlists) non reliés → échec explicite.
 - Câblage updater en-app : `HttpNetworkApi` (java.net + coroutines, prouvé contre
   l'API réelle), `UpdateEngine` instancié dans `SankamusicApp` (repos réels
   `N7T0-OF/Sankamusic` et `maxrave-dev/SimpMusic`), écran Compose « Mises à jour »
@@ -60,6 +69,13 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   vérifié : repo public vide, SimpMusic GPL-3.0, BetterDiscord Apache-2.0).
 - Signature : `scripts/make-dev-keystore.sh` — keystore DEV éphémère (keytool), export des
   4 secrets release.yml, cohérence vérifiée (re-décodage + keytool -list) ; jamais commité.
+
+### Notes de vérification ([Unreleased])
+- 24 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
+  `UiExtensionRegistryTest` (navigation), `UpdateEngineTest` (13 — upstream via
+  adapter), `SimpMusicAdapterTest` (5). Compilation `:core` main+test propre.
+- Module `:app` (Compose : bottom nav, écran Mises à jour) : **non compilé**
+  localement — SDK Android requis (vérifié par le CI après push).
 
 ### Corrigé
 - **CI rendu vert (verrou v0.1.0 levé)** — cause du 0s `Run tests` nommée : `gradlew` et

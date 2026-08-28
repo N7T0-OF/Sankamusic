@@ -71,7 +71,6 @@ android {
         // Exposé au code applicatif (affichage « À propos ») — même source de vérité.
         buildConfigField("String", "SANKAMUSIC_VERSION", "\"$sankamusicVersion\"")
         buildConfigField("String", "SANKAMUSIC_UPSTREAM_BASE", "\"SimpMusic\"")
-        buildConfigField("String", "SANKAMUSIC_UPSTREAM_VERSION", "\"TBD\"") // voir docs/UPSTREAM_SYSTEM.md
     }
 
     buildTypes {
@@ -130,6 +129,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.core)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)

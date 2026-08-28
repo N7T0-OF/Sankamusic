@@ -1,6 +1,7 @@
 package com.sankamusic.core
 
 import com.sankamusic.core.api.HomeSection
+import com.sankamusic.core.api.NavigationTab
 import com.sankamusic.core.api.PlayerAction
 import com.sankamusic.core.api.SettingsEntry
 import com.sankamusic.core.api.UiExtensionApi
@@ -14,9 +15,17 @@ import com.sankamusic.core.api.UiExtensionApi
  */
 class UiExtensionRegistry : UiExtensionApi {
 
+    private val navigationTabs = mutableMapOf<String, NavigationTab>()
     private val homeSections = mutableMapOf<String, HomeSection>()
     private val settingsEntries = mutableMapOf<String, SettingsEntry>()
     private val playerActions = mutableMapOf<String, PlayerAction>()
+
+    override fun registerNavigationTab(tab: NavigationTab): Unit =
+        putUnique(navigationTabs, tab.id, tab, "Onglet navigation")
+
+    override fun removeNavigationTab(id: String) {
+        navigationTabs.remove(id)
+    }
 
     override fun registerHomeSection(section: HomeSection): Unit =
         putUnique(homeSections, section.id, section, "Section Home")
@@ -38,6 +47,8 @@ class UiExtensionRegistry : UiExtensionApi {
     override fun removePlayerAction(id: String) {
         playerActions.remove(id)
     }
+
+    fun navigationTabs(): List<NavigationTab> = navigationTabs.values.sortedBy { it.priority }
 
     fun homeSections(): List<HomeSection> = homeSections.values.sortedBy { it.priority }
 
