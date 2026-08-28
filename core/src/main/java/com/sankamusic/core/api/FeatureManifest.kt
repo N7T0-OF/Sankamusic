@@ -159,9 +159,9 @@ val builtInSpaceKaiFeatures: SpaceKaiFeaturesManifest = SpaceKaiFeaturesManifest
         SpaceKaiFeature(
             id = "navigation",
             name = "Navigation personnalisable",
-            description = "Onglets extensibles (étape 1 migration)",
+            description = "Onglets extensibles (étape 1 migration) — vérifié sur 2.0.0 (BottomNavScreen + onglets conditionnels)",
             enabledByDefault = true,
-            upstreamCompatibility = "1.7.x",
+            upstreamCompatibility = "2.0.x",
             contract = SpaceKaiContracts.NAVIGATION,
         ),
         SpaceKaiFeature(
@@ -175,17 +175,17 @@ val builtInSpaceKaiFeatures: SpaceKaiFeaturesManifest = SpaceKaiFeaturesManifest
         SpaceKaiFeature(
             id = "orientation",
             name = "Orientation paysage",
-            description = "Politique d'orientation du player (étape 3)",
+            description = "Politique d'orientation du player (étape 3) — vérifié sur 2.0.0 (FullscreenPlayer force/restaure)",
             enabledByDefault = true,
-            upstreamCompatibility = "1.7.x",
+            upstreamCompatibility = "2.0.x",
             contract = SpaceKaiContracts.ORIENTATION,
         ),
         SpaceKaiFeature(
             id = "player",
             name = "Player",
-            description = "Machine à états + file d'attente (étape 4)",
+            description = "Machine à états + file d'attente (étape 4) — moteur 2.0.0 dans maxrave-dev/core/media3",
             enabledByDefault = true,
-            upstreamCompatibility = "1.7.x",
+            upstreamCompatibility = "2.0.x",
             contract = SpaceKaiContracts.PLAYER,
         ),
         SpaceKaiFeature(

@@ -10,17 +10,26 @@ import com.sankamusic.core.api.model.UnifiedPlaylist
 import com.sankamusic.core.api.model.UnifiedTrack
 
 /**
- * Adapter v1 de la base upstream SimpMusic (docs/UPSTREAM_SYSTEM.md).
+ * Adapter v2 de la base upstream SimpMusic (docs/UPSTREAM_SYSTEM.md).
  *
- * Déclare la version de base INTÉGRÉE (v1.7.0, vérifiée le 2026-08-27 contre
- * l'API GitHub réelle — docs/UPSTREAM_SYSTEM.md § 8) et la plage de
- * compatibilité couverte par cet Adapter (1.7.x). C'est la source unique de
- * vérité de l'état upstream : l'[UpdateEngine] ne connaît QUE cet Adapter.
+ * v2 : la source SimpMusic **2.0.0** a été auditée le 2026-08-28 (snapshot
+ * local + repo maxrave-dev/core) — docs/UPSTREAM_SYSTEM.md § 8bis. L'audit
+ * confirme que les 6 points d'intégration des contrats SpaceKai existent
+ * toujours dans l'architecture 2.0.0 (restructuration KMP, moteur déplacé
+ * dans le sous-module maxrave-dev/core/media/media3) :
  *
- * La compatibilité est VÉRIFIABLE : [isCompatibleWith] répond si une version
- * SimpMusic donnée est couverte. Hors plage → l'Adapter doit être vérifié/mis
- * à jour avant toute nouvelle release Sankamusic (règle conservatrice
- * UPSTREAM_SYSTEM.md § 5 — jamais de remplacement automatique non testé).
+ *   - navigation   : BottomNavScreen (enum) + onglets conditionnels ;
+ *   - thème        : AppTheme(themeMode, themeColorSource, customThemeColor,
+ *                    liquidGlassEnabled) — même famille + param liquid glass ;
+ *   - orientation  : FullscreenPlayer.android.kt force LANDSCAPE + restaure
+ *                    l'orientation d'origine (identique à l'ancien code) ;
+ *   - player       : FullscreenPlayer/NowPlayingScreen + moteur media3 ;
+ *   - haptique     : ajout SpaceKai (la base n'en a pas — rien à casser) ;
+ *   - dynamic color: platformDynamicColorScheme + isAmoled (identique).
+ *
+ * Plage couverte par cet Adapter : 2.0.x (stable). Hors plage → l'Adapter
+ * doit être re-vérifié avant toute release (UPSTREAM_SYSTEM.md § 5 — jamais
+ * de remplacement automatique non testé).
  *
  * ⚠️ Les sous-adaptateurs (player / library / playlists) ne sont PAS encore
  * reliés : la base SimpMusic n'est pas intégrée comme dépendance (Phase 2,
@@ -31,9 +40,9 @@ class SimpMusicAdapter : UpstreamAdapter {
 
     override val info = UpstreamInfo(
         repository = "maxrave-dev/SimpMusic",
-        version = "1.7.0",
-        adapterVersion = 1,
-        compatibility = "1.7.x",
+        version = "2.0.0",
+        adapterVersion = 2,
+        compatibility = "2.0.x",
     )
 
     override val player: MusicPlayerAdapter = NotLinked("player")
@@ -42,8 +51,9 @@ class SimpMusicAdapter : UpstreamAdapter {
 
     override fun isCompatibleWith(upstreamVersion: String): Boolean {
         val version = SemVer.parse(upstreamVersion) ?: return false
-        // Stable uniquement (jamais de pré-release) et couvert par la plage 1.7.x.
-        return version.prerelease == null && version.major == 1 && version.minor == 7
+        // Stable uniquement (jamais de pré-release) et couvert par la plage 2.0.x
+        // (version auditée le 2026-08-28 — docs/UPSTREAM_SYSTEM.md § 8bis).
+        return version.prerelease == null && version.major == 2 && version.minor == 0
     }
 
     /**

@@ -51,6 +51,16 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 ## [Unreleased]
 
 ### Ajouté
+- **Adapter v2 + vérification SimpMusic 2.0.0 (2026-08-28)** : sortie de
+  v2.0.0 détectée par le workflow upstream (issue auto), puis audit source
+  (snapshot local 2.0.0 + sous-module `maxrave-dev/core`) confirmant les 6
+  points d'intégration des contrats (BottomNavScreen + onglets conditionnels,
+  AppTheme avec liquidGlassEnabled, FullscreenPlayer landscape force/restore,
+  moteur media3 extrait dans le sous-module). `SimpMusicAdapter` passe en v2
+  (version 2.0.0, plage `2.0.x`) ; plages du manifest navigation/orientation/
+  player `1.7.x` → `2.0.x` ; miroir bash à jour → `check-upstream.sh` 6/6.
+  Tests adaptés (SimpMusicAdapterTest, CompatibilityReportTest, SettingsTest,
+  FeatureManifestTest). **141 tests OK.**
 - **Contrats d'API + rapport de compatibilité** (Compatibility Contracts des
   propositions Bridge/ReVanced) : `SpaceKaiFeature.contract` + ids stables
   `SpaceKaiContracts` (navigation-api…dynamic-color-api),
@@ -70,8 +80,11 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   **Premier constat réel (2026-08-28) : SimpMusic v2.0.0 est sortie** quelques
   heures après le commit — navigation, orientation et player (plage `1.7.x`)
   sortent de plage et sont désactivées ; thèmes, haptique, Dynamic Color
-  (`*`) restent compatibles. Comportement voulu : l'adapter devra être
-  vérifié contre l'architecture 2.0.0 avant d'étendre sa plage.
+  (`*`) restent compatibles. **Résolu le même jour** : audit source v2.0.0
+  (UPSTREAM_SYSTEM.md § 8bis) — les 6 points d'intégration des contrats
+  existent toujours ; `SimpMusicAdapter` v2 (2.0.0, plage `2.0.x`), plages du
+  manifest passées à `2.0.x`, script mirror à jour → workflow 6/6, issue
+  close.
 - **Rendu des thèmes dans l'UI Compose** : `SankamusicTheme`
   (`app/.../SankamusicTheme.kt`) mappe l'état réactif du `ThemeEngine` (nouveau
   `ThemeState` + `StateFlow` — coroutines en `implementation` dans `:core`) vers

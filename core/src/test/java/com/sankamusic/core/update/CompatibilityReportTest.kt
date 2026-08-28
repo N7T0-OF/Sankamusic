@@ -150,17 +150,17 @@ class CompatibilityReportTest {
     }
 
     @Test
-    fun `built-in manifest with real adapter is fully compatible at 1_7_0`() {
-        val report = CompatibilityReporter.report(builtInSpaceKaiFeatures, "1.7.0", SimpMusicAdapter())
+    fun `built-in manifest with real adapter is fully compatible at 2_0_0`() {
+        val report = CompatibilityReporter.report(builtInSpaceKaiFeatures, "2.0.0", SimpMusicAdapter())
         assertEquals(6, report.totalCount)
         assertEquals(6, report.compatibleCount)
         assertEquals("6/6 features compatible", report.summary())
     }
 
     @Test
-    fun `built-in manifest with real adapter out of range at 2_0_0`() {
-        val report = CompatibilityReporter.report(builtInSpaceKaiFeatures, "2.0.0", SimpMusicAdapter())
-        // navigation, orientation, player sont en 1.7.x → désactivées ;
+    fun `built-in manifest with real adapter out of range at 2_1_0`() {
+        val report = CompatibilityReporter.report(builtInSpaceKaiFeatures, "2.1.0", SimpMusicAdapter())
+        // navigation, orientation, player sont en 2.0.x → désactivées ;
         // themes, haptics, dynamic_color sont "*" → toujours compatibles.
         assertEquals(3, report.compatibleCount)
         assertEquals("3/6 features compatible", report.summary())

@@ -115,23 +115,23 @@ class SpaceKaiFeatureFlagsTest {
     @Test
     fun `enabled by default from the manifest`() {
         val settings = FakeSettings()
-        assertTrue(SpaceKaiFeatureFlags.isEnabled(settings, "navigation", "1.7.2"))
-        assertFalse(SpaceKaiFeatureFlags.isEnabled(settings, "haptics", "1.7.2")) // enabledByDefault = false
+        assertTrue(SpaceKaiFeatureFlags.isEnabled(settings, "navigation", "2.0.0"))
+        assertFalse(SpaceKaiFeatureFlags.isEnabled(settings, "haptics", "2.0.0")) // enabledByDefault = false
     }
 
     @Test
     fun `stored value overrides the default`() {
         val settings = FakeSettings(mapOf(featureFlagKey("haptics") to "true"))
-        assertTrue(SpaceKaiFeatureFlags.isEnabled(settings, "haptics", "1.7.2"))
+        assertTrue(SpaceKaiFeatureFlags.isEnabled(settings, "haptics", "2.0.0"))
         val off = FakeSettings(mapOf(featureFlagKey("navigation") to "false"))
-        assertFalse(SpaceKaiFeatureFlags.isEnabled(off, "navigation", "1.7.2"))
+        assertFalse(SpaceKaiFeatureFlags.isEnabled(off, "navigation", "2.0.0"))
     }
 
     @Test
     fun `incompatible with upstream disables the feature`() {
         val settings = FakeSettings(mapOf(featureFlagKey("navigation") to "true"))
-        // navigation est 1.7.x : une version 1.8.0 la rend incompatible.
-        assertFalse(SpaceKaiFeatureFlags.isEnabled(settings, "navigation", "1.8.0"))
+        // navigation est 2.0.x : une version 2.1.0 la rend incompatible.
+        assertFalse(SpaceKaiFeatureFlags.isEnabled(settings, "navigation", "2.1.0"))
         // upstream inconnu → jamais compatible.
         assertFalse(SpaceKaiFeatureFlags.isEnabled(settings, "navigation", null))
         assertFalse(SpaceKaiFeatureFlags.isEnabled(settings, "navigation", "invalide"))
@@ -139,14 +139,14 @@ class SpaceKaiFeatureFlagsTest {
 
     @Test
     fun `unknown feature is disabled`() {
-        assertFalse(SpaceKaiFeatureFlags.isEnabled(FakeSettings(), "inconnu", "1.7.2"))
+        assertFalse(SpaceKaiFeatureFlags.isEnabled(FakeSettings(), "inconnu", "2.0.0"))
     }
 
     @Test
     fun `setEnabled persists the choice`() {
         val settings = FakeSettings()
         SpaceKaiFeatureFlags.setEnabled(settings, "haptics", true)
-        assertTrue(SpaceKaiFeatureFlags.isEnabled(settings, "haptics", "1.7.2"))
+        assertTrue(SpaceKaiFeatureFlags.isEnabled(settings, "haptics", "2.0.0"))
     }
 
     @Test

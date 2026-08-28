@@ -23,10 +23,10 @@ OUT_DIR="${1:-build/upstream}"
 OUT_FILE="$OUT_DIR/upstream-compat.txt"
 
 # ── Fonctionnalités : miroir de builtInSpaceKaiFeatures (id|plage) ──────────
-FEATURES="navigation|1.7.x
+FEATURES="navigation|2.0.x
 themes|*
-orientation|1.7.x
-player|1.7.x
+orientation|2.0.x
+player|2.0.x
 haptics|*
 dynamic_color|*"
 

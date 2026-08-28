@@ -77,7 +77,7 @@ UPSTREAM
 
 - Liste des dépendances réelles de SimpMusic (Gradle) : _(vide)_
 - Mapping Adapter ↔ classes SimpMusic : _(vide)_
-- Version upstream actuelle de référence : **v1.7.0** (vérifiée le 2026-08-27)
+- Version upstream actuelle de référence : **v2.0.0** (source auditée le 2026-08-28 — § 8bis)
 
 ## 8. Faits vérifiés sur l'API réelle (2026-08-27)
 
@@ -94,3 +94,30 @@ mise à jour upstream :
 - **Repo cible `N7T0-OF/Sankamusic`** : existe, public, mais **zéro release** →
   l'updater en-app reste en état `ERROR` (propre, sans crash) jusqu'à la
   publication de la première release.
+
+## 8bis. Audit source SimpMusic v2.0.0 (2026-08-28)
+
+Déclenché par le workflow upstream-compat : la dernière release stable est
+passée à **v2.0.0** (publiée le 2026-08-28T17:36Z). La source a été auditée
+(snapshot local `SimpMusic-dev` version-name 2.0.0 / code 57 + repo
+`maxrave-dev/core`, branche `multiplatform`) :
+
+- **Restructuration majeure** : passage KMP consolidé ; le moteur audio est
+  extrait dans le sous-module **`maxrave-dev/core`** (`media/media3` — media3
+  conservé comme moteur, `media-jvm` pour desktop).
+- **Les 6 points d'intégration des contrats SpaceKai existent toujours** :
+
+| Contrat | Élément vérifié dans 2.0.0 | Verdict |
+|---------|------------------------------|---------|
+| navigation | `BottomNavScreen` (enum) + `AppBottomNavigationBar` avec onglets conditionnels (`takeIf { showXTab }`) | ✅ |
+| thème | `AppTheme(themeMode, themeColorSource, customThemeColor, liquidGlassEnabled)` — même famille, + nouveau param liquid glass | ✅ |
+| orientation | `FullscreenPlayer.android.kt` force `SCREEN_ORIENTATION_LANDSCAPE` + restaure l'orientation d'origine | ✅ |
+| player | `FullscreenPlayer`/`NowPlayingScreen`/`PlayerControlLayout` + moteur media3 (sous-module) | ✅ |
+| haptique | ajout SpaceKai (la base n'en a pas — rien à casser) | ✅ |
+| dynamic color | `platformDynamicColorScheme` + `rememberDynamicColorScheme(seed, isDark, isAmoled)` + OLED | ✅ |
+
+- **Conséquence** : `SimpMusicAdapter` passe en **v2** (version 2.0.0, plage
+  `2.0.x`, adapterVersion 2) ; les plages du manifest des fonctionnalités
+  navigation / orientation / player passent de `1.7.x` à `2.0.x`.
+- ⚠️ Le sous-module `core` est un repo séparé (`maxrave-dev/core`, branche
+  `multiplatform`) : à intégrer avec le clone (submodule) en Phase 2.

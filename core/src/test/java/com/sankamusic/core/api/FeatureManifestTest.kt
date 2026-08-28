@@ -98,23 +98,23 @@ class FeatureManifestTest {
     @Test
     fun `feature is compatible within its declared range`() {
         val manifest = builtInSpaceKaiFeatures
-        assertTrue(manifest.isFeatureCompatible("navigation", "1.7.2"))
+        assertTrue(manifest.isFeatureCompatible("navigation", "2.0.0"))
         assertTrue(manifest.isFeatureCompatible("themes", "9.9.9")) // "*"
-        assertFalse(manifest.isFeatureCompatible("navigation", "1.8.0"))
+        assertFalse(manifest.isFeatureCompatible("navigation", "2.1.0"))
         assertFalse(manifest.isFeatureCompatible("navigation", null))
     }
 
     @Test
     fun `unknown feature is never compatible`() {
-        assertFalse(builtInSpaceKaiFeatures.isFeatureCompatible("inconnu", "1.7.2"))
+        assertFalse(builtInSpaceKaiFeatures.isFeatureCompatible("inconnu", "2.0.0"))
     }
 
     @Test
     fun `compatibleFeatures filters by upstream version`() {
-        val compatible = builtInSpaceKaiFeatures.compatibleFeatures("1.7.2").map { it.id }
+        val compatible = builtInSpaceKaiFeatures.compatibleFeatures("2.0.0").map { it.id }
         assertTrue(compatible.containsAll(listOf("navigation", "orientation", "player", "themes", "haptics", "dynamic_color")))
-        val forNewer = builtInSpaceKaiFeatures.compatibleFeatures("1.8.0").map { it.id }
-        assertFalse(forNewer.contains("navigation")) // 1.7.x uniquement
+        val forNewer = builtInSpaceKaiFeatures.compatibleFeatures("2.1.0").map { it.id }
+        assertFalse(forNewer.contains("navigation")) // 2.0.x uniquement
         assertTrue(forNewer.contains("themes")) // "*"
     }
 

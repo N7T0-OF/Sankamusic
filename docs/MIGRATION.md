@@ -254,6 +254,12 @@ matching de bytecode.
   `scripts/check-upstream.sh` vérifie la dernière release SimpMusic contre les
   plages déclarées, publie le rapport en artefact, et ouvre une issue
   automatique si une fonctionnalité sort de sa plage.
+- **Vérification réelle contre SimpMusic 2.0.0 (2026-08-28)** : la sortie de
+  v2.0.0 a déclenché l'alarme (issue auto) puis l'audit source a confirmé que
+  les 6 points d'intégration des contrats existent toujours dans
+  l'architecture 2.0.0 (restructuration KMP, moteur déplacé dans le
+  sous-module `maxrave-dev/core`) — `docs/UPSTREAM_SYSTEM.md` § 8bis.
+  `SimpMusicAdapter` v2 + plages `2.0.x` : le workflow repasse au vert 6/6.
 
 ## 5. Gestion des données existantes
 
