@@ -10,6 +10,8 @@
 #   1. tag v1.7.2 (dans toutes les plages 1.7.x)   → 6/6, exit 0
 #   2. tag v2.0.0 (hors plages 1.7.x)              → 3/6, exit 1
 #   3. tag v3.1.0 (rupture majeure)                → 3/6, exit 1  (cohérent)
+#   4. tag v1.7.3 (patch 1.7.x)                    → 6/6, exit 0
+#   5. tag v2.0.0-rc.1 (pré-release)               → 3/6, exit 1
 #
 # Usage : bash scripts/test-upstream.sh
 
@@ -58,6 +60,18 @@ r=$(run_report "v3.1.0")
 ratio="${r%%|*}"; rc="${r##*|}"
 assert "v3.1.0 → 3/6 ($ratio)" "$ratio" "Résultat : 3/6"
 assert "v3.1.0 → exit 1" "$rc" "1"
+
+# 4. v1.7.3 (patch 1.7.x) : toujours couvert → 6/6, exit 0
+r=$(run_report "v1.7.3")
+ratio="${r%%|*}"; rc="${r##*|}"
+assert "v1.7.3 → 6/6 ($ratio)" "$ratio" "Résultat : 6/6"
+assert "v1.7.3 → exit 0" "$rc" "0"
+
+# 5. v2.0.0-rc.1 (pré-release) : partie numérique 2.0.0 → hors plage 1.7.x → 3/6, exit 1
+r=$(run_report "v2.0.0-rc.1")
+ratio="${r%%|*}"; rc="${r##*|}"
+assert "v2.0.0-rc.1 → 3/6 ($ratio)" "$ratio" "Résultat : 3/6"
+assert "v2.0.0-rc.1 → exit 1" "$rc" "1"
 
 echo
 if [ "$FAILED" -eq 0 ]; then
