@@ -182,6 +182,16 @@ Non porté (à faire) : le rendu effectif par l'UI — `dynamicDarkColorScheme` 
 `dynamicLightColorScheme` Android 12+, mapping tokens → MaterialTheme Compose
 et le toggle Paramètres (étape 7).
 
+### Manifest de fonctionnalités (docs/FEATURE_MANIFEST.md)
+
+Chaque étape migrée est déclarée dans le manifest intégré `builtInSpaceKaiFeatures`
+(`core/api/FeatureManifest.kt`) avec sa propre plage de compatibilité SimpMusic
+(`*`, `1.x`, `1.7.x`, version exacte) : les fonctionnalités sont indépendantes,
+activable/désactivable individuellement, et une fonctionnalité incompatible avec
+une nouvelle version upstream est simplement désactivée (jamais d'APK cassée).
+La détection d'architecture reste faite par le compilateur + l'adapter, pas par
+matching de bytecode.
+
 ## 5. Gestion des données existantes
 
 - La migration de l'ancienne base de données vers la nouvelle doit être **testée** :
