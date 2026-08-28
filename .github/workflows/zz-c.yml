@@ -1,0 +1,35 @@
+name: Zz c
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+permissions:
+  issues: write
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check latest SimpMusic release compatibility
+        id: check
+        run: bash scripts/check-upstream.sh build/upstream
+
+      - name: Upload compatibility report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: upstream-compat
+          path: build/upstream/upstream-compat.txt
+
+      - name: Open issue on incompatibility (once)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh issue list --state open --search "x" --json number --jq 'length' | grep -q '^[1-9]'; then
+            echo "skip"
+          else
+            gh issue create --title "t" --body "b"
+          fi
