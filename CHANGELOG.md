@@ -63,6 +63,13 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
   haptique/Dynamic Color) → rapport de compatibilité 3/6 → **seulement ensuite**
   extension des plages `2.x` + fermeture de l'issue #1. Interdit d'étendre
   `2.x` au seul motif « ça semble fonctionner ». Rattaché au ROADMAP Phase 2.
+- **🛡️ Garde-fou CI (2026-08-28)** : `scripts/check-phase2-validation.sh`
+  raccordé à `.github/workflows/ci.yml` — refuse le build si le manifest
+  intégré déclare une plage `2.x` sans le marqueur `PHASE2_V2_VALIDATED`
+  (fichier committé OU variable secrète). Cible le manifest (et NON
+  l'Adapter V2 : son existence ne prouve pas 2.x). Vérifié sur 3 scénarios
+  (1.7.x→OK, 2.x sans marqueur→refus exit 1, marqueur présent→OK).
+  C'est la fermeture technique du protocole strict.
 - **Playlists YouTube ajoutées au mapping § 7 + pont** : `PlaylistEntity`
   (playlist YouTube : `id: String`, `title`, `trackCount`, `thumbnails`,
   `tracks`) complète le mapping ; `YoutubePlaylistDraft` → `UnifiedPlaylist`

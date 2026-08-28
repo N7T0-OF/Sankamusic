@@ -152,6 +152,51 @@ relier en ~5 lignes par sous-adapter :
 > « ça semble fonctionner » ne doit exister : la validation est la SEULE porte
 > d'entrée vers `2.x`.
 
+### VERROU (à mémoriser et à imposer)
+
+```
+INTERDIT : étendre compatibility de 1.7.x vers 2.x avant validation complète.
+
+ORDRE OBLIGATOIRE :
+ 1.  Identifier / mettre à jour SimpMusic 2.0.0 dans l'Adapter
+ 2.  Monter SimpMusicAdapterV2
+ 3.  Compiler les 3 sous-adaptateurs (player / library / playlists locales + YouTube)
+ 4.  Contract tests (contre les sources réelles, pas des fakes)
+ 5.  Tests Core (≥ 162)
+ 6.  Build Android (APK debug)
+ 7.  Installer l'APK
+ 8.  Smoke tests fonctionnels (9 points)
+ 9.  CompatibilityReporter = PASS
+ 10. Seulement maintenant → étendre les plages à 2.x + fermer l'issue #1
+```
+
+### 🚦 PHASE 2 VALIDATION GATE
+
+```
+┌─────────────────────────────────────┐
+│  PHASE 2 VALIDATION GATE           │
+├─────────────────────────────────────┤
+│  Adapter V2 compile       [ ]       │
+│  Player contract          [ ]       │
+│  Library contract         [ ]       │
+│  Playlist contract        [ ]       │
+│  Core tests               [ ]       │
+│  Android build            [ ]       │
+│  Installation             [ ]       │
+│  Smoke tests              [ ]       │
+│  Compatibility report     [ ]       │
+└─────────────────────────────────────┘
+
+SI UNE CASE = ❌
+ → NE PAS déclarer 2.x compatible
+ → NE PAS fermer l'issue #1
+```
+
+> ⚙️ Cette porte est aussi imposée TECHNiquement par le CI : le workflow
+> `ci.yml` vérifie la présence du marqueur `PHASE2_V2_VALIDATED=true` avant
+> d'autoriser une plage d'Adapter `2.x` (voir § 8-ci). Un humain ne peut pas
+> étendre seul sans le prouver.
+
 Les étapes **doivent** être exécutées dans l'ordre ; on ne passe à l'étape
 suivante que si la précédente est entièrement verte.
 
@@ -253,3 +298,30 @@ fonctionnalités.**
 - Une future SimpMusic **3.0** deviendra simplement `SimpMusicAdapterV3` — le
   même Core et les mêmes fonctionnalités — sans transformer le projet en fork :
   c'est la démonstration du « Bridge ».
+
+---
+
+## 8. 🛡️ Garde-fou CI (obligation technique, pas seulement documentaire)
+
+Le guide est un document ; le **CI le fait respecter**. `scripts/check-phase2-validation.sh`
+(raccordé dans `.github/workflows/ci.yml`, étape « Phase 2 validation gate »)
+refuse le build si le **manifest intégré** (`core/api/FeatureManifest.kt`)
+déclare une fonctionnalité en `2.x` **sans marqueur de validation**.
+
+- **Cible** : `upstreamCompatibility = "2.x"` / `"2.0.x"` dans `builtInSpaceKaiFeatures` (le seul endroit où on étend la compatibilité).
+  L'Adapter `SimpMusicAdapterV2.compatibility = "2.0.x"` n'est PAS bloqué :
+  l'existence d'un Adapter ne prouve pas 2.x — seule la plage du manifest compte.
+- **Marqueur** : fichier `.phase2-v2-validated` (commité APRÈS avoir passé toute
+  la gate) **ou** variable CI secrète `PHASE2_V2_VALIDATED=true`. Sans l'un des
+  deux, une plage `2.x` → **exit 1 -> CI rouge**.
+
+Deux scripts de vérification coexistent donc :
+
+| Script | Rôle |
+|--------|------|
+| `scripts/check-upstream.sh` | Détecte la nouvelle version SimpMusic (workflow `upstream-check.yml`, hebdo) et signale une sortie de plage |
+| `scripts/check-phase2-validation.sh` | Imposé par `ci.yml` à chaque push : interdit d'étendre le manifest à `2.x` sans la validation Phase 2 accomplie |
+
+C'est la fermeture de la boucle : on ne peut pas déclarer `2.x` « à vue de nez »
+tant qu'un poste Android n'a pas produit la preuve (compile + contract tests +
+APK + smoke tests) via le marqueur correspondant.

@@ -55,6 +55,13 @@ jobs:
       - name: Run tests
         run: ./gradlew test
 
+      - name: Phase 2 validation gate
+        # Garde-fou : refuse une plage manifest à 2.x sans le marqueur
+        # PHASE2_V2_VALIDATED (généré uniquement après le pipeline Phase 2).
+        run: bash scripts/check-phase2-validation.sh
+        env:
+          PHASE2_V2_VALIDATED: ${{ secrets.PHASE2_V2_VALIDATED }}
+
       - name: Build release APK
         run: ./gradlew $GRADLE_TASK
 
