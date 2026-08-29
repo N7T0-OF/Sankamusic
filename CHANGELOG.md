@@ -48,7 +48,7 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 
 ---
 
-## [Unreleased]
+## [0.2.0] - 2026-08-29
 
 ### Ajouté
 - **Préparation CI à la Phase 2 (2026-08-28)** : `androidSdk` centralisé dans
@@ -262,7 +262,7 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 - Signature : `scripts/make-dev-keystore.sh` — keystore DEV éphémère (keytool), export des
   4 secrets release.yml, cohérence vérifiée (re-décodage + keytool -list) ; jamais commité.
 
-### Notes de vérification ([Unreleased])
+### Notes de vérification
 - 162 tests JUnit OK (compilés et exécutés hors Gradle, kotlinc 2.0.20 + JRE 21) :
   `UiExtensionRegistryTest` (navigation), `UpdateEngineTest` (13 — upstream via
   adapter), `SimpMusicAdapterTest` (8 — info, plage, pré-releases, **contrats**,
