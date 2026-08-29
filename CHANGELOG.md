@@ -8,6 +8,13 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 > **Règle :** une entrée n'est ajoutée que pour une **version réellement publiée**.
 > Les entrées en cours de préparation sont marquées `[Unreleased]`.
 
+## [Unreleased]
+
+### Ajouté
+-
+
+---
+
 ## [0.1.0] - 2026-08-27
 
 ### Ajouté
