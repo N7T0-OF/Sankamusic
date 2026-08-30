@@ -1,0 +1,68 @@
+# SpaceKai v0.3.1
+
+> Released 2026-08-31
+
+## What's changed
+
+This release finishes the two P0 features on top of the SimpMusic 2.0.0 base.
+
+### P0-1 — Real in-app update manager
+- Settings → Update now detects the latest GitHub release and resolves the
+  **universal** APK automatically (ignores debug / unsigned / per-ABI splits).
+- Internal download with real byte-progress, speed and remaining-time.
+- **SHA-256 verification** against `SHA256SUMS.txt` before install — a
+  corrupted or tampered APK is refused, never installed.
+- Install goes through the Android Package Installer (user confirms).
+- Desktop falls back to the browser (no simulated install).
+- The SimpMusic "upstream" block is informational only — SpaceKai never
+  installs the official SimpMusic APK over itself.
+
+### P0-2 — Settings reorganized and collapsed by default
+- Every Settings section is now **closed by default**; opening one smoothly
+  closes the previous one.
+- Settings are grouped per category (Content, Playback, Listening history,
+  Lyrics, AI, Spotify, Discord, SponsorBlock, Downloads, Audio, Storage,
+  Backup, About).
+- Added a dedicated collapsed **Downloads** and **Audio** section.
+- Collapsed sections are not rendered, improving scroll and response.
+
+### Other
+- Bug fixed: **Android build crash** from a non-ASCII string in the Android
+  updater source (rewritten ASCII-safe).
+- Settings toggle flags now apply immediately (Compose recomposition layer).
+
+### Known / not finished (honest)
+- The **full device install path** (download → SHA → Android installer) is
+  only compile + CI-verified — it has **not** been run on a physical phone.
+  The update flow and collapsed settings are marked PARTIALLY IMPLEMENTED in
+  the feature audit until verified on a device.
+- Many SpaceKai feature flags remain PARTIALLY / NOT IMPLEMENTED (see the
+  feature-audit block below); nothing here claims them done.
+
+---
+
+### Connu / non terminé
+
+- **Barre de navigation personnalisable (styles, sections, ordre, raccourcis)** — PARTIALLY IMPLEMENTED. Seul le swipe-to-skip est câblé (App.kt). Styles verre liquide + translucide existent (base) mais pas de sélecteur; sections/ordre/raccourcis absents. Voir scripts/audit-navigation.sh.
+- **Style de barre minimaliste** — PARTIALLY IMPLEMENTED. Le style 'minimaliste' n'existe pas comme style distinct — flag décoratif. Voir scripts/audit-navigation.sh.
+- **Barre verticale à droite en paysage** — PARTIALLY IMPLEMENTED. Rail de base (gauche) — pas de version SpaceKai à droite en paysage.
+- **Dynamic Color Android (fond + surfaces)** — PARTIALLY IMPLEMENTED. Capacité base OK (palette système + wallpaper/seed) mais fond sombre épinglé au noir — bug confirmé. Flag décoratif. Voir scripts/audit-dynamic-color.sh.
+- **Orientation auto / portrait / paysage** — NOT IMPLEMENTED.
+- **Player paysage = même player responsive (layout-only)** — PARTIALLY IMPLEMENTED. Aucune branche d'orientation dans NowPlayingScreen (portrait-first étiré) — téléphone paysage = overlay plein écran portrait comprimé. Le correctif artwork `matchHeightConstraintsFirst` reste inconditionnel. Voir scripts/audit-landscape-player.sh.
+- **Vibration (événements, intensité)** — PARTIALLY IMPLEMENTED. Seul onClick NowPlaying est câblé — pas d'intensité, pas d'événements réglages/navigation.
+- **Fondu enchaîné : slider visuel** — NOT IMPLEMENTED. Le réglage (dropdown upstream) vit ailleurs.
+- **Login Spotify (cookie sp_dc) + import playlists** — PARTIALLY IMPLEMENTED. sp_dc pour lyrics/canvas (chaîne réelle : login WebView → saveSpotifySpdc → setSpdc → spotifyLoggedIn, gate scripts/audit-spotify-flow.sh). Aucun OAuth PKCE ni import de playlists aujourd'hui. Voir scripts/audit-spotify-flow.sh.
+- **Sections de réglages fermées par défaut** — PARTIALLY IMPLEMENTED. Réglages repliables (chewron rotatif, une section ouverte, corps non composé si fermée). Statique — runtime à confirmer sur appareil. Voir scripts/audit-settings-ui.sh.
+- **Mise à jour interne (check + téléchargement + installation)** — PARTIALLY IMPLEMENTED. Détection OK + téléchargement APK universel + SHA-256 avant installation + Package Installer Android (expect/actual PlatformUpdater). Vérifié compile + jvm + gate + CI Android; **device run NON VÉRIFIÉ**. Voir scripts/audit-updater-flow.sh.
+- **Abstraction MusicProvider + capabilities** — NOT IMPLEMENTED. Design seul (docs/PROVIDER-ARCHITECTURE.md) — gate audit-provider-arch.sh en Mode A (aucun code provider sans l'abstraction).
+- **Musique locale (MediaStore, indexation incrémentale)** — NOT IMPLEMENTED. Design seul — indexation à construire.
+- **Widgets Android (play/pause, artwork, 4x2)** — NOT IMPLEMENTED. Aucun AppWidgetProvider dans tout le dépôt. À construire.
+
+### Installation
+
+Android : `SpaceKai-v0.3.1.apk` — APK universel signé (arm64-v8a, armeabi-v7a, x86_64)
+Windows : installer `.msix` · macOS : `.dmg` · Linux : `.AppImage`
+
+### SHA-256
+
+`SHA256SUMS.txt` joint à la release — vérification d'intégrité avant installation.

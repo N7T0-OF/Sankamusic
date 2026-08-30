@@ -88,9 +88,9 @@ haptics|Vibration|Vibration (événements, intensité)|haptics|haptics|HapticsSp
 crossfade-slider|Audio|Fondu enchaîné : slider visuel|-|-|-|Aucune preuve UI dans composeApp; le réglage (dropdown upstream) vit ailleurs.|
 spotify|Spotify|Login (cookie sp_dc) + import playlists|-|saveSpotifySpdc|setSpdc|Décision P0 documentée (docs/PROVIDER-ARCHITECTURE.md §5bis) : sp_dc pour lyrics/canvas (chaîne réelle : login WebView → saveSpotifySpdc → setSpdc → spotifyLoggedIn, gate scripts/audit-spotify-flow.sh). Aucun OAuth PKCE ni import de playlists aujourd'hui. Voir scripts/audit-spotify-flow.sh.|
 dl-notif|Téléchargements|Une seule notification par file|CORE|-|-|Logique dans core/data — sous-module absent de ce snapshot.|
-settings-collapsed|Paramètres|Sections de réglages fermées par défaut|-|-|-||
+settings-collapsed|Paramètres|Sections de réglages fermées par défaut|-|SettingsCollapsibleHeader|expandedSettingsSection|Réglages repliables (chewron rotatif, une section ouverte, corps non composé si fermée). Statique — runtime à confirmer sur appareil. Voir scripts/audit-settings-ui.sh.|ui/screen/home/SettingScreen.kt
 settings-overlap|Paramètres|Pas de superposition de textes|-|-|-|Verdict = gate audit-settings-ui.sh.|
-updater|Mise à jour|Mise à jour interne (check + téléchargement + installation)|-|SpaceKaiUpdateConfig|SpaceKaiUpdateConfig|Détection OK (réglage → checker → dialogue, cache CheckForUpdateAt, bouton = page releases SpaceKai). Téléchargement/installation internes ABSENTS — P0 n°1. Voir scripts/audit-updater-flow.sh.|spacekai/SpaceKaiUpdateConfig.kt
+updater|Mise à jour|Mise à jour interne (check + téléchargement + installation)|-|SpaceKaiUpdatesSection|SpaceKaiUpdateManager|Détection OK + téléchargement APK universel + SHA-256 avant installation + Package Installer Android (expect/actual PlatformUpdater). Détection=CORE, download/install=composeApp. Vérifié compile+jvm+gate+CI Android; device run NON VÉRIFIÉ. Voir scripts/audit-updater-flow.sh.|spacekai/update/SpaceKaiUpdateManager.kt
 provider-arch|Providers|Abstraction MusicProvider + capabilities|-|-|-|Design seul (docs/PROVIDER-ARCHITECTURE.md) — gate audit-provider-arch.sh en Mode A (aucun code provider sans l'abstraction).|
 apple-music|Providers|Apple Music (MusicKit officiel, developer token + music user token)|-|-|-|Design seul — aucune implémentation. Plan factuel docs/PROVIDER-ARCHITECTURE.md §5ter : SDK Android officiel (Authentication + Media Playback), token signé côté backend/GitHub Secret (jamais dans l'APK), storefront requis. Lecture via le player MusicKit (slot par provider), pas notre MediaPlayerInterface.|
 deezer|Providers|Deezer (API/SDK officiel)|-|-|-|Design seul — aucune implémentation. Plan factuel docs/PROVIDER-ARCHITECTURE.md §5quater : PLAYBACK=false (streaming gateé premium+approbation), provider métadonnées seulement. Première étape : vérifier si la création d'apps est rouverte. Jamais de login factice.|
@@ -225,7 +225,7 @@ $(snippet "$logic" "$(excl_for "$own")" 3)"
     [ -n "$CHANGELOG" ] && [ -f "$CHANGELOG" ] || continue
     while IFS= read -r line; do
       [ -z "$line" ] && continue
-      if ! printf '%s' "$line" | grep -qiE '\b(non|ne|pas|jamais|sans|absent|manquant|incomplet|à faire|todo|en cours|no|not|never|without|missing|unfinished|pending|wip)\b'; then
+      if ! printf '%s' "$line" | grep -qiE '\b(non|ne|pas|jamais|sans|absent|manquant|incomplet|à faire|todo|en cours|no|not|never|without|missing|unfinished|pending|wip|aucun|aucune)\b'; then
         contradictions="$contradictions
   - [$CHANGELOG] « $(printf '%s' "$line" | cut -c1-110) » vs **$label** = $verdict"
       fi
