@@ -36,7 +36,7 @@ actual fun platformDynamicColorScheme(isDark: Boolean): ColorScheme? {
  * instead of a fixed black background.
  */
 @Composable
-fun platformDynamicColorSchemeUnpinned(isDark: Boolean): ColorScheme? {
+actual fun platformDynamicColorSchemeUnpinned(isDark: Boolean): ColorScheme? {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
     val context = LocalContext.current
     return if (isDark) {
