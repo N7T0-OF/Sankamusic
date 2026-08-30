@@ -71,6 +71,7 @@ import com.maxrave.logger.Logger
 import com.maxrave.simpmusic.expect.Orientation
 import com.maxrave.simpmusic.expect.currentOrientation
 import com.maxrave.simpmusic.expect.installApk
+import com.maxrave.simpmusic.expect.openUrl
 import com.maxrave.simpmusic.expect.ui.layerBackdrop
 import com.maxrave.simpmusic.expect.ui.rememberBackdrop
 import com.maxrave.simpmusic.extension.copy
@@ -812,8 +813,16 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                     viewModel.showedUpdateDialog = false
                                     // SPACEKAI FEATURE: download the matching release APK and install
                                     // it straight through the system package installer — no browser,
-                                    // no manual uninstall. Falls back to the releases page.
-                                    installApk(response.apkUrl)
+                                    // no manual uninstall. When no APK URL was resolved (e.g. F-Droid
+                                    // channel) fall back to the SPACEKAI releases page — never the
+                                    // upstream SimpMusic one, which would hand users a differently
+                                    // signed APK ("Application non installée").
+                                    val releaseApkUrl = response.apkUrl
+                                    if (!releaseApkUrl.isNullOrBlank()) {
+                                        installApk(releaseApkUrl)
+                                    } else {
+                                        openUrl(SpaceKaiUpdateConfig.releasesPageUrl)
+                                    }
                                 },
                             ) {
                                 Text(
