@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -118,9 +120,23 @@ actual fun LiquidGlassAppBottomNavigationBar(
     }
 
     val nowPlayingData by viewModel.nowPlayingState.collectAsStateWithLifecycle()
-    // MiniPlayer visibility logic
-    var isShowMiniPlayer by rememberSaveable {
-        mutableStateOf(true)
+    // MiniPlayer visibility: derived, never stored.
+    //
+    // This is a second copy of the rule App.kt applies to the plain bottom bar, and it carried the
+    // same two faults. rememberSaveable(true) makes the first composition assert "a track is
+    // playing" before anything knows — nowPlayingState starts null and only fills in once the
+    // service has connected and the queue has been restored — and the LaunchedEffect that
+    // corrected it could only run AFTER that frame had already been drawn. So the bar laid itself
+    // out with the mini player, dropped it, then brought it back, animating each step through
+    // decoupledConstraints.
+    //
+    // Fixing the copy in App.kt did nothing here, because with liquid glass on it is THIS file
+    // that draws the mini player.
+    val isShowMiniPlayer by remember {
+        derivedStateOf {
+            val item = nowPlayingData?.mediaItem
+            item != null && item != GenericMediaItem.EMPTY
+        }
     }
 
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
@@ -168,10 +184,6 @@ actual fun LiquidGlassAppBottomNavigationBar(
 
     var isInSearchDestination by remember {
         mutableStateOf(false)
-    }
-
-    LaunchedEffect(nowPlayingData) {
-        isShowMiniPlayer = !(nowPlayingData?.mediaItem == null || nowPlayingData?.mediaItem == GenericMediaItem.EMPTY)
     }
 
     LaunchedEffect(currentBackStackEntry) {
@@ -254,6 +266,11 @@ actual fun LiquidGlassAppBottomNavigationBar(
          */
         Row(
             verticalAlignment = Alignment.CenterVertically,
+            // Center the WHOLE cluster — capsule, gap, FAB — as one unit. With four tabs the
+            // capsule fills every dp it is offered and this is a no-op; with two it is the
+            // difference between one centred cluster and a capsule floating mid-screen while the
+            // search FAB clings to the right edge on its own.
+            horizontalArrangement = Arrangement.Center,
             modifier =
                 Modifier
                     .then(
@@ -273,7 +290,14 @@ actual fun LiquidGlassAppBottomNavigationBar(
                 // bar whose last item is decorative, but here the last item is the Library tab and
                 // the FAB covered it. weight(1f) hands the capsule exactly what is left after the
                 // gap and the FAB, and BoxWithConstraints reports that as its budget.
-                BoxWithConstraints(Modifier.weight(1f)) {
+                //
+                // fill = false is what keeps the FAB NEXT TO the capsule instead of pinned to the
+                // right edge: tab width is capped at TabWidth, so with two tabs (Mix and Analytics
+                // both gated off) the capsule measures far narrower than its budget — a filled
+                // slot would still swallow the leftover and hold the FAB at the corner, while a
+                // wrapped one lets the Row's Arrangement.Center treat capsule + gap + FAB as one
+                // cluster.
+                BoxWithConstraints(Modifier.weight(1f, fill = false)) {
                     LiquidGlassTabBar(
                         tabs = barTabs,
                         selectedTab = barTabs.indexOfFirst { it.ordinal == selectedIndex },

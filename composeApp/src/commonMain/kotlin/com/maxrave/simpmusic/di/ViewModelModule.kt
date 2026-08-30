@@ -1,7 +1,10 @@
 package com.maxrave.simpmusic.di
 
 import com.maxrave.simpmusic.viewModel.AlbumViewModel
+import com.maxrave.simpmusic.utils.VersionManager
 import com.maxrave.simpmusic.viewModel.AnalyticsViewModel
+import com.maxrave.simpmusic.viewModel.ListenTogetherSettingsViewModel
+import com.maxrave.simpmusic.viewModel.ListenTogetherViewModel
 import com.maxrave.simpmusic.viewModel.ArtistViewModel
 import com.maxrave.simpmusic.viewModel.HomeViewModel
 import com.maxrave.simpmusic.viewModel.ImportViewModel
@@ -21,6 +24,7 @@ import com.maxrave.simpmusic.viewModel.AutoEqViewModel
 import com.maxrave.simpmusic.viewModel.SettingsViewModel
 import com.maxrave.simpmusic.viewModel.SharedViewModel
 import com.maxrave.simpmusic.viewModel.SongSelectionViewModel
+import com.maxrave.simpmusic.viewModel.WrappedViewModel
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
@@ -69,10 +73,12 @@ val viewModelModule =
                 get(),
                 get(),
                 get(),
+                get(),
             )
         }
         viewModel {
             LibraryDynamicPlaylistViewModel(
+                get(),
                 get(),
                 get(),
             )
@@ -102,6 +108,7 @@ val viewModelModule =
         }
         viewModel {
             SettingsViewModel(
+                get(),
                 get(),
                 get(),
                 get(),
@@ -171,4 +178,23 @@ val viewModelModule =
                 get(),
             )
         }
+        viewModel {
+            WrappedViewModel(
+                get(),
+                get(),
+                get(),
+                get(),
+            )
+        }
+        viewModel {
+            ListenTogetherSettingsViewModel(get())
+        }
+        viewModel {
+            ListenTogetherViewModel(
+                repository = get(),
+                dataStore = get(),
+                bridge = get(),
+            )
+        }
+
     }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -37,12 +38,12 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -74,11 +75,15 @@ import com.maxrave.simpmusic.ui.component.LibraryItem
 import com.maxrave.simpmusic.ui.component.LibraryItemState
 import com.maxrave.simpmusic.ui.component.LibraryItemType
 import com.maxrave.simpmusic.ui.component.LibraryTilingBox
+import com.maxrave.simpmusic.ui.component.ListenTogetherIconButton
+import com.maxrave.simpmusic.ui.component.RippleIconButton
 import com.maxrave.simpmusic.ui.component.selection.SelectedSongsBottomSheet
 import com.maxrave.simpmusic.ui.component.selection.SongSelectionTopAppBar
 import com.maxrave.simpmusic.ui.component.selection.rememberSongSelectionState
+import com.maxrave.simpmusic.ui.icon.Groups
 import com.maxrave.simpmusic.ui.icon.PeopleAlt
 import com.maxrave.simpmusic.ui.icon.SimpIcons
+import com.maxrave.simpmusic.ui.navigation.destination.home.ListenTogetherDestination
 import com.maxrave.simpmusic.ui.theme.typo
 import com.maxrave.simpmusic.viewModel.LibraryViewModel
 import com.maxrave.simpmusic.viewModel.SongSelectionViewModel
@@ -110,6 +115,7 @@ import simpmusic.composeapp.generated.resources.no_playlists_downloaded
 import simpmusic.composeapp.generated.resources.playlist_name
 import simpmusic.composeapp.generated.resources.playlist_name_cannot_be_empty
 import simpmusic.composeapp.generated.resources.simpmusic_charts
+import simpmusic.composeapp.generated.resources.wrapped
 import simpmusic.composeapp.generated.resources.your_library
 import simpmusic.composeapp.generated.resources.your_playlists
 import simpmusic.composeapp.generated.resources.your_youtube_playlists
@@ -125,6 +131,10 @@ fun LibraryScreen(
     val density = LocalDensity.current
 
     val loggedIn by viewModel.youtubeLoggedIn.collectAsStateWithLifecycle(initialValue = false)
+    // Wrapped and its recaps are built entirely from playback_event, so the chip follows the same
+    // setting the Analytics tab does.
+    val localTrackingEnabled by viewModel.localTrackingEnabled.collectAsStateWithLifecycle(initialValue = false)
+    val monthlyRecaps by viewModel.monthlyRecaps.collectAsStateWithLifecycle()
     val nowPlaying by viewModel.nowPlayingVideoId.collectAsStateWithLifecycle()
     val youTubePlaylist by viewModel.youTubePlaylist.collectAsStateWithLifecycle()
     val listCanvasSong by viewModel.listCanvasSong.collectAsStateWithLifecycle()
@@ -198,6 +208,10 @@ fun LibraryScreen(
                 if (chartPlaylists.data.isNullOrEmpty()) {
                     viewModel.getChartPlaylists()
                 }
+            }
+
+            LibraryChipType.WRAPPED -> {
+                viewModel.getMonthlyRecaps()
             }
         }
     }
@@ -344,6 +358,17 @@ fun LibraryScreen(
                     viewModel.getChartPlaylists()
                 }
             }
+
+            LibraryChipType.WRAPPED -> {
+                LibraryWrappedTab(
+                    navController = navController,
+                    contentPadding = innerPadding.copy(top = topAppBarHeight),
+                    recaps = monthlyRecaps,
+                    onScrolling = onScrolling,
+                ) {
+                    viewModel.getMonthlyRecaps()
+                }
+            }
         }
     }
     val coroutineScope = rememberCoroutineScope()
@@ -471,10 +496,21 @@ fun LibraryScreen(
                     )
                 }
             },
+            // The Library bar had no actions slot at all — added for the Listen Together entry,
+            // which the design canvas puts on Home AND Library.
+            actions = {
+                ListenTogetherIconButton { navController.navigate(ListenTogetherDestination) }
+            },
         )
         AnimatedVisibility(visible = selectionState.isActive) {
             SongSelectionTopAppBar(
                 state = selectionState,
+                // Stacked BELOW the Library TopAppBar in the same Column, which already consumed
+                // the status-bar inset — leaving the default here reserved it twice and opened a
+                // status-bar-sized band of dead blur between the two bars. Same fix as Search;
+                // the overlay-style call sites (Album, Artist, Recently…) keep the default because
+                // they COVER their normal bar instead of standing under it.
+                windowInsets = WindowInsets(0),
                 onSelectAll = {
                     selectionState.toggleSelectAll(
                         (recentlyAdded.data ?: emptyList())
@@ -504,6 +540,11 @@ fun LibraryScreen(
                 if (type == LibraryChipType.YOUTUBE_MUSIC_PLAYLIST && !loggedIn) {
                     return@forEach
                 }
+                // Nothing to recap without the plays — gated exactly as the YouTube chip above
+                // is gated on being logged in.
+                if (type == LibraryChipType.WRAPPED && !localTrackingEnabled) {
+                    return@forEach
+                }
                 Chip(
                     isAnimated = false,
                     isSelected = type == currentFilter,
@@ -517,6 +558,7 @@ fun LibraryScreen(
                             LibraryChipType.DOWNLOADED_PLAYLIST -> stringResource(Res.string.downloaded_playlists)
                             LibraryChipType.FAVORITE_PODCAST -> stringResource(Res.string.favorite_podcasts)
                             LibraryChipType.CHART -> stringResource(Res.string.simpmusic_charts)
+                            LibraryChipType.WRAPPED -> stringResource(Res.string.wrapped)
                         },
                 ) {
                     viewModel.setCurrentScreen(type)

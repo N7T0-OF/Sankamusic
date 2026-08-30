@@ -40,6 +40,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -87,6 +88,7 @@ import com.maxrave.simpmusic.ui.icon.SimpIcons
 import com.maxrave.simpmusic.ui.navigation.destination.home.AnalyticsDestination
 import com.maxrave.simpmusic.ui.navigation.destination.home.HomeDestination
 import com.maxrave.simpmusic.ui.navigation.destination.home.NotificationDestination
+import com.maxrave.simpmusic.ui.navigation.destination.home.WrappedDestination
 import com.maxrave.simpmusic.ui.navigation.destination.library.LibraryDestination
 import com.maxrave.simpmusic.ui.navigation.destination.library.LibraryDynamicPlaylistDestination
 import com.maxrave.simpmusic.ui.navigation.destination.library.MixForYouDestination
@@ -192,9 +194,14 @@ fun App(viewModel: SharedViewModel = koinInject()) {
     // as a side-by-side composition (artwork left, info/controls right) instead of
     // the portrait-first full-screen overlay. OFF = upstream portrait behaviour.
     val landscapePlayerEnabled = isSpaceKaiFeatureEnabled(SpaceKaiFeatures::landscapePlayer)
-    // MiniPlayer visibility logic
-    var isShowMiniPlayer by rememberSaveable {
-        mutableStateOf(true)
+    // MiniPlayer visibility: derived, never stored (upstream 2.0.0 refactor).
+    // Reading it straight from nowPlayingData removes the rememberSaveable failure
+    // modes (first-frame guess + stale restore) the old `var` had.
+    val isShowMiniPlayer by remember {
+        derivedStateOf {
+            val item = nowPlayingData?.mediaItem
+            item != null && item != GenericMediaItem.EMPTY
+        }
     }
 
     // Now playing screen
@@ -219,10 +226,6 @@ fun App(viewModel: SharedViewModel = koinInject()) {
         rememberHazeState(
             blurEnabled = true,
         )
-
-    LaunchedEffect(nowPlayingData) {
-        isShowMiniPlayer = !(nowPlayingData?.mediaItem == null || nowPlayingData?.mediaItem == GenericMediaItem.EMPTY)
-    }
 
     LaunchedEffect(intent) {
         val intent = intent ?: return@LaunchedEffect
@@ -402,8 +405,11 @@ fun App(viewModel: SharedViewModel = koinInject()) {
         if (navBackStackEntry?.destination?.route?.contains("FullscreenDestination") == true) {
             isShowNowPlaylistScreen = false
         }
+        // Wrapped counts as fullscreen for the same reason the video player does: it is a
+        // full-bleed reel, and the rail and the mini player would sit on top of the card the user
+        // is meant to be reading — and on top of every card captured as a share image.
         isInFullscreen = navBackStackEntry?.destination?.hierarchy?.any {
-            it.hasRoute(FullscreenDestination::class)
+            it.hasRoute(FullscreenDestination::class) || it.hasRoute(WrappedDestination::class)
         } == true
     }
     LaunchedEffect(showAnalyticsTab) {
@@ -453,6 +459,9 @@ fun App(viewModel: SharedViewModel = koinInject()) {
         themeMode = themeMode,
         themeColorSource = themeColorSource,
         customThemeColor = parseThemeColorHex(customThemeColorHex),
+        // Desktop is unconditionally true — the liquid-glass setting row is Android-only, and the
+        // Desktop capsule player is glass by design. Same rule as MiniPlayer's useGlassSurface.
+        liquidGlassEnabled = isLiquidGlassEnabled == TRUE || getPlatform() == Platform.Desktop,
     ) {
         // Backdrop base must match the theme: white page → white glass, dark/AMOLED → black glass.
         // Read inside AppTheme so MaterialTheme reflects the resolved scheme (light background is #FFFFFF).
