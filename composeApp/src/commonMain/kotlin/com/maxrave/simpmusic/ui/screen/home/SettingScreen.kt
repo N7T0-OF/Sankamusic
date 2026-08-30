@@ -244,6 +244,7 @@ import simpmusic.composeapp.generated.resources.developer_blog_tagline
 import simpmusic.composeapp.generated.resources.discord_integration
 import simpmusic.composeapp.generated.resources.donation
 import simpmusic.composeapp.generated.resources.download_quality
+import simpmusic.composeapp.generated.resources.downloads
 import simpmusic.composeapp.generated.resources.downloaded_cache
 import simpmusic.composeapp.generated.resources.enable_canvas
 import simpmusic.composeapp.generated.resources.enable_rich_presence
@@ -1036,30 +1037,6 @@ fun SettingScreen(
                     },
                 )
                 SettingItem(
-                    title = stringResource(Res.string.download_quality),
-                    subtitle = downloadQuality ?: "",
-                    smallSubtitle = true,
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.download_quality) },
-                                selectOne =
-                                    SettingAlertState.SelectData(
-                                        listSelect =
-                                            QUALITY.items.map { item ->
-                                                (item.toString() == downloadQuality) to item.toString()
-                                            },
-                                    ),
-                                confirm =
-                                    runBlocking { getString(Res.string.change) } to { state ->
-                                        state.selectOne?.getSelected()?.let { viewModel.setDownloadQuality(it) }
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
-                SettingItem(
                     title = stringResource(Res.string.video_quality),
                     subtitle = videoQuality ?: "",
                     onClick = {
@@ -1081,35 +1058,6 @@ fun SettingScreen(
                             ),
                         )
                     },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.video_download_quality),
-                    subtitle = videoDownloadQuality ?: "",
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.video_download_quality) },
-                                selectOne =
-                                    SettingAlertState.SelectData(
-                                        listSelect =
-                                            VIDEO_QUALITY.items.map { item ->
-                                                (item.toString() == videoDownloadQuality) to item.toString()
-                                            },
-                                    ),
-                                confirm =
-                                    runBlocking { getString(Res.string.change) } to { state ->
-                                        viewModel.setVideoDownloadQuality(state.selectOne?.getSelected() ?: "")
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.auto_download_liked_songs),
-                    subtitle = stringResource(Res.string.auto_download_liked_songs_description),
-                    smallSubtitle = true,
-                    switch = (autoDownloadLikedSongs to { viewModel.setAutoDownloadLikedSongs(it) }),
                 )
                 SettingItem(
                     title = stringResource(Res.string.play_video_for_video_track_instead_of_audio_only),
@@ -1149,11 +1097,6 @@ fun SettingScreen(
                     title = stringResource(Res.string.play_explicit_content),
                     subtitle = stringResource(Res.string.play_explicit_content_description),
                     switch = (explicitContentEnabled to { viewModel.setExplicitContentEnabled(it) }),
-                )
-                SettingItem(
-                    title = stringResource(Res.string.keep_your_youtube_playlist_offline),
-                    subtitle = stringResource(Res.string.keep_your_youtube_playlist_offline_description),
-                    switch = (keepYoutubePlaylistOffline to { viewModel.setKeepYouTubePlaylistOffline(it) }),
                 )
                 /*
                 SettingItem(
@@ -1333,25 +1276,139 @@ fun SettingScreen(
                 }
             }
         }
-        if (getPlatform() == Platform.Android) {
+        item(key = "audio_header") {
+            SettingsCollapsibleHeader(
+                title = stringResource(Res.string.audio),
+                expanded = expandedSettingsSection == "audio",
+                onClick = {
+                    expandedSettingsSection =
+                        if (expandedSettingsSection == "audio") null else "audio"
+                },
+            )
+        }
+        if (expandedSettingsSection == "audio") {
+            if (getPlatform() == Platform.Android) {
             item(key = "audio") {
                 Column {
-                    Text(
-                        text = stringResource(Res.string.audio),
-                        style = typo().labelMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(vertical = 8.dp),
+                    SettingItem(
+                    title = stringResource(Res.string.normalize_volume),
+                    subtitle = stringResource(Res.string.balance_media_loudness),
+                    switch = (normalizeVolume to { viewModel.setNormalizeVolume(it) }),
                     )
                     SettingItem(
-                        title = stringResource(Res.string.normalize_volume),
-                        subtitle = stringResource(Res.string.balance_media_loudness),
-                        switch = (normalizeVolume to { viewModel.setNormalizeVolume(it) }),
+                    title = stringResource(Res.string.skip_silent),
+                    subtitle = stringResource(Res.string.skip_no_music_part),
+                    switch = (skipSilent to { viewModel.setSkipSilent(it) }),
                     )
+                }
+            }
+            }
+            item(key = "crossfade_settings") {
+                Column {
                     SettingItem(
-                        title = stringResource(Res.string.skip_silent),
-                        subtitle = stringResource(Res.string.skip_no_music_part),
-                        switch = (skipSilent to { viewModel.setSkipSilent(it) }),
+                    title = stringResource(Res.string.crossfade),
+                    subtitle =
+                    if (castState.isRemote) {
+                        stringResource(Res.string.not_available_while_casting)
+                    } else {
+                        stringResource(Res.string.crossfade_description)
+                    },
+                    smallSubtitle = true,
+                    switch = (crossfadeEnabled to { viewModel.setCrossfadeEnabled(it) }),
+                    isEnable = !castState.isRemote,
                     )
+                    AnimatedVisibility(visible = crossfadeEnabled) {
+                        Column {
+                            SettingItem(
+                            title = stringResource(Res.string.crossfade_duration),
+                            subtitle =
+                            if (castState.isRemote) {
+                                stringResource(Res.string.not_available_while_casting)
+                            } else if (crossfadeDuration == DataStoreManager.CROSSFADE_DURATION_AUTO) {
+                                stringResource(Res.string.crossfade_auto)
+                            } else {
+                                "${crossfadeDuration / 1000}s"
+                            },
+                            isEnable = !castState.isRemote,
+                            onClick = {
+                                viewModel.setAlertData(
+                                SettingAlertState(
+                                title = runBlocking { getString(Res.string.crossfade_duration) },
+                                selectOne =
+                                SettingAlertState.SelectData(
+                                listSelect =
+                                listOf(
+                                (crossfadeDuration == DataStoreManager.CROSSFADE_DURATION_AUTO) to
+                                runBlocking { getString(Res.string.crossfade_auto) },
+                                (crossfadeDuration == 1000) to "1s",
+                                (crossfadeDuration == 2000) to "2s",
+                                (crossfadeDuration == 3000) to "3s",
+                                (crossfadeDuration == 5000) to "5s",
+                                (crossfadeDuration == 8000) to "8s",
+                                (crossfadeDuration == 10000) to "10s",
+                                (crossfadeDuration == 12000) to "12s",
+                                (crossfadeDuration == 15000) to "15s",
+                                (crossfadeDuration == 20000) to "20s",
+                                (crossfadeDuration == 30000) to "30s",
+                                ),
+                                ),
+                                confirm =
+                                runBlocking { getString(Res.string.change) } to { state ->
+                                    val duration =
+                                    when (state.selectOne?.getSelected()) {
+                                        runBlocking {
+                                            getString(
+                                            Res.string.crossfade_auto,
+                                            )
+                                        },
+                                        -> DataStoreManager.CROSSFADE_DURATION_AUTO
+                                        "1s" -> 1000
+                                        "2s" -> 2000
+                                        "3s" -> 3000
+                                        "5s" -> 5000
+                                        "8s" -> 8000
+                                        "10s" -> 10000
+                                        "12s" -> 12000
+                                        "15s" -> 15000
+                                        "20s" -> 20000
+                                        "30s" -> 30000
+                                        else -> 5000
+                                    }
+                                    viewModel.setCrossfadeDuration(duration)
+                                },
+                                dismiss = runBlocking { getString(Res.string.cancel) },
+                                ),
+                                )
+                            },
+                            )
+                            //                        if (getPlatform() == Platform.Android) {
+                                SettingItem(
+                                title = stringResource(Res.string.crossfade_dj_mode),
+                                subtitle =
+                                if (castState.isRemote) {
+                                    stringResource(Res.string.not_available_while_casting)
+                                } else {
+                                    stringResource(Res.string.crossfade_dj_mode_description)
+                                },
+                                smallSubtitle = true,
+                                switch = ((crossfadeDjMode) to { viewModel.setCrossfadeDjMode(it) }),
+                                isEnable = !castState.isRemote,
+                                )
+                                SettingItem(
+                                title = stringResource(Res.string.crossfade_skip_album),
+                                subtitle =
+                                if (castState.isRemote) {
+                                    stringResource(Res.string.not_available_while_casting)
+                                } else {
+                                    stringResource(Res.string.crossfade_skip_album_description)
+                                },
+                                smallSubtitle = true,
+                                switch = ((crossfadeSkipAlbum) to { viewModel.setCrossfadeSkipAlbum(it) }),
+                                isEnable = !castState.isRemote,
+                                )
+                                //                        }
+                        }
+                    }
                 }
             }
         }
@@ -1410,114 +1467,6 @@ fun SettingScreen(
         }
         }
         // Crossfade Settings (all platforms)
-        item(key = "crossfade_settings") {
-            Column {
-                SettingItem(
-                    title = stringResource(Res.string.crossfade),
-                    subtitle =
-                        if (castState.isRemote) {
-                            stringResource(Res.string.not_available_while_casting)
-                        } else {
-                            stringResource(Res.string.crossfade_description)
-                        },
-                    smallSubtitle = true,
-                    switch = (crossfadeEnabled to { viewModel.setCrossfadeEnabled(it) }),
-                    isEnable = !castState.isRemote,
-                )
-                AnimatedVisibility(visible = crossfadeEnabled) {
-                    Column {
-                        SettingItem(
-                            title = stringResource(Res.string.crossfade_duration),
-                            subtitle =
-                                if (castState.isRemote) {
-                                    stringResource(Res.string.not_available_while_casting)
-                                } else if (crossfadeDuration == DataStoreManager.CROSSFADE_DURATION_AUTO) {
-                                    stringResource(Res.string.crossfade_auto)
-                                } else {
-                                    "${crossfadeDuration / 1000}s"
-                                },
-                            isEnable = !castState.isRemote,
-                            onClick = {
-                                viewModel.setAlertData(
-                                    SettingAlertState(
-                                        title = runBlocking { getString(Res.string.crossfade_duration) },
-                                        selectOne =
-                                            SettingAlertState.SelectData(
-                                                listSelect =
-                                                    listOf(
-                                                        (crossfadeDuration == DataStoreManager.CROSSFADE_DURATION_AUTO) to
-                                                            runBlocking { getString(Res.string.crossfade_auto) },
-                                                        (crossfadeDuration == 1000) to "1s",
-                                                        (crossfadeDuration == 2000) to "2s",
-                                                        (crossfadeDuration == 3000) to "3s",
-                                                        (crossfadeDuration == 5000) to "5s",
-                                                        (crossfadeDuration == 8000) to "8s",
-                                                        (crossfadeDuration == 10000) to "10s",
-                                                        (crossfadeDuration == 12000) to "12s",
-                                                        (crossfadeDuration == 15000) to "15s",
-                                                        (crossfadeDuration == 20000) to "20s",
-                                                        (crossfadeDuration == 30000) to "30s",
-                                                    ),
-                                            ),
-                                        confirm =
-                                            runBlocking { getString(Res.string.change) } to { state ->
-                                                val duration =
-                                                    when (state.selectOne?.getSelected()) {
-                                                        runBlocking {
-                                                            getString(
-                                                                Res.string.crossfade_auto,
-                                                            )
-                                                        },
-                                                        -> DataStoreManager.CROSSFADE_DURATION_AUTO
-                                                        "1s" -> 1000
-                                                        "2s" -> 2000
-                                                        "3s" -> 3000
-                                                        "5s" -> 5000
-                                                        "8s" -> 8000
-                                                        "10s" -> 10000
-                                                        "12s" -> 12000
-                                                        "15s" -> 15000
-                                                        "20s" -> 20000
-                                                        "30s" -> 30000
-                                                        else -> 5000
-                                                    }
-                                                viewModel.setCrossfadeDuration(duration)
-                                            },
-                                        dismiss = runBlocking { getString(Res.string.cancel) },
-                                    ),
-                                )
-                            },
-                        )
-//                        if (getPlatform() == Platform.Android) {
-                        SettingItem(
-                            title = stringResource(Res.string.crossfade_dj_mode),
-                            subtitle =
-                                if (castState.isRemote) {
-                                    stringResource(Res.string.not_available_while_casting)
-                                } else {
-                                    stringResource(Res.string.crossfade_dj_mode_description)
-                                },
-                            smallSubtitle = true,
-                            switch = ((crossfadeDjMode) to { viewModel.setCrossfadeDjMode(it) }),
-                            isEnable = !castState.isRemote,
-                        )
-                        SettingItem(
-                            title = stringResource(Res.string.crossfade_skip_album),
-                            subtitle =
-                                if (castState.isRemote) {
-                                    stringResource(Res.string.not_available_while_casting)
-                                } else {
-                                    stringResource(Res.string.crossfade_skip_album_description)
-                                },
-                            smallSubtitle = true,
-                            switch = ((crossfadeSkipAlbum) to { viewModel.setCrossfadeSkipAlbum(it) }),
-                            isEnable = !castState.isRemote,
-                        )
-//                        }
-                    }
-                }
-            }
-        }
         // Deliberately not part of "storage" further down, which is Android-only: tracking and the
         // rows it leaves behind exist on Desktop just the same. The switch that produces the history
         // and the button that erases it belong together.
@@ -2176,6 +2125,80 @@ fun SettingScreen(
             SpaceKaiUpdatesSection(
                 sharedViewModel = sharedViewModel,
             )
+        }
+        item(key = "downloads_header") {
+            SettingsCollapsibleHeader(
+                title = stringResource(Res.string.downloads),
+                expanded = expandedSettingsSection == "downloads",
+                onClick = {
+                    expandedSettingsSection =
+                        if (expandedSettingsSection == "downloads") null else "downloads"
+                },
+            )
+        }
+        if (expandedSettingsSection == "downloads") {
+        item(key = "downloads") {
+            Column {
+                SettingItem(
+                title = stringResource(Res.string.download_quality),
+                subtitle = downloadQuality ?: "",
+                smallSubtitle = true,
+                onClick = {
+                    viewModel.setAlertData(
+                    SettingAlertState(
+                    title = runBlocking { getString(Res.string.download_quality) },
+                    selectOne =
+                    SettingAlertState.SelectData(
+                    listSelect =
+                    QUALITY.items.map { item ->
+                        (item.toString() == downloadQuality) to item.toString()
+                    },
+                    ),
+                    confirm =
+                    runBlocking { getString(Res.string.change) } to { state ->
+                        state.selectOne?.getSelected()?.let { viewModel.setDownloadQuality(it) }
+                    },
+                    dismiss = runBlocking { getString(Res.string.cancel) },
+                    ),
+                    )
+                },
+                )
+                SettingItem(
+                title = stringResource(Res.string.video_download_quality),
+                subtitle = videoDownloadQuality ?: "",
+                onClick = {
+                    viewModel.setAlertData(
+                    SettingAlertState(
+                    title = runBlocking { getString(Res.string.video_download_quality) },
+                    selectOne =
+                    SettingAlertState.SelectData(
+                    listSelect =
+                    VIDEO_QUALITY.items.map { item ->
+                        (item.toString() == videoDownloadQuality) to item.toString()
+                    },
+                    ),
+                    confirm =
+                    runBlocking { getString(Res.string.change) } to { state ->
+                        viewModel.setVideoDownloadQuality(state.selectOne?.getSelected() ?: "")
+                    },
+                    dismiss = runBlocking { getString(Res.string.cancel) },
+                    ),
+                    )
+                },
+                )
+                SettingItem(
+                title = stringResource(Res.string.auto_download_liked_songs),
+                subtitle = stringResource(Res.string.auto_download_liked_songs_description),
+                smallSubtitle = true,
+                switch = (autoDownloadLikedSongs to { viewModel.setAutoDownloadLikedSongs(it) }),
+                )
+                SettingItem(
+                title = stringResource(Res.string.keep_your_youtube_playlist_offline),
+                subtitle = stringResource(Res.string.keep_your_youtube_playlist_offline_description),
+                switch = (keepYoutubePlaylistOffline to { viewModel.setKeepYouTubePlaylistOffline(it) }),
+                )
+            }
+        }
         }
         if (getPlatform() == Platform.Android) {
         item(key = "storage_header") {
