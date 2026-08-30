@@ -58,7 +58,6 @@ json = "1.11.0"
 quickjs = "1.0.14"
 atomicfu = "0.33.0"
 kuromoji = "0.9.0"
-pinyin4j = "2.5.1"
 gemini-kotlin = "4.0.2"
 slf4j = "1.7.36"
 sentry-android = "8.53.0"
@@ -70,7 +69,6 @@ brave-newpipe = "0fcaf19ecc"
 org-json = "20231013" # pin version
 pipepipe = "f8982ca9e7"
 # QuickJS binding for KMP — runs YouTube's player JS to solve sig/n challenges locally.
-quickjs = "1.0.14"
 webkit = "1.17.0"
 kermit = "2.1.0"
 paging-common = "3.5.1"
@@ -83,7 +81,6 @@ composeMultiplatform = "1.11.1"
 datetime = "0.8.0"
 sqlite = "2.7.0"
 okio = "3.18.1"
-atomicfu = "0.33.0"
 material3-multiplatform = "1.12.0-alpha01" # alpha01 = skiko 0.148.1 (has Matrix33.makeTranslate) to match compottie 1.12 snapshot; alpha02 bumps skiko 0.148.2 which removed it → compottie crash
 adaptive = "1.2.0"
 componentsResources = "1.11.1"
@@ -203,7 +200,6 @@ newpipe-extractor = { module = "com.github.teamnewpipe:NewPipeExtractor", versio
 brave-extractor = { module = "com.github.maxrave-dev:BravePipeExtractor", version.ref = "brave-newpipe" }
 org-json = { module = "org.json:json", version.ref = "org-json" }
 pipepipe-extractor = { module = "com.github.maxrave-dev:PipePipeExtractor", version.ref = "pipepipe" }
-quickjs = { module = "io.github.dokar3:quickjs-kt", version.ref = "quickjs" }
 #leak-canary = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanary" }
 kermit-logging = { module = "co.touchlab:kermit", version.ref = "kermit" }
 glance = { group = "androidx.glance", name = "glance", version.ref = "glance" }

@@ -61,13 +61,22 @@ IMPL=$(find "$ROOT/core" "$ROOT/composeApp" -type f -name 'UpdateRepositoryImpl*
 if [ -z "$IMPL" ]; then
     echo "  WARN: UpdateRepositoryImpl not found in this checkout (core/data submodule not"
     echo "        extracted). When the full repo is present, this must reference"
-    echo "        SpaceKaiUpdateConfig — expecting a PASS then, a FAIL if it drifts."
+    echo "        SpaceKai releases — expecting a PASS then, a FAIL if it drifts."
 else
+    # Clean Architecture: core/data cannot import composeApp's SpaceKaiUpdateConfig
+    # (core must not depend on the app layer), so the fork's established pattern is to
+    # hard-code the fork URL in Ytmusic.kt (kotlinYtmusicScraper) where the HTTP call
+    # lives, and UpdateRepositoryImpl simply calls through. Accept either location.
+    YTMUSIC="$ROOT/core/service/kotlinYtmusicScraper/src/commonMain/kotlin/com/maxrave/kotlinytmusicscraper/Ytmusic.kt"
     if grep -q "SpaceKaiUpdateConfig" "$IMPL" 2>/dev/null; then
         echo "  PASS: $IMPL references SpaceKaiUpdateConfig"
+    elif grep -q "api.github.com/repos/$EXPECTED_OWNER/$EXPECTED_REPO/releases/latest" "$YTMUSIC" 2>/dev/null; then
+        echo "  PASS: $YTMUSIC points the update check at $EXPECTED_OWNER/$EXPECTED_REPO"
+        echo "        (core cannot import the app's SpaceKaiUpdateConfig; URL lives here)"
     else
-        echo "  FAIL: $IMPL does not reference SpaceKaiUpdateConfig — update checker"
-        echo "        is very likely pointing at maxrave-dev/SimpMusic releases again."
+        echo "  FAIL: update checker is very likely pointing at maxrave-dev/SimpMusic again."
+        echo "        Expected $EXPECTED_OWNER/$EXPECTED_REPO either in $IMPL"
+        echo "        (SpaceKaiUpdateConfig) or in $YTMUSIC (hard-coded fork URL)."
         echo "        Re-apply the SPACEKAI FEATURE hook (see docs/SPACEKAI-ARCHITECTURE.md)."
         fail=1
     fi

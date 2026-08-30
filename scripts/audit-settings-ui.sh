@@ -37,14 +37,23 @@ SRC="$ROOT/composeApp/src"
 ALLOWLIST_SITES=$(cat <<'EOF'
 commonMain/kotlin/com/maxrave/simpmusic/App.kt:674
 commonMain/kotlin/com/maxrave/simpmusic/App.kt:675
-commonMain/kotlin/com/maxrave/simpmusic/ui/screen/home/HomeScreen.kt:787
-commonMain/kotlin/com/maxrave/simpmusic/ui/screen/home/HomeScreen.kt:788
-commonMain/kotlin/com/maxrave/simpmusic/ui/screen/home/HomeScreen.kt:794
-commonMain/kotlin/com/maxrave/simpmusic/ui/screen/home/HomeScreen.kt:795
-commonMain/kotlin/com/maxrave/simpmusic/ui/screen/library/LibraryScreen.kt:452
-commonMain/kotlin/com/maxrave/simpmusic/ui/screen/library/LibraryScreen.kt:453
-commonMain/kotlin/com/maxrave/simpmusic/ui/screen/player/NowPlayingScreen.kt:1975
-commonMain/kotlin/com/maxrave/simpmusic/ui/screen/player/NowPlayingScreen.kt:1976
+commonMain/kotlin/com/maxrave/simpmusic/ui/screen/home/HomeScreen.kt:810
+commonMain/kotlin/com/maxrave/simpmusic/ui/screen/home/HomeScreen.kt:811
+commonMain/kotlin/com/maxrave/simpmusic/ui/screen/home/HomeScreen.kt:817
+commonMain/kotlin/com/maxrave/simpmusic/ui/screen/home/HomeScreen.kt:818
+commonMain/kotlin/com/maxrave/simpmusic/ui/screen/library/LibraryScreen.kt:477
+commonMain/kotlin/com/maxrave/simpmusic/ui/screen/library/LibraryScreen.kt:478
+commonMain/kotlin/com/maxrave/simpmusic/ui/screen/player/NowPlayingScreen.kt:1981
+commonMain/kotlin/com/maxrave/simpmusic/ui/screen/player/NowPlayingScreen.kt:1982
+# Upstream 2.0.0 player-content files (merged 2026-08-30): the flagged sites sit in
+# a plain Column (this@Column.AnimatedVisibility), never inside a LazyColumn/LazyRow
+# item — same family as the NowPlayingScreen sites above. AppleMusicLyricsView only
+# mentions LazyColumn in a comment; its lyrics list is a separate LazyColumn whose
+# item{} calls no size-transform.
+commonMain/kotlin/com/maxrave/simpmusic/ui/screen/player/content/applemusic/AppleMusicLyricsView.kt:286
+commonMain/kotlin/com/maxrave/simpmusic/ui/screen/player/content/applemusic/AppleMusicLyricsView.kt:287
+commonMain/kotlin/com/maxrave/simpmusic/ui/screen/player/content/NowPlayingContentSpotify.kt:1337
+commonMain/kotlin/com/maxrave/simpmusic/ui/screen/player/content/NowPlayingContentSpotify.kt:1338
 commonMain/kotlin/com/maxrave/simpmusic/ui/component/FullWidthItems.kt:243
 commonMain/kotlin/com/maxrave/simpmusic/ui/component/FullWidthItems.kt:244
 commonMain/kotlin/com/maxrave/simpmusic/ui/component/FullWidthItems.kt:400

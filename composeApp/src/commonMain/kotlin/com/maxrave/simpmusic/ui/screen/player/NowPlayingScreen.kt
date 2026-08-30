@@ -330,7 +330,13 @@ fun NowPlayingScreenContent(
     // Do NOT use mediaItem.mediaId — it carries the "Video" prefix for video items.
     val nowPlayingVideoId: String? = nowPlayingState?.track?.videoId
     val currentOrderIndex by remember(artworkQueue, nowPlayingVideoId) {
-        derivedStateOf { deriveOrderIndex(artworkQueue, nowPlayingVideoId) }
+        derivedStateOf {
+            deriveOrderIndex(
+                artworkQueue,
+                nowPlayingVideoId,
+                mediaPlayerHandler.currentOrderIndex(),
+            )
+        }
     }
     val isRepeatOne = controllerState.repeatState is RepeatState.One
     // Single PagerState — the unified ArtworkPager renders BOTH the fullscreen canvas

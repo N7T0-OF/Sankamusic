@@ -495,9 +495,6 @@ fun SettingScreen(
             }
         }
 
-    // Open equalizer
-    val resultLauncher = openEqResult(viewModel.getAudioSessionId())
-
     // SPACEKAI FEATURE: icons-only navigation bar (“hide text”).
     val hideNavLabel by viewModel.hideNavLabel.collectAsStateWithLifecycle()
     // SPACEKAI FEATURE: nav bar style selector (Minimalist / Translucent / Liquid glass).
