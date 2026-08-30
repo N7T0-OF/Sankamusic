@@ -1,0 +1,8 @@
+SpaceKai v0.3.0
+
+This release rebuilds SpaceKai on the SimpMusic 2.0.0 base — the whole engine moves forward (player, data, lyrics, analytics, Wrapped, Listen Together), with the SpaceKai layer re-applied on top.
+
+- BASE REBUILT ON SIMPMUSIC 2.0.0: the app now ships the real upstream 2.0.0 engine — Media3 player, YouTube Music scraper, analytics, Wrapped year-in-review, Listen Together, shareable lyrics — instead of the older 1.7.x fork. The SpaceKai layer (settings, navigation styles, update manager) is re-applied on top and survives future upstream merges.
+- TWO-BLOCK UPDATE MANAGER: Settings → Updates now shows two distinct blocks — "SpaceKai" (the installed app: installs the newest SpaceKai release in place via the Android package installer) and "SimpMusic — Upstream" (the base SpaceKai is rebuilt on, shown info-only with a compatibility status). The upstream APK is never downloaded or installed over SpaceKai.
+- CORE REBUILT ON UPSTREAM 2.0.0: the core submodule was rebuilt wholesale on upstream 2.0.0 (Listen Together, Wrapped/analytics models, crossfade suppression) with only the SpaceKai deltas re-applied — update checker pointed at SpaceKai releases, upstream compatibility matrix, in-app APK resolution.
+- ABI splits removed: one universal APK for all devices.
