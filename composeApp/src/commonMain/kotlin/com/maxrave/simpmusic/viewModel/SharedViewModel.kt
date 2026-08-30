@@ -963,6 +963,30 @@ class SharedViewModel(
     private var _updateResponse = MutableStateFlow<UpdateData?>(null)
     val updateResponse: StateFlow<UpdateData?> = _updateResponse
 
+    // SPACEKAI FEATURE: latest SimpMusic (upstream) release, for the Compatibility
+    // Matrix in Settings → Updates. INFO-ONLY — the upstream APK is never installed
+    // over SpaceKai; we only report it and whether the installed layer still runs on it.
+    private var _upstreamResponse = MutableStateFlow<UpdateData?>(null)
+    val upstreamResponse: StateFlow<UpdateData?> = _upstreamResponse
+
+    private var _isCheckingUpstream = MutableStateFlow(false)
+    val isCheckingUpstream: StateFlow<Boolean> = _isCheckingUpstream
+
+    fun checkForUpstreamRelease() {
+        if (_isCheckingUpstream.value) return
+        viewModelScope.launch {
+            _isCheckingUpstream.value = true
+            updateRepository.checkForUpstreamRelease().collectLatest { response ->
+                val data = response.data
+                when (response) {
+                    is Resource.Success if (data != null) -> _upstreamResponse.value = data
+                    else -> log("Upstream check error: ${response.message}", LogLevel.WARN)
+                }
+                _isCheckingUpstream.value = false
+            }
+        }
+    }
+
     fun checkForUpdate() {
         viewModelScope.launch {
             _isCheckingUpdate.value = true

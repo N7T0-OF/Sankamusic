@@ -132,6 +132,7 @@ import com.maxrave.simpmusic.ui.navigation.destination.login.LastfmLoginDestinat
 import com.maxrave.simpmusic.ui.navigation.destination.login.LoginDestination
 import com.maxrave.simpmusic.ui.navigation.destination.login.SpotifyLoginDestination
 import com.maxrave.simpmusic.spacekai.ui.SpaceKaiSettingsSection
+import com.maxrave.simpmusic.spacekai.ui.SpaceKaiUpdatesSection
 import com.maxrave.simpmusic.ui.theme.md_theme_dark_primary
 import com.maxrave.simpmusic.ui.theme.parseThemeColorHex
 import com.maxrave.simpmusic.ui.theme.typo
@@ -1925,6 +1926,14 @@ fun SettingScreen(
         // vanilla SimpMusic build — see SpaceKaiSettingsSection).
         item(key = "spacekai") {
             SpaceKaiSettingsSection(
+                sharedViewModel = sharedViewModel,
+            )
+        }
+        // SPACEKAI FEATURE: two-block update manager — SpaceKai (installable in-app)
+        // + SimpMusic upstream (info-only, compatibility matrix, never installed over
+        // SpaceKai). Renders only when the SpaceKai layer is active.
+        item(key = "spacekai_updates") {
+            SpaceKaiUpdatesSection(
                 sharedViewModel = sharedViewModel,
             )
         }
