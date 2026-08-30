@@ -15,12 +15,12 @@ import com.maxrave.logger.Logger
 private const val TAG = "SpaceKai"
 
 /** The SimpMusic upstream release this SpaceKai build is based on. */
-// Verified 2026-08-26: upstream maxrave-dev/SimpMusic latest tag is v1.7.0 — the
-// SpaceKai 1.7.x/1.8.x releases all sit on top of it. Bump when a newer upstream ships.
-const val SPACEKAI_BASED_ON_UPSTREAM: String = "1.7.0"
+// 2026-08-27: rebased on upstream 2.0.0 (see migrate/upstream-2.0.0, released v0.3.0).
+// Bump whenever a newer upstream base is integrated.
+const val SPACEKAI_BASED_ON_UPSTREAM: String = "2.0.0"
 
 /** The SpaceKai release version (aligned with `version-name` in libs.versions.toml). */
-const val SPACEKAI_VERSION: String = "0.2.2"
+const val SPACEKAI_VERSION: String = "0.3.0"
 
 // The configured feature set. `null` = no config was handed in (vanilla).
 //

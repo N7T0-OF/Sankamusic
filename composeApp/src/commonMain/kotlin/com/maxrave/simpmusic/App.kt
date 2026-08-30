@@ -44,8 +44,10 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,7 +73,7 @@ import com.maxrave.domain.manager.DataStoreManager.Values.TRUE
 import com.maxrave.logger.Logger
 import com.maxrave.simpmusic.expect.Orientation
 import com.maxrave.simpmusic.expect.currentOrientation
-import com.maxrave.simpmusic.expect.installApk
+import com.maxrave.simpmusic.spacekai.update.SpaceKaiUpdateManager
 import com.maxrave.simpmusic.expect.openUrl
 import com.maxrave.simpmusic.expect.ui.layerBackdrop
 import com.maxrave.simpmusic.expect.ui.rememberBackdrop
@@ -154,6 +156,7 @@ fun App(viewModel: SharedViewModel = koinInject()) {
     val sleepTimerState by viewModel.sleepTimerState.collectAsStateWithLifecycle()
     val nowPlayingData by viewModel.nowPlayingState.collectAsStateWithLifecycle()
     val updateData by viewModel.updateResponse.collectAsStateWithLifecycle()
+    val updateScope = rememberCoroutineScope()
     val intent by viewModel.intent.collectAsStateWithLifecycle()
     val showNotificationPermissionDialog by viewModel.showNotificationPermissionDialog.collectAsStateWithLifecycle()
 
@@ -820,15 +823,15 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                 onClick = {
                                     shouldShowUpdateDialog = false
                                     viewModel.showedUpdateDialog = false
-                                    // SPACEKAI FEATURE: download the matching release APK and install
-                                    // it straight through the system package installer — no browser,
-                                    // no manual uninstall. When no APK URL was resolved (e.g. F-Droid
-                                    // channel) fall back to the SPACEKAI releases page — never the
-                                    // upstream SimpMusic one, which would hand users a differently
-                                    // signed APK ("Application non installée").
-                                    val releaseApkUrl = response.apkUrl
-                                    if (!releaseApkUrl.isNullOrBlank()) {
-                                        installApk(releaseApkUrl)
+                                    // SPACEKAI FEATURE: download the matching release APK, verify its
+                                    // SHA-256 against the release's SHA256SUMS.txt, then hand it to the
+                                    // system package installer — no browser, no manual uninstall, and a
+                                    // corrupted/tampered file is refused before install. When no APK URL
+                                    // was resolved (e.g. F-Droid channel) fall back to the SPACEKAI
+                                    // releases page — never the upstream SimpMusic one, which would hand
+                                    // users a differently signed APK ("Application non installée").
+                                    if (!response.apkUrl.isNullOrBlank()) {
+                                        updateScope.launch { SpaceKaiUpdateManager.install(response) }
                                     } else {
                                         openUrl(SpaceKaiUpdateConfig.releasesPageUrl)
                                     }

@@ -129,6 +129,7 @@ import com.maxrave.simpmusic.ui.component.rememberNowPlayingGlowTint
 import com.maxrave.simpmusic.ui.icon.ArrowBackIosNew
 import com.maxrave.simpmusic.ui.icon.Close
 import com.maxrave.simpmusic.ui.icon.Error
+import com.maxrave.simpmusic.ui.icon.KeyboardArrowDown
 import com.maxrave.simpmusic.ui.icon.PeopleAlt
 import com.maxrave.simpmusic.ui.icon.PlaylistAdd
 import com.maxrave.simpmusic.ui.icon.SimpIcons
@@ -644,6 +645,12 @@ fun SettingScreen(
                     }
             },
     )
+    // SPACEKAI FEATURE: Settings sections are COLLAPSED by default, with a single-open
+    // behaviour (opening one closes the others). Kept null = all collapsed on first view.
+    var expandedSettingsSection by rememberSaveable {
+        mutableStateOf<String?>(null)
+    }
+
     LazyColumn(
         state = settingListState,
         contentPadding = innerPadding,
@@ -922,14 +929,19 @@ fun SettingScreen(
                 )
             }
         }
+        item(key = "content_header") {
+            SettingsCollapsibleHeader(
+                title = stringResource(Res.string.content),
+                expanded = expandedSettingsSection == "content",
+                onClick = {
+                    expandedSettingsSection =
+                        if (expandedSettingsSection == "content") null else "content"
+                },
+            )
+        }
+        if (expandedSettingsSection == "content") {
         item(key = "content") {
             Column {
-                Text(
-                    text = stringResource(Res.string.content),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
                 SettingItem(
                     title = stringResource(Res.string.youtube_account),
                     subtitle = stringResource(Res.string.manage_your_youtube_accounts),
@@ -1157,6 +1169,7 @@ fun SettingScreen(
                 )
             }
         }
+        }
         item(key = "proxy") {
             Crossfade(usingProxy) { it ->
                 if (it) {
@@ -1342,14 +1355,19 @@ fun SettingScreen(
                 }
             }
         }
+        item(key = "playback_header") {
+            SettingsCollapsibleHeader(
+                title = stringResource(Res.string.playback),
+                expanded = expandedSettingsSection == "playback",
+                onClick = {
+                    expandedSettingsSection =
+                        if (expandedSettingsSection == "playback") null else "playback"
+                },
+            )
+        }
+        if (expandedSettingsSection == "playback") {
         item(key = "playback") {
             Column {
-                Text(
-                    text = stringResource(Res.string.playback),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
                 // Under Playback rather than Audio because that whole group sits inside an
                 // Android-only branch — "Open system equalizer" is an Android feature — and this
                 // one is on both platforms: mpv's `af` chain on Desktop, an AudioProcessor in the
@@ -1389,6 +1407,7 @@ fun SettingScreen(
                     )
                 }
             }
+        }
         }
         // Crossfade Settings (all platforms)
         item(key = "crossfade_settings") {
@@ -1502,14 +1521,19 @@ fun SettingScreen(
         // Deliberately not part of "storage" further down, which is Android-only: tracking and the
         // rows it leaves behind exist on Desktop just the same. The switch that produces the history
         // and the button that erases it belong together.
+        item(key = "listening_history_header") {
+            SettingsCollapsibleHeader(
+                title = stringResource(Res.string.listening_history),
+                expanded = expandedSettingsSection == "listening_history",
+                onClick = {
+                    expandedSettingsSection =
+                        if (expandedSettingsSection == "listening_history") null else "listening_history"
+                },
+            )
+        }
+        if (expandedSettingsSection == "listening_history") {
         item(key = "listening_history") {
             Column {
-                Text(
-                    text = stringResource(Res.string.listening_history),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
                 SettingItem(
                     title = stringResource(Res.string.local_tracking_title),
                     subtitle = stringResource(Res.string.local_tracking_description),
@@ -1534,14 +1558,20 @@ fun SettingScreen(
                 )
             }
         }
+        }
+        item(key = "lyrics_header") {
+            SettingsCollapsibleHeader(
+                title = stringResource(Res.string.lyrics),
+                expanded = expandedSettingsSection == "lyrics",
+                onClick = {
+                    expandedSettingsSection =
+                        if (expandedSettingsSection == "lyrics") null else "lyrics"
+                },
+            )
+        }
+        if (expandedSettingsSection == "lyrics") {
         item(key = "lyrics") {
             Column {
-                Text(
-                    text = stringResource(Res.string.lyrics),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
                 SettingItem(
                     title = stringResource(Res.string.main_lyrics_provider),
                     subtitle =
@@ -1700,14 +1730,20 @@ fun SettingScreen(
                 )
             }
         }
+        }
+        item(key = "AI_header") {
+            SettingsCollapsibleHeader(
+                title = stringResource(Res.string.ai),
+                expanded = expandedSettingsSection == "AI",
+                onClick = {
+                    expandedSettingsSection =
+                        if (expandedSettingsSection == "AI") null else "AI"
+                },
+            )
+        }
+        if (expandedSettingsSection == "AI") {
         item(key = "AI") {
             Column {
-                Text(
-                    text = stringResource(Res.string.ai),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
                 SettingItem(
                     title = stringResource(Res.string.ai_provider),
                     subtitle =
@@ -1881,14 +1917,20 @@ fun SettingScreen(
                 )
             }
         }
+        }
+        item(key = "spotify_header") {
+            SettingsCollapsibleHeader(
+                title = stringResource(Res.string.spotify),
+                expanded = expandedSettingsSection == "spotify",
+                onClick = {
+                    expandedSettingsSection =
+                        if (expandedSettingsSection == "spotify") null else "spotify"
+                },
+            )
+        }
+        if (expandedSettingsSection == "spotify") {
         item(key = "spotify") {
             Column {
-                Text(
-                    text = stringResource(Res.string.spotify),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
                 SettingItem(
                     // The title follows the state: a row that still reads "Log in" while logged in
                     // gives no clue that tapping it signs you out.
@@ -1938,14 +1980,20 @@ fun SettingScreen(
                 )
             }
         }
+        }
+        item(key = "discord_header") {
+            SettingsCollapsibleHeader(
+                title = stringResource(Res.string.discord_integration),
+                expanded = expandedSettingsSection == "discord",
+                onClick = {
+                    expandedSettingsSection =
+                        if (expandedSettingsSection == "discord") null else "discord"
+                },
+            )
+        }
+        if (expandedSettingsSection == "discord") {
         item(key = "discord") {
             Column {
-                Text(
-                    text = stringResource(Res.string.discord_integration),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
                 SettingItem(
                     title =
                         if (discordLoggedIn) {
@@ -1981,6 +2029,7 @@ fun SettingScreen(
                     },
                 )
             }
+        }
         }
         // Hidden entirely when the build carries no Last.fm credentials — a FOSS build, or a full
         // build whose local.properties has no key.
@@ -2030,14 +2079,19 @@ fun SettingScreen(
                 }
             }
         }
+        item(key = "sponsor_block_header") {
+            SettingsCollapsibleHeader(
+                title = stringResource(Res.string.sponsorBlock),
+                expanded = expandedSettingsSection == "sponsor_block",
+                onClick = {
+                    expandedSettingsSection =
+                        if (expandedSettingsSection == "sponsor_block") null else "sponsor_block"
+                },
+            )
+        }
+        if (expandedSettingsSection == "sponsor_block") {
         item(key = "sponsor_block") {
             Column {
-                Text(
-                    text = stringResource(Res.string.sponsorBlock),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
                 SettingItem(
                     title = stringResource(Res.string.enable_sponsor_block),
                     subtitle = stringResource(Res.string.skip_sponsor_part_of_video),
@@ -2107,6 +2161,7 @@ fun SettingScreen(
                 )
             }
         }
+        }
         // SPACEKAI FEATURE: add-on settings section (renders nothing on a
         // vanilla SimpMusic build — see SpaceKaiSettingsSection).
         item(key = "spacekai") {
@@ -2123,14 +2178,19 @@ fun SettingScreen(
             )
         }
         if (getPlatform() == Platform.Android) {
-            item(key = "storage") {
+        item(key = "storage_header") {
+            SettingsCollapsibleHeader(
+                title = stringResource(Res.string.storage),
+                expanded = expandedSettingsSection == "storage",
+                onClick = {
+                    expandedSettingsSection =
+                        if (expandedSettingsSection == "storage") null else "storage"
+                },
+            )
+        }
+        if (expandedSettingsSection == "storage") {
+        item(key = "storage") {
                 Column {
-                    Text(
-                        text = stringResource(Res.string.storage),
-                        style = typo().labelMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                        modifier = Modifier.padding(vertical = 8.dp),
-                    )
                     SettingItem(
                         title = stringResource(Res.string.player_cache),
                         subtitle = "${playerCache.bytesToMB()} MB",
@@ -2432,16 +2492,22 @@ fun SettingScreen(
                         Text(text = stringResource(Res.string.free_space), style = typo().bodySmall)
                     }
                 }
-            }
         }
+        }
+        }
+        item(key = "backup_header") {
+            SettingsCollapsibleHeader(
+                title = stringResource(Res.string.backup),
+                expanded = expandedSettingsSection == "backup",
+                onClick = {
+                    expandedSettingsSection =
+                        if (expandedSettingsSection == "backup") null else "backup"
+                },
+            )
+        }
+        if (expandedSettingsSection == "backup") {
         item(key = "backup") {
             Column {
-                Text(
-                    text = stringResource(Res.string.backup),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
                 SettingItem(
                     title = stringResource(Res.string.backup_downloaded),
                     subtitle = stringResource(Res.string.backup_downloaded_description),
@@ -2601,14 +2667,20 @@ fun SettingScreen(
                 )
             }
         }
+        }
+        item(key = "about_us_header") {
+            SettingsCollapsibleHeader(
+                title = stringResource(Res.string.about_us),
+                expanded = expandedSettingsSection == "about_us",
+                onClick = {
+                    expandedSettingsSection =
+                        if (expandedSettingsSection == "about_us") null else "about_us"
+                },
+            )
+        }
+        if (expandedSettingsSection == "about_us") {
         item(key = "about_us") {
             Column {
-                Text(
-                    text = stringResource(Res.string.about_us),
-                    style = typo().labelMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
                 SettingItem(
                     title = stringResource(Res.string.version),
                     subtitle = stringResource(Res.string.version_format, VersionManager.getVersionName()),
@@ -2702,6 +2774,7 @@ fun SettingScreen(
                     },
                 )
             }
+        }
         }
         item(key = "end") {
             EndOfPage()
@@ -3428,4 +3501,38 @@ private fun ImportProgressDialog(
             }
         },
     )
+}
+
+
+@Composable
+private fun SettingsCollapsibleHeader(
+    title: String,
+    expanded: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(vertical = 12.dp, horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = typo().labelLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            imageVector = SimpIcons.KeyboardArrowDown,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier =
+                Modifier
+                .graphicsLayer {
+                    rotationZ = if (expanded) 180f else 0f
+                },
+        )
+    }
 }
