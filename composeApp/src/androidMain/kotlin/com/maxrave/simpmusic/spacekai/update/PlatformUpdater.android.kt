@@ -20,10 +20,10 @@ private const val TAG = "SpaceKaiUpdater"
  * SPACEKAI FEATURE: the honest Android update pipeline.
  *
  *   1. Download every byte to a cache file, reporting (downloaded, total, speed) as
- *      the stream is read — progress is real, not estimated.
+ *      the stream is read - progress is real, not estimated.
  *   2. If the release ships a SHA256SUMS.txt (checksumsUrl), download it and verify
  *      the APK's SHA-256 matches its line. On mismatch the install is aborted and the
- *      file is deleted — a corrupted/tampered APK is never handed to the installer.
+ *      file is deleted - a corrupted/tampered APK is never handed to the installer.
  *   3. Hand the verified file to the system package installer via FileProvider.
  *
  * The FileProvider authority and provider_paths.xml are already registered in the
@@ -46,39 +46,40 @@ internal actual object PlatformUpdater {
                 downloadWithProgress(url = apkUrl, output = tmp, onProgress = onProgress)
 
                 // VERIFYING
-                var isValid = true
-                if (!checksumsUrl.isNullOrBlank()) {
-                    isValid =
+                val verified =
+                    checksumsUrl.isNullOrBlank() ||
                         verifySha256(
                             apkFile = tmp,
                             checksumsUrl = checksumsUrl,
                         )
-                }
-                if (!isValid) {
+                if (!verified) {
                     tmp.delete()
-                    return@withContext(
-                        SpaceKaiUpdateResult.Failure(
-                            "Vérification SHA-256 échouée — fichier invalide. Installation annulée.",
-                        ),
+                    SpaceKaiUpdateResult.Failure(
+                        "SHA-256 verification failed - the APK is corrupt or tampered.",
                     )
-                }
-                if (!tmp.renameTo(apkFile)) {
-                    apkFile.delete()
-                    tmp.copyTo(apkFile, overwrite = true)
-                    tmp.delete()
-                }
-
-                val uri = FileProvider.getUriForFile(context, "${context.packageName}.FileProvider", apkFile)
-                val installIntent =
-                    Intent(Intent.ACTION_VIEW).apply {
-                        setDataAndType(uri, "application/vnd.android.package-archive")
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or FLAG_ACTIVITY_NEW_TASK)
+                } else {
+                    if (!tmp.renameTo(apkFile)) {
+                        apkFile.delete()
+                        tmp.copyTo(apkFile, overwrite = true)
+                        tmp.delete()
                     }
-                context.startActivity(installIntent)
-                SpaceKaiUpdateResult.Success
+                    val uri =
+                        FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.FileProvider",
+                            apkFile,
+                        )
+                    val installIntent =
+                        Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(uri, "application/vnd.android.package-archive")
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or FLAG_ACTIVITY_NEW_TASK)
+                        }
+                    context.startActivity(installIntent)
+                    SpaceKaiUpdateResult.Success
+                }
             } catch (e: Exception) {
                 Logger.e(TAG, "In-app update failed: ${e.message}")
-                SpaceKaiUpdateResult.Failure(e.message ?: "Erreur de mise à jour.")
+                SpaceKaiUpdateResult.Failure(e.message ?: "Update failed.")
             }
         }
 
