@@ -20,6 +20,9 @@ import com.maxrave.domain.manager.DataStoreManager
 import com.maxrave.logger.Logger
 import com.maxrave.simpmusic.di.viewModelModule
 import com.maxrave.simpmusic.service.backup.AutoBackupScheduler
+import com.maxrave.simpmusic.spacekai.SpaceKaiFeatures
+import com.maxrave.simpmusic.spacekai.configSpaceKai
+import com.maxrave.simpmusic.spacekai.spacekaiModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -52,11 +55,15 @@ class SimpMusicApplication :
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         configCrashlytics(this, BuildKonfig.sentryDsn)
         configLastfm(BuildKonfig.lastfmApiKey, BuildKonfig.lastfmSecret)
+        // SPACEKAI FEATURE: enable the SpaceKai add-on layer (feature flags).
+        // Pass SpaceKaiFeatures.allEnabled for a full SpaceKai build.
+        configSpaceKai(SpaceKaiFeatures.allEnabled)
         startKoin {
             androidLogger(level = Level.DEBUG)
             androidContext(this@SimpMusicApplication)
             loadAllModules()
             loadKoinModules(viewModelModule)
+            loadKoinModules(spacekaiModule)
         }
         // provide custom configuration
         val workConfig =

@@ -7,19 +7,6 @@ val isFullBuild: Boolean =
         false
     }
 
-/**
- * Release-only flag: -PsingleReleaseApk=true disables the ABI splits so the build emits ONE
- * universal APK (containing all of `abis`) instead of one APK per ABI + a universal one.
- * SpaceKai publishes a single user-facing APK; the per-ABI splits stay available for
- * side-loading/debugging when the flag is absent.
- */
-val singleReleaseApk: Boolean =
-    try {
-        extra["singleReleaseApk"] == "true"
-    } catch (e: Exception) {
-        false
-    }
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.sentry.gradle)
@@ -27,8 +14,6 @@ plugins {
 }
 
 android {
-    val abis = arrayOf("armeabi-v7a", "arm64-v8a", "x86_64")
-
     namespace = "com.maxrave.simpmusic"
     compileSdk = 37
 
@@ -102,16 +87,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            if (!singleReleaseApk) {
-                splits {
-                    abi {
-                        isEnable = true
-                        reset()
-                        isUniversalApk = true
-                        include(*abis)
-                    }
-                }
-            }
+            // Build a single universal APK (no per-ABI splits) for release.
         }
         debug {
             isMinifyEnabled = false

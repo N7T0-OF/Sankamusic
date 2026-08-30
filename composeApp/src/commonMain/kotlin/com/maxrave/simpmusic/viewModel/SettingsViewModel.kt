@@ -24,7 +24,6 @@ import com.maxrave.domain.utils.LocalResource
 import com.maxrave.logger.LogLevel
 import com.maxrave.logger.Logger
 import com.maxrave.simpmusic.Platform
-import com.maxrave.simpmusic.expect.HapticManager
 import com.maxrave.simpmusic.getPlatform
 import com.maxrave.simpmusic.viewModel.base.BaseViewModel
 import kotlinx.coroutines.Dispatchers
@@ -122,6 +121,16 @@ class SettingsViewModel(
     val canvasCacheSize: StateFlow<Long?> = _canvasCacheSize
     private var _translucentBottomBar: MutableStateFlow<String?> = MutableStateFlow(null)
     val translucentBottomBar: StateFlow<String?> = _translucentBottomBar
+    // SPACEKAI FEATURE: “hide text” — icons-only navigation bar (bottom bar and landscape rail).
+    private var _hideNavLabel: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val hideNavLabel: StateFlow<Boolean> = _hideNavLabel
+
+    // SPACEKAI FEATURE: nav bar style — a single selector combining the two legacy booleans.
+    // MINIMALIST = solid bar (translucent off, glass off) · TRANSLUCENT = translucent on ·
+    // LIQUID_GLASS = glass on (Android only). Kept as a derived label so the old keys stay the
+    // single source of truth (backward compatible with existing installs).
+    private var _navBarStyle: MutableStateFlow<String> = MutableStateFlow(NAV_STYLE_MINIMALIST)
+    val navBarStyle: StateFlow<String> = _navBarStyle
     private var _usingProxy = MutableStateFlow(false)
     val usingProxy: StateFlow<Boolean> = _usingProxy
     private var _proxyType = MutableStateFlow(DataStoreManager.ProxyType.PROXY_TYPE_HTTP)
@@ -158,15 +167,6 @@ class SettingsViewModel(
     val crossfadeDjMode: StateFlow<Boolean> = _crossfadeDjMode
     private val _crossfadeSkipAlbum = MutableStateFlow<Boolean>(false)
     val crossfadeSkipAlbum: StateFlow<Boolean> = _crossfadeSkipAlbum
-
-    private val _smartShuffleEnabled = MutableStateFlow<Boolean>(false)
-    val smartShuffleEnabled: StateFlow<Boolean> = _smartShuffleEnabled
-    private val _vibrationEnabled = MutableStateFlow<Boolean>(false)
-    val vibrationEnabled: StateFlow<Boolean> = _vibrationEnabled
-    private val _vibrationIntensity = MutableStateFlow<Float>(0.5f)
-    val vibrationIntensity: StateFlow<Float> = _vibrationIntensity
-    private val _minimalisticNavBar = MutableStateFlow<Boolean>(false)
-    val minimalisticNavBar: StateFlow<Boolean> = _minimalisticNavBar
     private val _autoDownloadLikedSongs = MutableStateFlow<Boolean>(false)
     val autoDownloadLikedSongs: StateFlow<Boolean> = _autoDownloadLikedSongs
     private val _youtubeSubtitleLanguage = MutableStateFlow<String>("")
@@ -316,15 +316,13 @@ class SettingsViewModel(
         getCrossfadeDuration()
         getCrossfadeDjMode()
         getCrossfadeSkipAlbum()
-        getSmartShuffleEnabled()
-        getVibrationEnabled()
-        getVibrationIntensity()
-        getMinimalisticNavBar()
         getAutoDownloadLikedSongs()
         getContributorNameAndEmail()
         getBackupDownloaded()
         getUpdateChannel()
         getEnableLiquidGlass()
+        getHideNavLabel()
+        getNavBarStyle()
         getExplicitContentEnabled()
         getDiscordLoggedIn()
         getDiscordRichPresenceEnabled()
@@ -527,73 +525,6 @@ class SettingsViewModel(
         }
     }
 
-    private fun getSmartShuffleEnabled() {
-        viewModelScope.launch {
-            dataStoreManager.getString("smart_shuffle_enabled").collect { enabled ->
-                _smartShuffleEnabled.value = enabled == DataStoreManager.TRUE
-            }
-        }
-    }
-
-    fun setSmartShuffleEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            dataStoreManager.putString("smart_shuffle_enabled", if (enabled) DataStoreManager.TRUE else DataStoreManager.FALSE)
-        }
-    }
-
-    private fun getVibrationEnabled() {
-        viewModelScope.launch {
-            dataStoreManager.getString("vibration_enabled").collect { enabled ->
-                _vibrationEnabled.value = enabled == DataStoreManager.TRUE
-                // Keep the central haptics layer in sync so UI handlers don't
-                // need to reach into DataStore themselves.
-                HapticManager.enabled = enabled == DataStoreManager.TRUE
-            }
-        }
-    }
-
-    fun setVibrationEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            _vibrationEnabled.value = enabled
-            HapticManager.enabled = enabled
-            dataStoreManager.putString("vibration_enabled", if (enabled) DataStoreManager.TRUE else DataStoreManager.FALSE)
-        }
-    }
-
-    private fun getVibrationIntensity() {
-        viewModelScope.launch {
-            dataStoreManager.getString("vibration_intensity").collect { raw ->
-                val value = raw?.toFloatOrNull() ?: 0.5f
-                _vibrationIntensity.value = value
-                HapticManager.intensity = value
-            }
-        }
-    }
-
-    fun setVibrationIntensity(value: Float) {
-        viewModelScope.launch {
-            val clamped = value.coerceIn(0f, 1f)
-            _vibrationIntensity.value = clamped
-            HapticManager.intensity = clamped
-            dataStoreManager.putString("vibration_intensity", clamped.toString())
-        }
-    }
-
-    private fun getMinimalisticNavBar() {
-        viewModelScope.launch {
-            dataStoreManager.getString("minimalistic_nav_bar").collect { enabled ->
-                _minimalisticNavBar.value = enabled == DataStoreManager.TRUE
-            }
-        }
-    }
-
-    fun setMinimalisticNavBar(enabled: Boolean) {
-        viewModelScope.launch {
-            _minimalisticNavBar.value = enabled
-            dataStoreManager.putString("minimalistic_nav_bar", if (enabled) DataStoreManager.TRUE else DataStoreManager.FALSE)
-        }
-    }
-
     private fun getAutoDownloadLikedSongs() {
         viewModelScope.launch {
             dataStoreManager.autoDownloadLikedSongs.collect { enabled ->
@@ -714,6 +645,69 @@ class SettingsViewModel(
         viewModelScope.launch {
             dataStoreManager.setEnableLiquidGlass(enableLiquidGlass)
             getEnableLiquidGlass()
+        }
+    }
+
+    private fun getHideNavLabel() {
+        viewModelScope.launch {
+            // Generic string key persisted via DataStoreManager.getString/putString
+            // (the SpaceKai layer must not add typed keys to the core submodule).
+            dataStoreManager.getString(HIDE_NAV_LABEL_KEY).collect { value ->
+                _hideNavLabel.value = value == DataStoreManager.TRUE
+            }
+        }
+    }
+
+    fun setHideNavLabel(hide: Boolean) {
+        viewModelScope.launch {
+            dataStoreManager.putString(
+                HIDE_NAV_LABEL_KEY,
+                if (hide) DataStoreManager.TRUE else DataStoreManager.FALSE,
+            )
+            getHideNavLabel()
+        }
+    }
+
+    // SPACEKAI FEATURE: the nav bar style is DERIVED from the two legacy booleans
+    // (translucent + liquid glass) so existing installs keep their current bar and the
+    // selector never drifts from what App.kt actually renders.
+    private fun deriveNavBarStyle(
+        translucent: Boolean,
+        liquidGlass: Boolean,
+    ): String =
+        when {
+            liquidGlass -> NAV_STYLE_LIQUID_GLASS
+            translucent -> NAV_STYLE_TRANSLUCENT
+            else -> NAV_STYLE_MINIMALIST
+        }
+
+    fun getNavBarStyle() {
+        viewModelScope.launch {
+            combine(translucentBottomBar, enableLiquidGlass) { translucent, glass ->
+                deriveNavBarStyle(translucent == DataStoreManager.TRUE, glass)
+            }.collect { style ->
+                _navBarStyle.value = style
+            }
+        }
+    }
+
+    fun setNavBarStyle(style: String) {
+        when (style) {
+            NAV_STYLE_LIQUID_GLASS -> {
+                if (getPlatform() != Platform.Android) return
+                setEnableLiquidGlass(true)
+                setTranslucentBottomBar(false)
+            }
+
+            NAV_STYLE_TRANSLUCENT -> {
+                setEnableLiquidGlass(false)
+                setTranslucentBottomBar(true)
+            }
+
+            else -> {
+                setEnableLiquidGlass(false)
+                setTranslucentBottomBar(false)
+            }
         }
     }
 
@@ -2033,6 +2027,14 @@ expect fun changeLanguageNative(code: String)
 
 /** Number of equalizer bands, matching the ISO centres the desktop backend installs. */
 const val EQUALIZER_BAND_COUNT = 10
+
+/** SPACEKAI FEATURE: DataStore key for the “hide text” (icons-only) navigation bar setting. */
+const val HIDE_NAV_LABEL_KEY = "hide_nav_label"
+
+/** SPACEKAI FEATURE: nav bar style identifiers (see SettingsViewModel.navBarStyle). */
+const val NAV_STYLE_MINIMALIST = "minimalist"
+const val NAV_STYLE_TRANSLUCENT = "translucent"
+const val NAV_STYLE_LIQUID_GLASS = "liquid_glass"
 
 /** Band centre labels, for display only — the backend owns the actual frequencies. */
 val EQUALIZER_BAND_LABELS = listOf("31", "62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k")

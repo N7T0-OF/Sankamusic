@@ -1731,8 +1731,11 @@ class SharedViewModel(
     fun getTranslucentBottomBar() = dataStoreManager.translucentBottomBar
 
     fun getEnableLiquidGlass() = dataStoreManager.enableLiquidGlass
-    fun getMinimalisticNavBar() =
-        dataStoreManager.getString("minimalistic_nav_bar").map { it ?: DataStoreManager.FALSE }
+
+    // SPACEKAI FEATURE: icons-only navigation bar. Read through the generic string store
+    // (see SettingsViewModel.setHideNavLabel) so the SpaceKai layer needs no core changes.
+    fun getHideNavLabel() =
+        dataStoreManager.getString(HIDE_NAV_LABEL_KEY).map { it == DataStoreManager.TRUE }
 
     fun getLocalTrackingEnabled() = dataStoreManager.localTrackingEnabled
 

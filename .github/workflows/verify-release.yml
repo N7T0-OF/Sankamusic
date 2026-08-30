@@ -1,0 +1,57 @@
+name: Verify published release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to verify (e.g. v1.7.4)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Determine release tag
+        id: tag
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          if [ -z "$TAG" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          if [ -z "$TAG" ]; then
+            echo "::error::No release tag available (release event or workflow_dispatch input required)."
+            exit 1
+          fi
+          echo "tag=$TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p assets
+          gh release download "${{ steps.tag.outputs.tag }}" --dir assets --clobber
+          echo "Downloaded assets:"
+          ls -la assets
+
+      - name: Verify assets
+        run: |
+          ./scripts/verify-release.sh assets "${{ steps.tag.outputs.tag }}"
+
+      - name: Report verification result
+        if: always()
+        run: |
+          {
+            echo "## Release verification (${{ steps.tag.outputs.tag }})"
+            echo ""
+            echo "Ran \`scripts/verify-release.sh\` over the downloaded assets —"
+            echo "single universal APK, checksums match, no forbidden variants."
+          } >> "$GITHUB_STEP_SUMMARY"

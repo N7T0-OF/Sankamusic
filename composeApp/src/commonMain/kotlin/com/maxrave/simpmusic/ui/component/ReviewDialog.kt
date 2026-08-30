@@ -40,6 +40,7 @@ fun ReviewDialog(
         confirmButton = {
             TextButton(onClick = {
                 onDoneReview.invoke()
+                // SPACEKAI FEATURE: star the SpaceKai repo, not upstream SimpMusic.
                 uriHandler.openUri("https://github.com/N7T0-OF/Sankamusic")
             }) {
                 Text(

@@ -3,6 +3,7 @@ package com.maxrave.simpmusic.ui.screen.home
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -70,6 +71,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
@@ -224,6 +226,15 @@ fun HomeScreen(
     val isScrollingUp by scrollState.isScrollingUp()
     val accountInfo by viewModel.accountInfo.collectAsStateWithLifecycle()
     val homeData by viewModel.homeItemList.collectAsStateWithLifecycle()
+    // SPACEKAI FIX: resolve the Quick Picks section ONCE per homeData change instead of
+    // inside the LazyColumn item lambda. The old code called stringResource() in the
+    // per-item title comparison (a resource lookup for EVERY section) and then ran
+    // homeData.find() up to three times per Quick Picks composition.
+    val quickPicksTitle = stringResource(Res.string.quick_picks)
+    val quickPicksItem =
+        remember(homeData, quickPicksTitle) {
+            homeData.find { it.title == quickPicksTitle }
+        }
     val newRelease by viewModel.newRelease.collectAsStateWithLifecycle()
     val chart by viewModel.chart.collectAsStateWithLifecycle()
     val moodMomentAndGenre by viewModel.exploreMoodItem.collectAsStateWithLifecycle()
@@ -528,9 +539,14 @@ fun HomeScreen(
                         state = scrollState,
                         verticalArrangement = Arrangement.spacedBy(20.dp),
                     ) {
-                        itemsIndexed(homeData, key = { _, item ->
-                            item.hashCode().toString() + (mainHomeThumbnail ?: "nothumb")
-                        }) { index, item ->
+                        // SPACEKAI FIX: key on the INDEX, not on hashCode + mainHomeThumbnail.
+                        // The old key changed for EVERY item the moment the first-thumbnail URL
+                        // arrived after fetch (null -> url), which made the LazyColumn tear down
+                        // and rebuild the whole list and re-request every thumbnail. The header
+                        // already re-renders on its own via animatedColor, so the thumbnail never
+                        // belonged in the key. Index keys are stable across pagination (appends)
+                        // and keep each section's internal LazyRow state (scroll position) alive.
+                        itemsIndexed(homeData, key = { index, _ -> index }) { index, item ->
                             Box {
                                 if (index == 0) {
                                     Box(
@@ -570,26 +586,15 @@ fun HomeScreen(
                                         )
                                         Spacer(Modifier.height(8.dp))
                                     }
-                                    if (item.title == stringResource(Res.string.quick_picks)) {
+                                    if (item.title == quickPicksTitle) {
+                                        // SPACEKAI FIX: quickPicksItem is hoisted above the
+                                        // LazyColumn and only recomputed when homeData changes.
                                         AnimatedVisibility(
-                                            visible =
-                                                homeData.find {
-                                                    it.title ==
-                                                        stringResource(
-                                                            Res.string.quick_picks,
-                                                        )
-                                                } != null,
+                                            visible = quickPicksItem != null,
                                         ) {
-                                            QuickPicks(
-                                                homeItem =
-                                                    (
-                                                        homeData.find {
-                                                            it.title ==
-                                                                stringResource(
-                                                                    Res.string.quick_picks,
-                                                                )
-                                                        } ?: return@AnimatedVisibility
-                                                    ).let { content ->
+                                            quickPicksItem?.let { content ->
+                                                QuickPicks(
+                                                    homeItem =
                                                         content.copy(
                                                             contents =
                                                                 content.contents.mapNotNull { ct ->
@@ -604,11 +609,11 @@ fun HomeScreen(
                                                                             },
                                                                     )
                                                                 },
-                                                        )
-                                                    },
-                                                navController = navController,
-                                                viewModel = viewModel,
-                                            )
+                                                        ),
+                                                    navController = navController,
+                                                    viewModel = viewModel,
+                                                )
+                                            }
                                         }
                                     } else {
                                         HomeItem(
@@ -620,21 +625,35 @@ fun HomeScreen(
                             }
                         }
                         item {
-                            AnimatedVisibility(
-                                homeListState == ListState.PAGINATING,
-                                enter = expandVertically() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically(),
+                            // SPACEKAI FIX: fade-only inside a lazy item. A size-transform
+                            // animation (expandVertically/shrinkVertically) here measures the
+                            // content with unbounded height and can draw the loading box over
+                            // the following item while the layout animates. The container
+                            // animates its own height (layout-driven) and clips to bounds.
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clipToBounds()
+                                    .animateContentSize(),
                             ) {
-                                CenterLoadingBox(
-                                    modifier =
-                                        Modifier
-                                            .fillMaxWidth()
-                                            .height(200.dp),
-                                )
+                                AnimatedVisibility(
+                                    homeListState == ListState.PAGINATING,
+                                    enter = fadeIn(),
+                                    exit = fadeOut(),
+                                ) {
+                                    CenterLoadingBox(
+                                        modifier =
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .height(200.dp),
+                                    )
+                                }
                             }
                         }
                         if (homeListState == ListState.PAGINATION_EXHAUST) {
-                            items(newRelease, key = { it.hashCode() }) {
+                            // SPACEKAI FIX: no explicit key (index-based) — hashCode changes on
+                            // every refresh and rebuilt this tail section, re-requesting images.
+                            items(newRelease) {
                                 AnimatedVisibility(
                                     visible = newRelease.isNotEmpty(),
                                 ) {
@@ -996,7 +1015,11 @@ fun QuickPicks(
             state = lazyListState,
             flingBehavior = snapperFlingBehavior,
         ) {
-            items(homeItem.contents, key = { it.hashCode() }) {
+            // SPACEKAI FIX: no explicit key (index-based, like the section LazyRows in
+            // AdapterItems). A hashCode key changes for EVERY row the moment the section
+            // refreshes, so the grid rebuilt itself and re-requested every thumbnail.
+            // Index keys keep the slots alive and Coil serves the cached images.
+            items(homeItem.contents) {
                 if (it != null) {
                     QuickPicksItem(
                         onClick = {

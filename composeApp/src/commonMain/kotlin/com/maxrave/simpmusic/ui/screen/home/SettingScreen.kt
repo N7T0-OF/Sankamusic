@@ -47,8 +47,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -91,6 +89,7 @@ import androidx.navigation.NavController
 import coil3.annotation.ExperimentalCoilApi
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.eygraber.uri.toKmpUri
@@ -98,7 +97,6 @@ import com.maxrave.common.LIMIT_CACHE_SIZE
 import com.maxrave.common.QUALITY
 import com.maxrave.common.SUPPORTED_LANGUAGE
 import com.maxrave.common.SUPPORTED_LOCATION
-import com.maxrave.common.SpaceKaiFeatures
 import com.maxrave.common.SponsorBlockType
 import com.maxrave.common.VIDEO_QUALITY
 import com.maxrave.domain.extension.now
@@ -108,8 +106,6 @@ import com.maxrave.domain.repository.ImportProgress
 import com.maxrave.domain.utils.LocalResource
 import com.maxrave.logger.Logger
 import com.maxrave.simpmusic.Platform
-import com.maxrave.simpmusic.expect.HapticManager
-import com.maxrave.simpmusic.expect.HapticType
 import com.maxrave.simpmusic.expect.ui.fileSaverResult
 import com.maxrave.simpmusic.expect.ui.isWallpaperDynamicColorSupported
 import com.maxrave.simpmusic.expect.ui.openEqResult
@@ -120,11 +116,8 @@ import com.maxrave.simpmusic.extension.isValidProxyHost
 import com.maxrave.simpmusic.getPlatform
 import com.maxrave.simpmusic.ui.component.ActionButton
 import com.maxrave.simpmusic.ui.component.CenterLoadingBox
-import com.maxrave.simpmusic.ui.component.CollapsibleSection
 import com.maxrave.simpmusic.ui.component.EndOfPage
 import com.maxrave.simpmusic.ui.component.LoadingDialog
-import com.maxrave.simpmusic.ui.component.NavigationBarStyle
-import com.maxrave.simpmusic.ui.component.NavigationBarStyleSelector
 import com.maxrave.simpmusic.ui.component.RippleIconButton
 import com.maxrave.simpmusic.ui.component.SettingItem
 import com.maxrave.simpmusic.ui.icon.ArrowBackIosNew
@@ -138,13 +131,15 @@ import com.maxrave.simpmusic.ui.navigation.destination.login.DiscordLoginDestina
 import com.maxrave.simpmusic.ui.navigation.destination.login.LastfmLoginDestination
 import com.maxrave.simpmusic.ui.navigation.destination.login.LoginDestination
 import com.maxrave.simpmusic.ui.navigation.destination.login.SpotifyLoginDestination
-import com.maxrave.simpmusic.ui.navigation.destination.login.SpotifySyncDestination
+import com.maxrave.simpmusic.spacekai.ui.SpaceKaiSettingsSection
 import com.maxrave.simpmusic.ui.theme.md_theme_dark_primary
 import com.maxrave.simpmusic.ui.theme.parseThemeColorHex
-import com.maxrave.simpmusic.ui.theme.seed
 import com.maxrave.simpmusic.ui.theme.typo
 import com.maxrave.simpmusic.utils.VersionManager
 import com.maxrave.simpmusic.viewModel.ImportViewModel
+import com.maxrave.simpmusic.viewModel.NAV_STYLE_LIQUID_GLASS
+import com.maxrave.simpmusic.viewModel.NAV_STYLE_MINIMALIST
+import com.maxrave.simpmusic.viewModel.NAV_STYLE_TRANSLUCENT
 import com.maxrave.simpmusic.viewModel.SettingAlertState
 import com.maxrave.simpmusic.viewModel.SettingBasicAlertState
 import com.maxrave.simpmusic.viewModel.SettingsViewModel
@@ -244,8 +239,6 @@ import simpmusic.composeapp.generated.resources.donation
 import simpmusic.composeapp.generated.resources.download_quality
 import simpmusic.composeapp.generated.resources.downloaded_cache
 import simpmusic.composeapp.generated.resources.enable_canvas
-import simpmusic.composeapp.generated.resources.enable_liquid_glass_effect
-import simpmusic.composeapp.generated.resources.enable_liquid_glass_effect_description
 import simpmusic.composeapp.generated.resources.enable_rich_presence
 import simpmusic.composeapp.generated.resources.enable_sponsor_block
 import simpmusic.composeapp.generated.resources.enable_spotify_lyrics
@@ -254,6 +247,8 @@ import simpmusic.composeapp.generated.resources.gemini
 import simpmusic.composeapp.generated.resources.guest
 import simpmusic.composeapp.generated.resources.help_build_lyrics_database
 import simpmusic.composeapp.generated.resources.help_build_lyrics_database_description
+import simpmusic.composeapp.generated.resources.hide_navigation_text
+import simpmusic.composeapp.generated.resources.hide_navigation_text_description
 import simpmusic.composeapp.generated.resources.http
 import simpmusic.composeapp.generated.resources.import_data
 import simpmusic.composeapp.generated.resources.import_data_intro
@@ -305,6 +300,11 @@ import simpmusic.composeapp.generated.resources.main_lyrics_provider
 import simpmusic.composeapp.generated.resources.manage_your_youtube_accounts
 import simpmusic.composeapp.generated.resources.maxrave_dev
 import simpmusic.composeapp.generated.resources.monthly
+import simpmusic.composeapp.generated.resources.nav_style_liquid_glass
+import simpmusic.composeapp.generated.resources.nav_style_minimalist
+import simpmusic.composeapp.generated.resources.nav_style_translucent
+import simpmusic.composeapp.generated.resources.navigation_bar
+import simpmusic.composeapp.generated.resources.navigation_bar_style
 import simpmusic.composeapp.generated.resources.never
 import simpmusic.composeapp.generated.resources.no_account
 import simpmusic.composeapp.generated.resources.normalize_volume
@@ -341,8 +341,6 @@ import simpmusic.composeapp.generated.resources.save_all_your_playlist_data
 import simpmusic.composeapp.generated.resources.save_last_played
 import simpmusic.composeapp.generated.resources.save_last_played_track_and_queue
 import simpmusic.composeapp.generated.resources.save_playback_state
-import simpmusic.composeapp.generated.resources.smart_shuffle
-import simpmusic.composeapp.generated.resources.smart_shuffle_description
 import simpmusic.composeapp.generated.resources.save_shuffle_and_repeat_mode
 import simpmusic.composeapp.generated.resources.send_back_listening_data_to_google
 import simpmusic.composeapp.generated.resources.set
@@ -360,15 +358,8 @@ import simpmusic.composeapp.generated.resources.spotify_canvas_cache
 import simpmusic.composeapp.generated.resources.spotify_lyrícs_info
 import simpmusic.composeapp.generated.resources.storage
 import simpmusic.composeapp.generated.resources.such_as_music_video_lyrics_video_podcasts_and_more
-import simpmusic.composeapp.generated.resources.minimalistic_nav_bar
-import simpmusic.composeapp.generated.resources.minimalistic_nav_bar_description
 import simpmusic.composeapp.generated.resources.theme
 import simpmusic.composeapp.generated.resources.theme_color
-import simpmusic.composeapp.generated.resources.vibration
-import simpmusic.composeapp.generated.resources.vibration_description
-import simpmusic.composeapp.generated.resources.vibration_intensity
-import simpmusic.composeapp.generated.resources.vibration_intensity_strong
-import simpmusic.composeapp.generated.resources.vibration_intensity_weak
 import simpmusic.composeapp.generated.resources.theme_color_custom
 import simpmusic.composeapp.generated.resources.theme_color_default
 import simpmusic.composeapp.generated.resources.theme_color_wallpaper
@@ -379,7 +370,6 @@ import simpmusic.composeapp.generated.resources.third_party_libraries
 import simpmusic.composeapp.generated.resources.thumbnail_cache
 import simpmusic.composeapp.generated.resources.translation_language
 import simpmusic.composeapp.generated.resources.translation_language_message
-import simpmusic.composeapp.generated.resources.translucent_bottom_navigation_bar
 import simpmusic.composeapp.generated.resources.unknown
 import simpmusic.composeapp.generated.resources.update_channel
 import simpmusic.composeapp.generated.resources.upload_your_listening_history_to_youtube_music_server_it_will_make_yt_music_recommendation_system_better_working_only_if_logged_in
@@ -394,7 +384,6 @@ import simpmusic.composeapp.generated.resources.video_quality
 import simpmusic.composeapp.generated.resources.warning
 import simpmusic.composeapp.generated.resources.weekly
 import simpmusic.composeapp.generated.resources.what_segments_will_be_skipped
-import simpmusic.composeapp.generated.resources.you_can_see_the_content_below_the_bottom_bar
 import simpmusic.composeapp.generated.resources.youtube_account
 import simpmusic.composeapp.generated.resources.youtube_subtitle_language
 import simpmusic.composeapp.generated.resources.youtube_subtitle_language_message
@@ -481,7 +470,10 @@ fun SettingScreen(
     // Open equalizer
     val resultLauncher = openEqResult(viewModel.getAudioSessionId())
 
-    val enableTranslucentNavBar by remember { viewModel.translucentBottomBar.map { it == TRUE } }.collectAsStateWithLifecycle(initialValue = false)
+    // SPACEKAI FEATURE: icons-only navigation bar (“hide text”).
+    val hideNavLabel by viewModel.hideNavLabel.collectAsStateWithLifecycle()
+    // SPACEKAI FEATURE: nav bar style selector (Minimalist / Translucent / Liquid glass).
+    val navBarStyle by viewModel.navBarStyle.collectAsStateWithLifecycle()
     val language by viewModel.language.collectAsStateWithLifecycle()
     val location by viewModel.location.collectAsStateWithLifecycle()
     val quality by viewModel.quality.collectAsStateWithLifecycle()
@@ -538,7 +530,6 @@ fun SettingScreen(
     val autoBackupMaxFiles by viewModel.autoBackupMaxFiles.collectAsStateWithLifecycle()
     val autoBackupLastTime by viewModel.autoBackupLastTime.collectAsStateWithLifecycle()
     val updateChannel by viewModel.updateChannel.collectAsStateWithLifecycle()
-    val enableLiquidGlass by viewModel.enableLiquidGlass.collectAsStateWithLifecycle()
     val themeMode by sharedViewModel.getThemeMode().collectAsStateWithLifecycle(DataStoreManager.THEME_MODE_DARK)
     val themeColorSource by sharedViewModel.getThemeColorSource().collectAsStateWithLifecycle(DataStoreManager.THEME_COLOR_DEFAULT)
     val customThemeColorHex by sharedViewModel.getCustomThemeColor().collectAsStateWithLifecycle(DataStoreManager.DEFAULT_THEME_COLOR_HEX)
@@ -557,10 +548,6 @@ fun SettingScreen(
     val crossfadeDuration by viewModel.crossfadeDuration.collectAsStateWithLifecycle()
     val crossfadeDjMode by viewModel.crossfadeDjMode.collectAsStateWithLifecycle()
     val crossfadeSkipAlbum by viewModel.crossfadeSkipAlbum.collectAsStateWithLifecycle()
-    val smartShuffleEnabled by viewModel.smartShuffleEnabled.collectAsStateWithLifecycle()
-    val vibrationEnabled by viewModel.vibrationEnabled.collectAsStateWithLifecycle()
-    val vibrationIntensity by viewModel.vibrationIntensity.collectAsStateWithLifecycle()
-    val minimalisticNavBar by viewModel.minimalisticNavBar.collectAsStateWithLifecycle()
     val castState by viewModel.castState.collectAsStateWithLifecycle()
 
     val isCheckingUpdate by sharedViewModel.isCheckingUpdate.collectAsStateWithLifecycle()
@@ -615,7 +602,9 @@ fun SettingScreen(
             Spacer(Modifier.height(64.dp))
         }
         item(key = "user_interface") {
-            CollapsibleSection(title = stringResource(Res.string.user_interface)) {
+            Column {
+                Spacer(Modifier.height(16.dp))
+                Text(text = stringResource(Res.string.user_interface), style = typo().labelMedium, color = MaterialTheme.colorScheme.onBackground)
                 val themeModeLabels =
                     listOf(
                         DataStoreManager.THEME_MODE_SYSTEM to stringResource(Res.string.theme_mode_system),
@@ -687,95 +676,56 @@ fun SettingScreen(
                         onClick = { showColorPickerDialog = true },
                     )
                 }
-                SettingItem(
-                    title = stringResource(Res.string.translucent_bottom_navigation_bar),
-                    subtitle = stringResource(Res.string.you_can_see_the_content_below_the_bottom_bar),
-                    smallSubtitle = true,
-                    switch = (enableTranslucentNavBar to { viewModel.setTranslucentBottomBar(it) }),
-                    otherView = if (getPlatform() == Platform.Android) {
-                        {
-                            val navBarStyle = remember(enableTranslucentNavBar, enableLiquidGlass, minimalisticNavBar) {
-                                when {
-                                    minimalisticNavBar -> NavigationBarStyle.MINIMALISTIC
-                                    enableLiquidGlass -> NavigationBarStyle.GLASS
-                                    enableTranslucentNavBar -> NavigationBarStyle.TRANSLUCENT
-                                    else -> NavigationBarStyle.CLASSIC
-                                }
-                            }
-                            NavigationBarStyleSelector(
-                                currentStyle = navBarStyle,
-                                onStyleChanged = { style ->
-                                    viewModel.setMinimalisticNavBar(style.isMinimalistic)
-                                    if (!style.isMinimalistic) {
-                                        viewModel.setTranslucentBottomBar(style.hasTranslucent)
-                                        viewModel.setEnableLiquidGlass(style.hasLiquidGlass)
-                                    }
-                                },
-                            )
+                // SPACEKAI FEATURE: nav bar style — one selector replacing the two legacy
+                // switches (translucent + liquid glass). “Hide text” stays a separate toggle.
+                val navBarStyleLabels =
+                    buildList {
+                        add(NAV_STYLE_MINIMALIST to stringResource(Res.string.nav_style_minimalist))
+                        add(NAV_STYLE_TRANSLUCENT to stringResource(Res.string.nav_style_translucent))
+                        if (getPlatform() == Platform.Android) {
+                            add(NAV_STYLE_LIQUID_GLASS to stringResource(Res.string.nav_style_liquid_glass))
                         }
-                    } else {
-                        null
+                    }
+                SettingItem(
+                    title = stringResource(Res.string.navigation_bar),
+                    subtitle = navBarStyleLabels.firstOrNull { it.first == navBarStyle }?.second ?: "",
+                    onClick = {
+                        viewModel.setAlertData(
+                            SettingAlertState(
+                                title = runBlocking { getString(Res.string.navigation_bar_style) },
+                                selectOne =
+                                    SettingAlertState.SelectData(
+                                        listSelect = navBarStyleLabels.map { (it.first == navBarStyle) to it.second },
+                                    ),
+                                confirm =
+                                    runBlocking { getString(Res.string.change) } to { state ->
+                                        val selected = state.selectOne?.getSelected()
+                                        navBarStyleLabels.firstOrNull { it.second == selected }?.first?.let {
+                                            viewModel.setNavBarStyle(it)
+                                        }
+                                    },
+                                dismiss = runBlocking { getString(Res.string.cancel) },
+                            ),
+                        )
                     },
                 )
-                if (getPlatform() == Platform.Android && SpaceKaiFeatures.HAPTICS) {
-                    if (SpaceKaiFeatures.MINIMALISTIC_NAVIGATION) {
-                        SettingItem(
-                            title = stringResource(Res.string.minimalistic_nav_bar),
-                            subtitle = stringResource(Res.string.minimalistic_nav_bar_description),
-                            smallSubtitle = true,
-                            switch = (minimalisticNavBar to { viewModel.setMinimalisticNavBar(it) }),
-                        )
-                    }
-                    SettingItem(
-                        title = stringResource(Res.string.vibration),
-                        subtitle = stringResource(Res.string.vibration_description),
-                        smallSubtitle = true,
-                        switch = (vibrationEnabled to { viewModel.setVibrationEnabled(it) }),
-                    )
-                    if (vibrationEnabled) {
-                        SettingItem(
-                            title = stringResource(Res.string.vibration_intensity),
-                            smallSubtitle = true,
-                            otherView = {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 24.dp, vertical = 4.dp),
-                                ) {
-                                    Slider(
-                                        value = vibrationIntensity,
-                                        onValueChange = { viewModel.setVibrationIntensity(it) },
-                                        valueRange = 0f..1f,
-                                        colors =
-                                            SliderDefaults.colors(
-                                                thumbColor = seed,
-                                                activeTrackColor = seed,
-                                            ),
-                                    )
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                    ) {
-                                        Text(
-                                            text = stringResource(Res.string.vibration_intensity_weak),
-                                            style = typo().bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                        Text(
-                                            text = stringResource(Res.string.vibration_intensity_strong),
-                                            style = typo().bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            },
-                        )
-                    }
-                }
+                // SPACEKAI FEATURE: “hide text” — icons-only navigation bar (bottom bar + landscape rail).
+                SettingItem(
+                    title = stringResource(Res.string.hide_navigation_text),
+                    subtitle = stringResource(Res.string.hide_navigation_text_description),
+                    smallSubtitle = true,
+                    switch = (hideNavLabel to { viewModel.setHideNavLabel(it) }),
+                )
             }
         }
         item(key = "content") {
-            CollapsibleSection(title = stringResource(Res.string.content)) {
+            Column {
+                Text(
+                    text = stringResource(Res.string.content),
+                    style = typo().labelMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
                 SettingItem(
                     title = stringResource(Res.string.youtube_account),
                     subtitle = stringResource(Res.string.manage_your_youtube_accounts),
@@ -1168,37 +1118,49 @@ fun SettingScreen(
         }
         if (getPlatform() == Platform.Android) {
             item(key = "audio") {
-                CollapsibleSection(title = stringResource(Res.string.audio)) {
-                SettingItem(
-                    title = stringResource(Res.string.normalize_volume),
-                    subtitle = stringResource(Res.string.balance_media_loudness),
-                    switch = (normalizeVolume to { viewModel.setNormalizeVolume(it) }),
-                )
-                SettingItem(
-                    title = stringResource(Res.string.skip_silent),
-                    subtitle = stringResource(Res.string.skip_no_music_part),
-                    switch = (skipSilent to { viewModel.setSkipSilent(it) }),
-                )
-                SettingItem(
-                    title = stringResource(Res.string.open_system_equalizer),
-                    subtitle =
-                        if (castState.isRemote) {
-                            stringResource(Res.string.not_available_while_casting)
-                        } else {
-                            stringResource(Res.string.use_your_system_equalizer)
+                Column {
+                    Text(
+                        text = stringResource(Res.string.audio),
+                        style = typo().labelMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.normalize_volume),
+                        subtitle = stringResource(Res.string.balance_media_loudness),
+                        switch = (normalizeVolume to { viewModel.setNormalizeVolume(it) }),
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.skip_silent),
+                        subtitle = stringResource(Res.string.skip_no_music_part),
+                        switch = (skipSilent to { viewModel.setSkipSilent(it) }),
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.open_system_equalizer),
+                        subtitle =
+                            if (castState.isRemote) {
+                                stringResource(Res.string.not_available_while_casting)
+                            } else {
+                                stringResource(Res.string.use_your_system_equalizer)
+                            },
+                        isEnable = !castState.isRemote,
+                        onClick = {
+                            coroutineScope.launch {
+                                resultLauncher.launch()
+                            }
                         },
-                    isEnable = !castState.isRemote,
-                    onClick = {
-                        coroutineScope.launch {
-                            resultLauncher.launch()
-                        }
-                    },
-                )
+                    )
+                }
             }
         }
-        }
         item(key = "playback") {
-            CollapsibleSection(title = stringResource(Res.string.playback)) {
+            Column {
+                Text(
+                    text = stringResource(Res.string.playback),
+                    style = typo().labelMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
                 // Desktop only for now: the shared interface ships a no-op default, so on Android
                 // these controls would move nothing. It lives under Playback rather than Audio
                 // because that whole group is inside an Android-only branch — "Open system
@@ -1227,12 +1189,6 @@ fun SettingScreen(
                     title = stringResource(Res.string.save_last_played),
                     subtitle = stringResource(Res.string.save_last_played_track_and_queue),
                     switch = (saveLastPlayed to { viewModel.setSaveLastPlayed(it) }),
-                )
-                SettingItem(
-                    title = stringResource(Res.string.smart_shuffle),
-                    subtitle = stringResource(Res.string.smart_shuffle_description),
-                    smallSubtitle = true,
-                    switch = (smartShuffleEnabled to { viewModel.setSmartShuffleEnabled(it) }),
                 )
                 if (getPlatform() == Platform.Android) {
                     SettingItem(
@@ -1321,7 +1277,6 @@ fun SettingScreen(
                                                         else -> 5000
                                                     }
                                                 viewModel.setCrossfadeDuration(duration)
-                                                HapticManager.vibrate(HapticType.SLIDER_STEP)
                                             },
                                         dismiss = runBlocking { getString(Res.string.cancel) },
                                     ),
@@ -1362,7 +1317,13 @@ fun SettingScreen(
         // rows it leaves behind exist on Desktop just the same. The switch that produces the history
         // and the button that erases it belong together.
         item(key = "listening_history") {
-            CollapsibleSection(title = stringResource(Res.string.listening_history)) {
+            Column {
+                Text(
+                    text = stringResource(Res.string.listening_history),
+                    style = typo().labelMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
                 SettingItem(
                     title = stringResource(Res.string.local_tracking_title),
                     subtitle = stringResource(Res.string.local_tracking_description),
@@ -1388,7 +1349,13 @@ fun SettingScreen(
             }
         }
         item(key = "lyrics") {
-            CollapsibleSection(title = stringResource(Res.string.lyrics)) {
+            Column {
+                Text(
+                    text = stringResource(Res.string.lyrics),
+                    style = typo().labelMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
                 SettingItem(
                     title = stringResource(Res.string.main_lyrics_provider),
                     subtitle =
@@ -1547,8 +1514,14 @@ fun SettingScreen(
                 )
             }
         }
-        item(key = "ai") {
-            CollapsibleSection(title = stringResource(Res.string.ai)) {
+        item(key = "AI") {
+            Column {
+                Text(
+                    text = stringResource(Res.string.ai),
+                    style = typo().labelMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
                 SettingItem(
                     title = stringResource(Res.string.ai_provider),
                     subtitle =
@@ -1723,7 +1696,13 @@ fun SettingScreen(
             }
         }
         item(key = "spotify") {
-            CollapsibleSection(title = stringResource(Res.string.spotify)) {
+            Column {
+                Text(
+                    text = stringResource(Res.string.spotify),
+                    style = typo().labelMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
                 SettingItem(
                     // The title follows the state: a row that still reads "Log in" while logged in
                     // gives no clue that tapping it signs you out.
@@ -1771,20 +1750,16 @@ fun SettingScreen(
                         }
                     },
                 )
-                if (SpaceKaiFeatures.SPOTIFY_SYNC) {
-                    SettingItem(
-                        title = "Importer vos playlists Spotify",
-                        subtitle = "Synchronisez vos playlists Spotify dans votre bibliothèque",
-                        smallSubtitle = true,
-                        onClick = {
-                            navController.navigate(SpotifySyncDestination)
-                        },
-                    )
-                }
             }
         }
         item(key = "discord") {
-            CollapsibleSection(title = stringResource(Res.string.discord_integration)) {
+            Column {
+                Text(
+                    text = stringResource(Res.string.discord_integration),
+                    style = typo().labelMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
                 SettingItem(
                     title =
                         if (discordLoggedIn) {
@@ -1870,7 +1845,13 @@ fun SettingScreen(
             }
         }
         item(key = "sponsor_block") {
-            CollapsibleSection(title = stringResource(Res.string.sponsorBlock)) {
+            Column {
+                Text(
+                    text = stringResource(Res.string.sponsorBlock),
+                    style = typo().labelMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
                 SettingItem(
                     title = stringResource(Res.string.enable_sponsor_block),
                     subtitle = stringResource(Res.string.skip_sponsor_part_of_video),
@@ -1940,9 +1921,22 @@ fun SettingScreen(
                 )
             }
         }
+        // SPACEKAI FEATURE: add-on settings section (renders nothing on a
+        // vanilla SimpMusic build — see SpaceKaiSettingsSection).
+        item(key = "spacekai") {
+            SpaceKaiSettingsSection(
+                sharedViewModel = sharedViewModel,
+            )
+        }
         if (getPlatform() == Platform.Android) {
             item(key = "storage") {
-                CollapsibleSection(title = stringResource(Res.string.storage)) {
+                Column {
+                    Text(
+                        text = stringResource(Res.string.storage),
+                        style = typo().labelMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(vertical = 8.dp),
+                    )
                     SettingItem(
                         title = stringResource(Res.string.player_cache),
                         subtitle = "${playerCache.bytesToMB()} MB",
@@ -2247,7 +2241,13 @@ fun SettingScreen(
             }
         }
         item(key = "backup") {
-            CollapsibleSection(title = stringResource(Res.string.backup)) {
+            Column {
+                Text(
+                    text = stringResource(Res.string.backup),
+                    style = typo().labelMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
                 SettingItem(
                     title = stringResource(Res.string.backup_downloaded),
                     subtitle = stringResource(Res.string.backup_downloaded_description),
@@ -2408,7 +2408,13 @@ fun SettingScreen(
             }
         }
         item(key = "about_us") {
-            CollapsibleSection(title = stringResource(Res.string.about_us)) {
+            Column {
+                Text(
+                    text = stringResource(Res.string.about_us),
+                    style = typo().labelMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
                 SettingItem(
                     title = stringResource(Res.string.version),
                     subtitle = stringResource(Res.string.version_format, VersionManager.getVersionName()),
@@ -2427,7 +2433,8 @@ fun SettingScreen(
                         if (updateChannel == DataStoreManager.FDROID) {
                             "F-Droid"
                         } else {
-                            "SimpMusic GitHub Release"
+                            // SPACEKAI CUSTOMIZATION: label reflects SpaceKai, not SimpMusic
+                            "SpaceKai GitHub Release"
                         },
                     onClick = {
                         viewModel.setAlertData(
@@ -2438,7 +2445,8 @@ fun SettingScreen(
                                         listSelect =
                                             listOf(
                                                 (updateChannel == DataStoreManager.FDROID) to "F-Droid",
-                                                (updateChannel == DataStoreManager.GITHUB) to "SimpMusic GitHub Release",
+                                                // SPACEKAI CUSTOMIZATION: label reflects SpaceKai
+                                                (updateChannel == DataStoreManager.GITHUB) to "SpaceKai GitHub Release",
                                             ),
                                     ),
                                 confirm =
@@ -2446,7 +2454,8 @@ fun SettingScreen(
                                         viewModel.setUpdateChannel(
                                             when (state.selectOne?.getSelected()) {
                                                 "F-Droid" -> DataStoreManager.FDROID
-                                                "SimpMusic GitHub Release" -> DataStoreManager.GITHUB
+                                                // SPACEKAI CUSTOMIZATION: label reflects SpaceKai
+                                                "SpaceKai GitHub Release" -> DataStoreManager.GITHUB
                                                 else -> DataStoreManager.GITHUB
                                             },
                                         )
@@ -2716,6 +2725,8 @@ fun SettingScreen(
                                             ImageRequest
                                                 .Builder(LocalPlatformContext.current)
                                                 .data(it.thumbnailUrl)
+                                                .diskCachePolicy(CachePolicy.ENABLED)
+                                                .diskCacheKey(it.thumbnailUrl)
                                                 .crossfade(550)
                                                 .build(),
                                         placeholder = rememberVectorPainter(SimpIcons.PeopleAlt),

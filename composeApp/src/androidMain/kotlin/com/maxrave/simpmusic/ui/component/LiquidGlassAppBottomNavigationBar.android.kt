@@ -46,8 +46,6 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.maxrave.domain.data.player.GenericMediaItem
 import com.maxrave.logger.Logger
-import com.maxrave.simpmusic.expect.HapticManager
-import com.maxrave.simpmusic.expect.HapticType
 import com.maxrave.simpmusic.expect.ui.PlatformBackdrop
 import com.maxrave.simpmusic.ui.navigation.destination.home.AnalyticsDestination
 import com.maxrave.simpmusic.ui.navigation.destination.home.HomeDestination
@@ -77,6 +75,7 @@ actual fun LiquidGlassAppBottomNavigationBar(
     isScrolledToTop: Boolean,
     showAnalyticsTab: Boolean,
     showMixForYouTab: Boolean,
+    minimalistic: Boolean,
     onOpenNowPlaying: () -> Unit,
     reloadDestinationIfNeeded: (KClass<*>) -> Unit,
 ) {
@@ -128,8 +127,8 @@ actual fun LiquidGlassAppBottomNavigationBar(
     val bottomNavScreens =
         listOfNotNull(
             BottomNavScreen.Home,
-            BottomNavScreen.MixForYou.takeIf { showMixForYouTab },
-            BottomNavScreen.Analytics.takeIf { showAnalyticsTab },
+            BottomNavScreen.MixForYou.takeIf { showMixForYouTab && !minimalistic },
+            BottomNavScreen.Analytics.takeIf { showAnalyticsTab && !minimalistic },
             BottomNavScreen.Library,
             BottomNavScreen.Search,
         )
@@ -137,8 +136,8 @@ actual fun LiquidGlassAppBottomNavigationBar(
     val barTabs =
         listOfNotNull(
             BottomNavScreen.Home,
-            BottomNavScreen.MixForYou.takeIf { showMixForYouTab },
-            BottomNavScreen.Analytics.takeIf { showAnalyticsTab },
+            BottomNavScreen.MixForYou.takeIf { showMixForYouTab && !minimalistic },
+            BottomNavScreen.Analytics.takeIf { showAnalyticsTab && !minimalistic },
             BottomNavScreen.Library,
         )
     var selectedIndex by rememberSaveable {
@@ -154,11 +153,11 @@ actual fun LiquidGlassAppBottomNavigationBar(
         )
     }
     // A tab can disappear from the bar under the user: tracking gets turned off while Analytics is
-    // selected, or the YouTube session ends while Mix for you is. Fall back to Home in both cases so
-    // nothing is left highlighted.
-    LaunchedEffect(showAnalyticsTab, showMixForYouTab) {
-        if ((!showAnalyticsTab && selectedIndex == BottomNavScreen.Analytics.ordinal) ||
-            (!showMixForYouTab && selectedIndex == BottomNavScreen.MixForYou.ordinal)
+    // selected, the YouTube session ends while Mix for you is, or the minimalistic variant removes
+    // both. Fall back to Home in all cases so nothing is left highlighted.
+    LaunchedEffect(showAnalyticsTab, showMixForYouTab, minimalistic) {
+        if (((!showAnalyticsTab || minimalistic) && selectedIndex == BottomNavScreen.Analytics.ordinal) ||
+            ((!showMixForYouTab || minimalistic) && selectedIndex == BottomNavScreen.MixForYou.ordinal)
         ) {
             selectedIndex = BottomNavScreen.Home.ordinal
         }
@@ -228,7 +227,6 @@ actual fun LiquidGlassAppBottomNavigationBar(
             }
         } else {
             selectedIndex = index
-            HapticManager.vibrate(HapticType.SELECT)
             navController.navigate(screen.destination) {
                 popUpTo(navController.graph.startDestinationId) {
                     saveState = true

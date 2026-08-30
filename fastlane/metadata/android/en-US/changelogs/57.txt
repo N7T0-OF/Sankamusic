@@ -1,0 +1,7 @@
+SpaceKai v1.7.4
+
+- Release unique : un seul APK universel signé (SpaceKai-v1.7.4.apk) + SHA256SUMS.txt
+- Pipeline de release consolidé : builds Android + desktop, signature, checks, rapport pré-release
+- Icônes verrouillées (SHA-256) : circle_app_icon.png / app_icon.png inchangées
+- Couche addon SpaceKai : feature flags, section Réglages SpaceKai, haptics sur le lecteur
+- Synchronisation upstream documentée (docs/UPSTREAM.md + scripts/update-upstream.sh)

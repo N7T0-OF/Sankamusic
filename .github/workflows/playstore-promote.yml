@@ -1,0 +1,44 @@
+name: Promote Play Store to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: 'Track to promote from'
+        required: true
+        default: 'internal'
+        type: choice
+        options:
+          - internal
+          - beta
+          - alpha
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    name: Promote latest release to production
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Decode Play Store service account
+        env:
+          PLAY_STORE_SERVICE_ACCOUNT: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$PLAY_STORE_SERVICE_ACCOUNT" ]; then
+            echo "::error::PLAY_STORE_SERVICE_ACCOUNT secret is not set."
+            exit 1
+          fi
+          echo "$PLAY_STORE_SERVICE_ACCOUNT" | base64 -d > fastlane/service-account.json
+
+      - name: Promote to production
+        env:
+          PROMOTE_FROM_TRACK: ${{ inputs.track }}
+        run: |
+          bundle install --quiet
+          bundle exec fastlane android promote_to_production --json_text

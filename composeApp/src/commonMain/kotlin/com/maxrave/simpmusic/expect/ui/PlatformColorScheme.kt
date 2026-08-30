@@ -7,6 +7,14 @@ import androidx.compose.runtime.Composable
 @Composable
 expect fun platformDynamicColorScheme(isDark: Boolean): ColorScheme?
 
+/**
+ * SPACEKAI FEATURE: dynamicColor — unpinned variant of [platformDynamicColorScheme].
+ * Same system palette but WITHOUT dark background/surface being forced to black.
+ * Only used when the SpaceKai dynamicColor flag is on.
+ */
+@Composable
+expect fun platformDynamicColorSchemeUnpinned(isDark: Boolean): ColorScheme?
+
 /** Whether this platform can derive a color scheme from the system wallpaper. */
 expect fun isWallpaperDynamicColorSupported(): Boolean
 

@@ -6,6 +6,9 @@ import androidx.compose.runtime.Composable
 @Composable
 actual fun platformDynamicColorScheme(isDark: Boolean): ColorScheme? = null
 
+@Composable
+actual fun platformDynamicColorSchemeUnpinned(isDark: Boolean): ColorScheme? = null
+
 actual fun isWallpaperDynamicColorSupported(): Boolean = false
 
 @Composable

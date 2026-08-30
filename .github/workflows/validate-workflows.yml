@@ -1,0 +1,33 @@
+name: Validate workflows
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'dev'
+    paths:
+      - '.github/workflows/**'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: Lint GitHub Actions workflows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # actionlint checks .github/workflows by default and fails the build on
+      # any lint error, so a broken workflow never reaches the release pipeline.
+      # shellcheck is disabled: this job validates YAML structure and workflow
+      # expressions, and the release scripts legitimately use patterns that
+      # shellcheck would flag (e.g. ls in command substitution).
+      - name: Run actionlint
+        uses: raven-actions/actionlint@v2
+        with:
+          shellcheck: false
+          pyflakes: false

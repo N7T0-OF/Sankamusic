@@ -1,0 +1,184 @@
+name: Nightly release pipeline check
+
+on:
+  schedule:
+    # Every night at 03:00 UTC — catches configuration regressions in the
+    # release pipeline without running the full build (which would burn
+    # hundreds of CI minutes nightly; the full pipeline already runs on
+    # every tag and every push to main).
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-config:
+    name: Validate release configuration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Run actionlint on workflows
+        uses: raven-actions/actionlint@v2
+        with:
+          shellcheck: false
+          pyflakes: false
+
+      - name: Verify brand icons are unchanged
+        run: ./scripts/verify-icons.sh
+
+      # ZERO-FALSE-POSITIVE + UI-regression + upstream-hotspot + Spotify-flow
+      # + landscape-player + updater + navigation + dynamic-color gates run
+      # EVERY night so an upstream merge that silently un-wires a SpaceKai
+      # feature (decorative toggle), reintroduces a size-transform-in-lazy-item
+      # overlap, re-reverts conveyor vcs-url / the update checker to SimpMusic,
+      # breaks the sp_dc login chain, reverts the landscape artwork fix, sends
+      # users back to the SimpMusic download page, drops the nav wiring, or
+      # removes the dynamic color palette is caught the next morning — BEFORE
+      # the release gate does. They are WARN-only here (the release gate still
+      # blocks); a red nightly tells you something changed, not that the build
+      # is broken.
+      - name: Audit SpaceKai wiring + UI overlaps + upstream hotspots + Spotify + landscape + updater
+        run: |
+          set +e
+          out1=$(bash scripts/audit-features.sh 2>&1)
+          r1=$?
+          out2=$(bash scripts/audit-settings-ui.sh 2>&1)
+          r2=$?
+          out3=$(bash scripts/audit-upstream-hotspots.sh 2>&1)
+          r3=$?
+          out4=$(bash scripts/audit-spotify-flow.sh 2>&1)
+          r4=$?
+          out5=$(bash scripts/audit-landscape-player.sh 2>&1)
+          r5=$?
+          out6=$(bash scripts/audit-updater-flow.sh 2>&1)
+          r6=$?
+          out7=$(bash scripts/audit-navigation.sh 2>&1)
+          r7=$?
+          out8=$(bash scripts/audit-dynamic-color.sh 2>&1)
+          r8=$?
+          out9=$(bash scripts/verify-perf-keys.sh 2>&1)
+          r9=$?
+          out10=$(bash scripts/audit-provider-arch.sh 2>&1)
+          r10=$?
+          out11=$(bash scripts/check-gate-parity.sh 2>&1)
+          r11=$?
+          echo "$out1" | tail -5
+          echo "$out2" | tail -5
+          echo "$out3" | tail -5
+          echo "$out4" | tail -5
+          echo "$out5" | tail -5
+          echo "$out6" | tail -5
+          echo "$out7" | tail -5
+          echo "$out8" | tail -5
+          echo "$out9" | tail -5
+          echo "$out10" | tail -5
+          echo "$out11" | tail -5
+          # Fail loudly (warn) if a decorative toggle, a UI overlap, an
+          # upstream hotspot, the Spotify chain, the landscape handling, the
+          # updater chain, the nav wiring, the dynamic color capability, an
+          # unstable lazy key, or a gate-parity drift occurred.
+          if [ "$r1" -ne 0 ]; then
+            echo "::warning::Decorative SpaceKai feature toggle(s) detected (audit-features.sh). Wire them or remove the toggle before the next release."
+          fi
+          if [ "$r2" -ne 0 ]; then
+            echo "::warning::Suspicious size-transform in a lazy file (audit-settings-ui.sh) — settings overlap risk."
+          fi
+          if [ "$r3" -ne 0 ]; then
+            echo "::warning::Upstream hotspot drifted to SimpMusic (audit-upstream-hotspots.sh) — conveyor vcs-url or update checker."
+          fi
+          if [ "$r4" -ne 0 ]; then
+            echo "::warning::Spotify flow broken (audit-spotify-flow.sh) — sp_dc chain or inconsistent redirect_uri."
+          fi
+          if [ "$r5" -ne 0 ]; then
+            echo "::warning::Landscape player regression (audit-landscape-player.sh) — artwork fix or landscape branching reverted."
+          fi
+          if [ "$r6" -ne 0 ]; then
+            echo "::warning::Updater flow broken (audit-updater-flow.sh) — dialog or SpaceKai releases URL reverted."
+          fi
+          if [ "$r7" -ne 0 ]; then
+            echo "::warning::Navigation wiring broken (audit-navigation.sh) — styles, hide-text or landscape rail reverted."
+          fi
+          if [ "$r8" -ne 0 ]; then
+            echo "::warning::Dynamic color capability broken (audit-dynamic-color.sh) — system palette or wallpaper/seed scheme removed."
+          fi
+          if [ "$r9" -ne 0 ]; then
+            echo "::warning::Unstable hashCode() lazy key detected (verify-perf-keys.sh) — list remount risk."
+          fi
+          if [ "$r10" -ne 0 ]; then
+            echo "::warning::Provider architecture violation (audit-provider-arch.sh) — provider code without abstraction, or secret in APK."
+          fi
+          if [ "$r11" -ne 0 ]; then
+            echo "::warning::Gate parity drift — a gate runs in one path (release / pre-tag / nightly) but not another (check-gate-parity.sh)."
+          fi
+
+      # The GATE REGRESSION test runs nightly too: every gate must produce its
+      # expected outcome AND the critical SpaceKai patterns must still hit the
+      # real code (a gate whose pattern stopped matching would PASS while the
+      # feature is broken — the false-confidence trap).
+      - name: Gate regression test (outcomes + pattern reality)
+        run: |
+          set +e
+          bash scripts/test-gates.sh >/dev/null 2>&1
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "::warning::Gate regression detected — an outcome changed or a critical SpaceKai pattern no longer hits (test-gates.sh)."
+          else
+            echo "Gate regression test: all outcomes as expected, all critical patterns alive."
+          fi
+
+      # The FEATURE AUDIT generator runs nightly too: it cross-checks the
+      # changelog / RELEASE.md against the evidence-based verdicts (a release
+      # note claiming a feature that the audit classifies NOT IMPLEMENTED is
+      # a false positive to catch the morning after it is written, not at
+      # release time), and flags BROKEN verdicts before the release gate.
+      - name: Feature audit (evidence-based) + claim cross-check
+        run: |
+          set +e
+          bash scripts/generate-feature-audit.sh >/dev/null 2>&1
+          NBROKEN=$(grep -c '\*\*BROKEN\*\*' docs/FEATURE-AUDIT-REPORT.md || true)
+          NCONTRA=$(grep -c 'vs \*\*' docs/FEATURE-AUDIT-REPORT.md || true)
+          echo "Feature audit report regenerated: BROKEN=$NBROKEN contradictions=$NCONTRA"
+          if [ "${NBROKEN:-0}" -gt 0 ]; then
+            echo "::warning::Feature audit reports BROKEN feature(s) — see docs/FEATURE-AUDIT-REPORT.md."
+          fi
+          if [ "${NCONTRA:-0}" -gt 0 ]; then
+            echo "::warning::Changelog/RELEASE.md claims a NOT-finished feature as done — see docs/FEATURE-AUDIT-REPORT.md § Contradictions."
+          fi
+
+      - name: Validate version consistency
+        run: |
+          # Fast sanity checks that mirror the release gate without building.
+          VERSION_NAME=$(grep '^version-name' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+          VERSION_CODE=$(grep '^version-code' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+          echo "version-name: $VERSION_NAME"
+          echo "version-code: $VERSION_CODE"
+          if [ -z "$VERSION_NAME" ] || [ -z "$VERSION_CODE" ]; then
+            echo "::error::Could not read version from gradle/libs.versions.toml"
+            exit 1
+          fi
+          # version-name and version-code must be plain numbers (or dotted).
+          if ! [[ "$VERSION_CODE" =~ ^[0-9]+$ ]]; then
+            echo "::error::version-code must be an integer, got '$VERSION_CODE'"
+            exit 1
+          fi
+          # version-code must be greater than the previous tag's.
+          PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
+          if [ -n "$PREV_TAG" ]; then
+            PREV_CODE=$(git show "$PREV_TAG:gradle/libs.versions.toml" | grep '^version-code' | head -1 | cut -d'"' -f2)
+            if [ "$VERSION_CODE" -le "$PREV_CODE" ]; then
+              echo "::error::version-code $VERSION_CODE is not greater than previous release $PREV_TAG ($PREV_CODE)"
+              exit 1
+            fi
+          fi
+          # The fastlane changelog for the current version should exist.
+          CHANGELOG="fastlane/metadata/android/en-US/changelogs/${VERSION_CODE}.txt"
+          if [ ! -f "$CHANGELOG" ]; then
+            echo "::warning::No fastlane changelog at $CHANGELOG — release notes will be auto-generated."
+          else
+            echo "fastlane changelog found: $CHANGELOG"
+          fi
+          echo "Release configuration OK."

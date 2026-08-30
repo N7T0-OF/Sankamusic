@@ -1,0 +1,9 @@
+SpaceKai v1.9.0
+
+- Landscape navigation: the bottom bar moves to the RIGHT edge as a compact rail on phones in landscape, keeping the same tabs and order
+- Navigation bar settings: translucent and liquid-glass bar styles remain independent toggles — there is no unified Minimalist/Translucent/Liquid-glass selector yet — plus a "Hide text" option for an icons-only compact bar
+- Swipe the navigation bar to skip tracks: swipe left for the next song, right for the previous one (all bar styles, gated by the SpaceKai custom-navigation flag)
+- Landscape player: the artwork stays proportionate to the screen height (no more oversized square pushing the controls off-screen); the timeline already uses the full width
+- SpaceKai flags are now persisted: toggles survive a restart, and the add-on layer re-applies them at startup
+- Home performance: stable lazy-list keys (no more full list rebuild when the header thumbnail arrives), Quick Picks lookup computed once, explicit disk cache on every artwork image
+- Release pipeline: guard scripts verify stable lazy keys and locked icons before release; upstream sync now lists the SpaceKai touchpoints to re-apply

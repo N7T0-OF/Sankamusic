@@ -1,111 +1,160 @@
-# Upstream Tracking (SimpMusic → SpaceKai)
+# Upstream synchronization (SpaceKai ← SimpMusic)
 
-SpaceKai is a **customization layer over SimpMusic**, not a rewritten fork. SimpMusic
-(`maxrave-dev/SimpMusic`) is the upstream engine; SpaceKai adds its own features, UI and
-branding on top. This document explains how to keep both in sync.
+SpaceKai is an **add-on layer** over SimpMusic, not a copy-and-edit fork.
+SimpMusic remains the upstream engine; SpaceKai adds branding, features and
+customizations on top. This document explains how to keep SpaceKai in sync
+with new SimpMusic releases **without** redoing SpaceKai work by hand.
 
 ## Repositories
 
-| Role      | Repository                                  |
-|-----------|---------------------------------------------|
-| Upstream  | `https://github.com/maxrave-dev/SimpMusic`  |
-| SpaceKai  | `https://github.com/N7T0-OF/Sankamusic`     |
+| | Repository | Branch followed |
+| --- | --- | --- |
+| **Upstream** | `https://github.com/maxrave-dev/SimpMusic.git` | `main` |
+| **SpaceKai** | `https://github.com/N7T0-OF/Sankamusic` | `main` (release) |
 
-The `core` module is a **git submodule**:
+## Version tracking
 
-| Role      | Repository                              |
-|-----------|-----------------------------------------|
-| Upstream  | `https://github.com/maxrave-dev/core`   |
-| SpaceKai  | `https://github.com/N7T0-OF/core` (fork) |
+SpaceKai is always based on a specific SimpMusic version. Keep this up to date
+after every sync:
 
-## Current baseline
+| Field | Where | Example |
+| --- | --- | --- |
+| SpaceKai version | `gradle/libs.versions.toml` → `version-name` / `version-code` | `2.0.0` / `73` |
+| Based on SimpMusic | this file, **Current upstream** below | `v1.7.0` |
 
-- Main repo branch followed: `upstream/dev`
-- Core submodule branch followed: `upstream/dev` (in the submodule)
-- The two repositories share history (verified: `git merge-base dev upstream/dev` exists).
-- Versioning is **independent**: SpaceKai version (e.g. `1.7.3`) is not the SimpMusic
-  version. The app reports its own version via `gradle/libs.versions.toml`.
+**Current upstream:** SimpMusic `v1.7.0` (code 56, latest tag — verified 2026-08-26) — SpaceKai ships `2.0.0` / code `73`
 
-## Remote setup
+## Architecture principle
 
-```bash
-git remote add upstream https://github.com/maxrave-dev/SimpMusic.git
-cd core && git remote add upstream https://github.com/maxrave-dev/core.git && cd ..
+```
+SimpMusic upstream
+      ↓  (merge/rebase, resolve conflicts by hand)
+SpaceKai patch layer   ← SpaceKai customizations live here
+      ↓
+SpaceKai features + branding + UI
+      ↓
+SpaceKai release (APK + desktop packages)
 ```
 
-## Synchronisation procedure
+Never overwrite SpaceKai changes with upstream blindly. When a SpaceKai
+feature can be implemented without touching upstream code, prefer:
 
-Never merge upstream blindly. Run the helper script — it fetches, reports and
-**detects conflicts without resolving them automatically**:
+- extension / wrapper / interface / configuration
+- extra composable / repository decorator / service / module / adapter
+- a `// SPACEKAI FEATURE` / `// SPACEKAI CUSTOMIZATION` comment marking the spot
+
+## Synchronization procedure
+
+One command:
 
 ```bash
 ./scripts/update-upstream.sh
 ```
 
-What the script does:
+What it does (never auto-publishes):
 
-1. checks `git status` is clean (refuses to run otherwise)
-2. fetches `upstream` (main repo, depth = full history on the followed branch)
-3. reports the new upstream version available
-4. creates a sync branch `sync/upstream-<date>`
-5. attempts `git merge upstream/dev` into it
-6. reports conflicts **without** choosing ours/theirs
-7. prints a summary report
+1. Checks the working tree is clean.
+2. Adds/verifies the `upstream` git remote.
+3. Fetches `upstream/main`.
+4. Reports the upstream version available vs. the local version.
+5. Creates a `upstream-sync` branch and merges upstream into it.
+6. Prints a report: changed files, conflicts to resolve by hand.
+7. **Scans the upstream-changed files for `SPACEKAI` markers** and lists every
+   file upstream touched that also carries a SpaceKai hook — the silent-break
+   hotspots that must be re-applied by hand even when the merge reports no
+   conflict (the update-checker URL is the classic one).
+7b. **Verifies the critical hooks survived the merge** — exact-signature checks
+   on `App.kt` (persistence re-apply, swipe, liquid-glass bar), `conveyor.conf`
+   (`vcs-url` = N7T0-OF) and `UpdateRepositoryImpl` (SpaceKaiUpdateConfig). A
+   clean merge can still drop a hook when upstream restructures the region
+   around it; 7b reports it as LOST even without a conflict marker. Modules not
+   checked out locally are flagged "verify on the live repo", not failed.
 
-### Manual steps for the maintainer
-
-1. `git fetch upstream`
-2. `git merge upstream/dev` (or rebase) on a sync branch
-3. **Resolve conflicts by hand.** Rules:
-   - Files under `core/` are handled in the submodule first (same procedure, in `core/`).
-   - Files that are pure SpaceKai additions (`composeApp/.../ui/icon/*`, `SpaceKai*`,
-     `docs/`, `scripts/`) are kept as-is — upstream cannot conflict with them.
-   - Files that carry both upstream and SpaceKai changes are the real conflicts:
-     decide per hunk. Mark SpaceKai edits with `// SPACEKAI CUSTOMIZATION` when feasible.
-4. Run the checks: `./gradlew :composeApp:compileKotlinJvm` (fast local signal),
-   then let CI run `android.yml` on the pushed branch.
-5. When green, merge the sync branch into `dev`, fast-forward `main`, and cut a release.
-
-> The installed app **never** updates straight to a SimpMusic release. Users always get a
-> SpaceKai release built from this repository.
-
-## Known conflict surfaces
-
-Files where SpaceKai intentionally diverges from upstream:
-
-| File / area                                  | Why                                    |
-|----------------------------------------------|----------------------------------------|
-| `gradle/libs.versions.toml`                  | SpaceKai version, update-checker repo  |
-| `composeApp/.../ui/icon/*`                   | Material Symbols set (auto-generated)  |
-| `androidApp/build.gradle.kts`                | single-APK release flag               |
-| `.github/workflows/*`                        | SpaceKai release pipeline             |
-| `core/.../DataStoreManager*`                 | SpaceKai OAuth keys + settings        |
-| `core/service/spotify/*`                     | Spotify playlist sync (SpaceKai)      |
-| `build_and_sign_apk.sh`                      | single-APK signing                    |
-| `composeApp/.../App.kt`                      | nav styles, deep links, haptics       |
-| `composeApp/.../SettingScreen.kt`            | SpaceKai settings sections            |
-
-## Icons — LOCKED (never change)
-
-`circle_app_icon.png` and `app_icon.png` are **locked SpaceKai assets**. Do not optimize,
-recompress, resize, recolor, regenerate or replace them — in any release, ever. Verify
-before/after any operation:
+Manual fallback:
 
 ```bash
-sha256sum composeApp/src/commonMain/composeResources/drawable/circle_app_icon.png \
-           androidApp/src/main/res/drawable/app_icon.png
+git remote add upstream https://github.com/maxrave-dev/SimpMusic.git
+git fetch upstream
+git checkout -b upstream-sync
+git merge upstream/main --no-edit   # resolve conflicts by hand
 ```
+
+### Conflict policy
+
+If upstream changed a file that also contains SpaceKai changes, **never** pick
+`ours` or `theirs` automatically. The maintainer decides, file by file:
+
+```
+UPSTREAM CHANGED:  PlayerScreen.kt
+SPACEKAI CHANGED:  PlayerScreen.kt
+CONFLICT:          PlayerScreen.kt   → resolve manually, re-apply SpaceKai bits
+```
+
+## SpaceKai vs upstream files
+
+| Kind | Paths | Policy |
+| --- | --- | --- |
+| **SpaceKai-owned** | `docs/`, `scripts/`, `RELEASE.md`, `fastlane/` (metadata), branding resources (`app_name`, icons) | Keep SpaceKai versions on conflict |
+| **Upstream-owned** | `core/*`, `composeApp/src/**` (except `spacekai/`), `androidApp/src/**`, `desktopApp/` | Take upstream, re-apply SpaceKai changes on top |
+| **SpaceKai-owned, under composeApp** | `composeApp/src/commonMain/kotlin/com/maxrave/simpmusic/spacekai/` | **Never present upstream** — the git merge leaves it untouched (upstream has no such files); never delete/replace it when resolving conflicts |
+| **Locked assets** | `circle_app_icon.png`, `app_icon.png` (all copies) | **Never modify** — verified by `scripts/verify-icons.sh` |
+
+## Known conflict hotspots
+
+These files carry SpaceKai customizations and are frequently touched upstream:
+
+- **`composeApp/src/commonMain/.../App.kt` — the central hook point.**
+  Carries the startup persistence re-apply (`applyPersistedSpaceKaiFeatures`,
+  ~L174), the nav-bar swipe wiring (`onSwipeToNext/Previous`), the bar-style
+  selection (~L491-506: liquid-glass vs translucent) and the analytics-tab
+  gating. Upstream rewrites App.kt often; every sync must re-check ALL of
+  these hooks (grep `SPACEKAI` in App.kt).
+- `composeApp/src/commonMain/.../ui/screen/player/` (player UI, landscape, haptics)
+- `composeApp/src/commonMain/.../ui/screen/home/SettingScreen.kt`
+- `composeApp/src/commonMain/.../ui/theme/` (SpaceKai theming)
+- `composeApp/src/commonMain/.../ui/component/AppBottomNavigationBar.kt` +
+  `LiquidGlassAppBottomNavigationBar.kt` (swipe-to-skip, bar variants)
+- `composeApp/src/commonMain/.../viewModel/LogInViewModel.kt` (sp_dc chain,
+  future `spotifySync` hook)
+- `androidApp/src/main/AndroidManifest.xml` (deep links, label)
+- `gradle/libs.versions.toml` (version bump on every sync)
+- `core/data/.../update/UpdateRepositoryImpl.kt` — the update checker URL is
+  **silently reverted** to `maxrave-dev/SimpMusic` on merge (no conflict marker,
+  surrounding code identical). After every sync, grep for `maxrave-dev/SimpMusic`
+  in `core/data/.../update/` and re-apply `SpaceKaiUpdateConfig.latestReleaseApiUrl`
+  (owner `N7T0-OF`, repo `Sankamusic`). See `SPACEKAI-ARCHITECTURE.md` → Update checker.
+- `conveyor.conf` → `app.vcs-url` — **silently reverted** to
+  `maxrave-dev/SimpMusic` on merge; Conveyor then generates every download URL
+  (`download.html`, `.appinstaller`, `.exe` wrapper) pointing at the *wrong*
+  repo's releases. Must stay `https://github.com/N7T0-OF/Sankamusic`.
+
+## Test procedure (before any release)
+
+1. `./scripts/verify-icons.sh` — icons must be unchanged.
+2. `./gradlew test` and `./gradlew lint`.
+3. `./gradlew androidApp:assembleRelease` + `apksigner verify`.
+4. Install the APK on a device/emulator: fresh install, **upgrade** from the
+   previous SpaceKai, playback, navigation, Spotify, settings.
+5. If no device is available, state clearly: *installation réelle non testée*.
 
 ## Release procedure
 
-1. `./gradlew :composeApp:compileKotlinJvm` (and `androidApp:assembleRelease` if an SDK is available)
-2. Push `dev`, fast-forward `main` → triggers `.github/workflows/release.yml`
-3. The workflow builds: **one** universal signed APK (`SpaceKai-vX.Y.Z.apk`) + `SHA256SUMS.txt`,
-   plus desktop packages (AppImage / mac .zip→.dmg / Windows installer) when the Conveyor
-   signing key is configured
-4. Attach the artifacts to a GitHub Release `vX.Y.Z` — only after human validation
+See [`RELEASE.md`](../RELEASE.md) for the full flow. Summary:
 
-## License
+1. Bump `version-name` / `version-code` in `gradle/libs.versions.toml`.
+2. Generate the changelog: `./scripts/generate-fastlane-changelog.sh`.
+3. Push tag `vX.Y.Z` → CI builds the single `SpaceKai-vX.Y.Z.apk` +
+   desktop packages + `SHA256SUMS.txt` → draft release for manual publish.
+4. **Never publish without validation.**
 
-GPL-3.0. Upstream license and copyright notices are preserved and must not be removed.
-SpaceKai is not presented as the original project.
+## License (GPL-3.0)
+
+SimpMusic is **GPL-3.0**. SpaceKai is a derivative work, so:
+
+- SpaceKai must be distributed under GPL-3.0 with the license notice preserved.
+- The original copyright and attribution must stay intact (do not present
+  SpaceKai as the original project).
+- Source code must be made available for any distributed binaries.
+- SpaceKai itself may not be relicensed to a closed/commercial license.
+
+Keep the `LICENSE` file and the upstream credits intact in every release.

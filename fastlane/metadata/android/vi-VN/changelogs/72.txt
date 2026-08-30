@@ -1,0 +1,7 @@
+SpaceKai v1.8.1
+
+- Pipeline phát hành: nâng mức version-code lên 71 (v1.8.0) để bản nâng cấp không bao giờ bị "Application non installée"
+- Lớp add-on SpaceKai: feature flags, mục cài đặt SpaceKai, rung phản hồi trên trình phát
+- Trình kiểm tra cập nhật trỏ về bản phát hành SpaceKai (N7T0-OF/Sankamusic)
+- Hộp đánh giá gắn sao cho kho SpaceKai
+- Biểu tượng thương hiệu được khóa và xác minh (SHA-256)

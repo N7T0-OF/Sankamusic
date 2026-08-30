@@ -105,6 +105,7 @@ import androidx.compose.ui.window.Popup
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.kmpalette.rememberPaletteState
@@ -320,20 +321,18 @@ fun MiniPlayer(
     }
 
     if (getPlatform() == Platform.Android) {
-        // Notification Island (pill-shaped) when liquid glass is off, CircleShape when on.
-        // The island radius (24 dp) is the Samsung-style floating pill look.
+        // One shape for both the Card and the clip below. They must not diverge: the clip wraps
+        // the Card's own background draw, so the larger radius wins and silently becomes the
+        // visible one.
         val miniPlayerShape =
-            if (isLiquidGlassEnabled == DataStoreManager.TRUE) CircleShape else RoundedCornerShape(24.dp)
+            if (isLiquidGlassEnabled == DataStoreManager.TRUE) CircleShape else RoundedCornerShape(12.dp)
         Card(
             shape = miniPlayerShape,
             colors =
                 CardDefaults.cardColors(
-                    containerColor = if (isLiquidGlassEnabled == DataStoreManager.TRUE) Color.Transparent else background.value.copy(alpha = 0.92f),
-                    disabledContainerColor = if (isLiquidGlassEnabled == DataStoreManager.TRUE) Color.Transparent else background.value.copy(alpha = 0.92f),
+                    containerColor = if (isLiquidGlassEnabled == DataStoreManager.TRUE) Color.Transparent else background.value,
+                    disabledContainerColor = if (isLiquidGlassEnabled == DataStoreManager.TRUE) Color.Transparent else background.value,
                 ),
-            elevation = CardDefaults.cardElevation(
-                defaultElevation = if (isLiquidGlassEnabled != DataStoreManager.TRUE) 6.dp else 0.dp,
-            ),
             modifier =
                 modifier
                     .then(
@@ -436,6 +435,8 @@ fun MiniPlayer(
                                     ImageRequest
                                         .Builder(LocalPlatformContext.current)
                                         .data(songEntity?.thumbnails)
+                                        .diskCachePolicy(CachePolicy.ENABLED)
+                                        .diskCacheKey(songEntity?.thumbnails)
                                         .crossfade(550)
                                         .build(),
                                 placeholder = rememberHolderPainter(),
@@ -742,6 +743,8 @@ fun MiniPlayer(
                                 ImageRequest
                                     .Builder(LocalPlatformContext.current)
                                     .data(songEntity?.thumbnails)
+                                    .diskCachePolicy(CachePolicy.ENABLED)
+                                    .diskCacheKey(songEntity?.thumbnails)
                                     .crossfade(550)
                                     .build(),
                             placeholder = rememberHolderPainter(),

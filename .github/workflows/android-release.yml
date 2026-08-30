@@ -1,0 +1,700 @@
+name: SpaceKai Release Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Validate the whole pipeline (builds + notes + artifact checks) without creating a release'
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches:
+      - 'main'
+    tags:
+      - 'v*'
+    paths-ignore:
+      - 'README.md'
+      - 'fastlane/**'
+      - 'assets/**'
+      - '.github/**/*.md'
+      - '.github/FUNDING.yml'
+      - '.github/ISSUE_TEMPLATE/**'
+
+permissions:
+  contents: write
+
+jobs:
+  validate-tag:
+    name: Validate tag matches app version
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      # Full history + all tags are required to read the previous release's
+      # version-code and compare it with the current one.
+      - uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+          fetch-depth: 0
+
+      - name: Check tag matches version-name
+        run: |
+          # Only meaningful for tag pushes; branch/manual runs always pass.
+          if [[ "$GITHUB_REF" != refs/tags/* ]]; then
+            echo "Not a tag push — skipping tag validation."
+            exit 0
+          fi
+          EXPECTED="v$(grep '^version-name' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)"
+          echo "Tag: $GITHUB_REF_NAME"
+          echo "Expected: $EXPECTED"
+          # Accept the exact version (v1.7.0) or a pre-release suffix
+          # (v1.7.0-beta.1, v1.7.0-rc.1, ...) built on the same version-name.
+          if [[ "$GITHUB_REF_NAME" != "$EXPECTED" && "$GITHUB_REF_NAME" != "$EXPECTED-"* ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match version-name $EXPECTED in gradle/libs.versions.toml"
+            exit 1
+          fi
+          echo "Tag matches app version."
+
+      - name: Check version-code beats EVERY previously released version-code
+        run: |
+          # Only meaningful for tag pushes; branch/manual runs always pass.
+          if [[ "$GITHUB_REF" != refs/tags/* ]]; then
+            echo "Not a tag push — skipping version-code check."
+            exit 0
+          fi
+          CURRENT_CODE=$(grep '^version-code' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+          if [ -z "$CURRENT_CODE" ]; then
+            echo "::error::Could not read version-code from gradle/libs.versions.toml"
+            exit 1
+          fi
+          # Scan EVERY tag's libs.versions.toml and take the max version-code,
+          # NOT just the previous tag. Real incident (2026-08-25): the v1.1.6
+          # series shipped code 66, v1.7.5 shipped 61 — the "previous tag" check
+          # passed, but Android rejected v1.7.5 for anyone on v1.1.6-3 with
+          # "Application non installée" (INSTALL_FAILED_VERSION_DOWNGRADE).
+          # A tag whose toml predates version-code lines yields an empty value;
+          # skip those and still require strictly greater than the max found.
+          MAX_CODE=0
+          for TAG in $(git tag); do
+            # The tag this run validates is itself in `git tag` (it was just pushed),
+            # and comparing the current version-code against itself always fails
+            # (N > N is false). Skip it so the check is strictly "beats every
+            # PREVIOUSLY released version-code".
+            [[ "$TAG" == "$GITHUB_REF_NAME" ]] && continue
+            CODE=$(git show "$TAG:gradle/libs.versions.toml" 2>/dev/null | grep '^version-code' | head -1 | cut -d'"' -f2 || true)
+            if [[ "$CODE" =~ ^[0-9]+$ ]] && [ "$CODE" -gt "$MAX_CODE" ]; then
+              MAX_CODE=$CODE
+            fi
+          done
+          echo "Highest version-code across all tags: $MAX_CODE"
+          echo "Current version-code: $CURRENT_CODE"
+          # Play Store rejects a build whose versionCode is not strictly greater
+          # than every previous upload; Android refuses the install with
+          # "Application non installée" (downgrade) for end users.
+          if [ "$CURRENT_CODE" -le "$MAX_CODE" ]; then
+            echo "::error::version-code $CURRENT_CODE must be greater than the highest ever published ($MAX_CODE)"
+            echo "::error::Android refuses downgrades with 'Application non installée'."
+            exit 1
+          fi
+          echo "version-code beats full history: $MAX_CODE → $CURRENT_CODE"
+
+      - name: Warn if fastlane changelog is missing
+        run: |
+          # Only meaningful for tag pushes; branch/manual runs always pass.
+          if [[ "$GITHUB_REF" != refs/tags/* ]]; then
+            exit 0
+          fi
+          VERSION_CODE=$(grep '^version-code' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+          CHANGELOG="fastlane/metadata/android/en-US/changelogs/${VERSION_CODE}.txt"
+          if [ ! -f "$CHANGELOG" ]; then
+            echo "::warning::No fastlane changelog at $CHANGELOG — the release workflow will auto-generate notes from commits. Run scripts/generate-fastlane-changelog.sh and commit the file for hand-written notes (and a changelog for the Play Store upload)."
+          else
+            echo "fastlane changelog found: $CHANGELOG"
+          fi
+
+      - name: Verify brand icons are unchanged
+        # The hand-crafted app icons are locked assets — a release must never
+        # ship with an optimized/replaced icon. Fails the pipeline otherwise.
+        run: ./scripts/verify-icons.sh
+
+  build-full-release:
+    name: Build full release version
+    runs-on: ubuntu-latest
+    needs: validate-tag
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+
+      - name: set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: "microsoft"
+          cache: 'gradle'
+
+      - name: Update Sentry Secrets
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          echo 'SENTRY_DSN=${{ secrets.SENTRY_DSN }}' > ./local.properties
+          echo "SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}" >> ./local.properties
+
+      - name: Update Last.fm secrets
+        env:
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+        run: |
+          echo "LASTFM_API_KEY=${{ secrets.LASTFM_API_KEY }}" >> ./local.properties
+          echo "LASTFM_SECRET=${{ secrets.LASTFM_SECRET }}" >> ./local.properties
+
+      - name: Update environment variables
+        env:
+          BASE_64_SIGNING_KEY: ${{ secrets.BASE_64_SIGNING_KEY }}
+        run:
+          echo $BASE_64_SIGNING_KEY | base64 -d > simpmusic.jks
+
+      - name: Update build product flavor
+        run: |
+          echo "" >> ./gradle.properties
+          echo "isFullBuild=true" >> ./gradle.properties
+
+      - name: Build full release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        # The script always builds ONE universal APK named SpaceKai-v<version>.apk
+        # (single-APK mode is now the default — the old --single flag is gone). The
+        # public release ships exactly one universal APK; the pre-release report
+        # refuses to publish a per-ABI split/debug/unsigned set.
+        run: ./build_and_sign_apk.sh --release --full
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-full-release
+          path: androidApp/build/outputs/apk/release/*.apk
+
+  build-desktop-packages:
+    name: Build desktop packages (AppImage + Mac zip + Windows msix)
+    # Without the Conveyor signing key the desktop build cannot sign anything;
+    # the desktop steps are skipped and the release ships APK-only. `secrets`
+    # cannot be read in a job-level `if` (documented GitHub limitation), so the
+    # check lives in a job-level env + output and the steps read that — same
+    # pattern as the live repo's release.yml.
+    env:
+      DESKTOP_SIGNING_KEY_SET: ${{ secrets.CONVEYOR_SIGNING_KEY != '' }}
+    outputs:
+      built: ${{ env.DESKTOP_SIGNING_KEY_SET }}
+    runs-on: ubuntu-22.04
+    needs: validate-tag
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: 'recursive'
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: "microsoft"
+          cache: 'gradle'
+
+      - name: Install libfuse2
+        # Needed by appimagetool when wrapping the Linux app. Nothing else is
+        # required here: mpvSetupAll only downloads and untars the prebuilt
+        # native slices, so no 7-Zip, patchelf or dwarfs toolchain on the runner.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfuse2
+
+      - name: Update build product flavor
+        run: |
+          echo "" >> ./gradle.properties
+          echo "isFullBuild=true" >> ./gradle.properties
+
+      - name: Update Sentry Secrets
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_JVM }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          echo 'SENTRY_DSN=${{ secrets.SENTRY_DSN_JVM }}' > ./local.properties
+          echo "SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}" >> ./local.properties
+
+      - name: Update Last.fm secrets
+        env:
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          LASTFM_SECRET: ${{ secrets.LASTFM_SECRET }}
+        run: |
+          echo "LASTFM_API_KEY=${{ secrets.LASTFM_API_KEY }}" >> ./local.properties
+          echo "LASTFM_SECRET=${{ secrets.LASTFM_SECRET }}" >> ./local.properties
+
+      - name: Generate aboutLibraries.json
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
+        run: ./gradlew exportLibraryDefinitions
+
+      - name: Cache mpv-natives
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
+        uses: actions/cache@v4
+        with:
+          path: mpv-natives
+          key: mpv-natives-${{ hashFiles('composeApp/build.gradle.kts') }}
+
+      - name: Populate mpv-natives for all OSes
+        # Conveyor is invoked by its own action further down, NOT through Gradle,
+        # so the dependsOn(":composeApp:mpvSetupAll") wired into the conveyor*
+        # tasks never fires on this path — the natives have to be staged here
+        # explicitly or the installers ship without libmpv.
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
+        run: ./gradlew :composeApp:mpvSetupAll --no-configuration-cache
+
+      - name: Generate Conveyor config
+        # Run writeConveyorConfig BEFORE Conveyor so the parser only reads
+        # the static generated.conveyor.conf and never tastes Gradle stdout
+        # (which can contain plugin println output and break HOCON parsing).
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
+        run: ./gradlew :desktopApp:writeConveyorConfig --no-configuration-cache
+
+      # Linux first: `make linux-app` emits the unpacked tree under output/
+      # that our packageConveyorAppImage task wraps into a portable AppImage.
+      # Conveyor 22.0 dropped native AppImage support, hence the wrap.
+      - name: Run Conveyor (linux-app)
+        # Skip cleanly when no signing key is configured instead of failing
+        # the action with "Missing required input: signing_key".
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
+        uses: hydraulic-software/conveyor/actions/build@v22.0
+        with:
+          command: -Kapp.machines=linux.amd64.glibc make linux-app
+          agree_to_license: 1
+          signing_key: ${{ secrets.CONVEYOR_SIGNING_KEY }}
+
+      - name: Wrap Linux app tree → AppImage
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
+        run: ./gradlew :desktopApp:packageConveyorAppImage --no-configuration-cache
+
+      # `make site` builds every machine that has non-empty targets +
+      # `.appinstaller`, `.exe` wrapper, and the download.html landing
+      # page. Conveyor wipes output/ at the start, so it does NOT clobber
+      # the AppImage we already wrapped (that lives under
+      # desktopApp/build/appimage/).
+      #
+      # `-Kapp.machines=...` restricts the site build to Mac + Windows.
+      # Linux is excluded because we already produced the AppImage in
+      # the previous step. Without this restriction, `make site` re-
+      # enters Conveyor's Linux tarball pipeline as an intermediate even
+      # when `linux.amd64.targets = []`, and that intermediate fails the
+      # build with "Linux Tarball Contents for Intel" before the Mac /
+      # Windows artifacts get a chance to run.
+      - name: Run Conveyor (make site, Mac + Windows only)
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
+        uses: hydraulic-software/conveyor/actions/build@v22.0
+        with:
+          command: '-Kapp.machines=[mac.amd64,mac.aarch64,windows.amd64] make site'
+          agree_to_license: 1
+          signing_key: ${{ secrets.CONVEYOR_SIGNING_KEY }}
+
+      - name: Stage AppImage into output/ for upload
+        # SPACEKAI FEATURE: publish the AppImage under the SpaceKai release
+        # name (internal packaging identity stays simpmusic — launcher, cert,
+        # .desktop, install.bat all keep working unchanged; only the release
+        # asset is renamed).
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
+        run: |
+          VERSION=$(grep '^version-name' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+          cp desktopApp/build/appimage/conveyor/SimpMusic-*.AppImage output/
+          mv output/SimpMusic-*.AppImage "output/SpaceKai-${VERSION}-linux-x86_64.AppImage"
+
+      - name: Show built artifacts
+        # output/ only exists when Conveyor actually ran (signing key set);
+        # otherwise the desktop steps are skipped and the release ships APK-only.
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
+        run: ls -lh output/
+
+      - name: Upload AppImage to run artifacts
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-appimage
+          path: output/SpaceKai-*.AppImage
+
+      - name: Upload macOS zips to run artifacts
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-mac-zips
+          path: output/*.zip
+
+      # Bundle Windows installer = install.bat + simpmusic.crt + msix.
+      # Conveyor's default .exe wrapper + .appinstaller fetch URLs from
+      # `site.base-url` (GitHub Releases /latest/download/) which 404 for
+      # unreleased builds, so we ship our own scripts/windows/install.bat
+      # that trusts the cert and sideloads the msix offline — no network
+      # round-trip, double-click works, UAC self-elevates.
+      #
+      # Only x64 is shipped — windows.aarch64 is dropped because
+      # androidx.sqlite-bundled lacks a Windows ARM64 native (see
+      # conveyor.conf for full context). ARM Windows users get the x64
+      # msix running under Prism emulation, which works correctly.
+      - name: Bundle Windows offline installer
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
+        run: |
+          set -euo pipefail
+          if [ ! -f output/simpmusic.crt ]; then
+            echo "::error::output/simpmusic.crt missing — Conveyor signing must have failed"
+            exit 1
+          fi
+          msix=$(ls output/simpmusic-*.x64.msix 2>/dev/null | head -1)
+          if [ -z "$msix" ]; then
+            echo "::error::No simpmusic-*.x64.msix found in output/"
+            exit 1
+          fi
+          mkdir -p installers/
+          stage="$(mktemp -d)"
+          cp scripts/windows/install.bat "$stage/"
+          cp output/simpmusic.crt        "$stage/"
+          cp "$msix"                      "$stage/"
+          VERSION=$(grep '^version-name' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+          ( cd "$stage" && zip -q -j \
+            "${GITHUB_WORKSPACE}/installers/SpaceKai-${VERSION}-windows-installer.zip" \
+            install.bat simpmusic.crt "$(basename "$msix")" )
+          rm -rf "$stage"
+          ls -lh installers/
+
+      - name: Upload Windows offline installer
+        if: ${{ env.DESKTOP_SIGNING_KEY_SET == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows
+          path: installers/SpaceKai-*.zip
+
+  wrap-mac-dmg:
+    name: Wrap macOS .zip → .dmg (installer UX)
+    # Only meaningful when the desktop build actually ran (signing key set).
+    # Reads the output of build-desktop-packages — secrets are not available
+    # in job-level `if`, but job outputs are.
+    if: ${{ needs.build-desktop-packages.outputs.built == 'true' }}
+    runs-on: macos-14
+    needs: [validate-tag, build-desktop-packages]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install create-dmg + ImageMagick
+        # create-dmg = sindresorhus brew formula. ImageMagick is used to
+        # downscale the 2800x1600 source background to a sharp 1400x800
+        # bitmap using a Lanczos filter (matches the DMG window size).
+        run: brew install create-dmg imagemagick
+
+      - name: Read app version
+        id: version
+        run: |
+          VERSION=$(grep '^version-name' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "App version: $VERSION"
+
+      - name: Download Mac .zip artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-mac-zips
+          path: mac-zips
+
+      - name: Prepare background (Lanczos resize 2800x1600 → 1400x800)
+        run: |
+          mkdir -p build/dmg
+          magick composeApp/icon/dmg-background.png \
+            -filter Lanczos -resize 1400x800 \
+            build/dmg/dmg-bg-1400x800.png
+
+      - name: Wrap each Mac .zip into a polished .dmg
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          shopt -s nullglob
+          for zip in mac-zips/simpmusic-*-mac-*.zip; do
+            arch="$(basename "$zip" | sed -nE 's/.*-mac-([a-z0-9]+)\.zip/\1/p')"
+            [[ -z "$arch" ]] && { echo "Cannot infer arch from $zip" >&2; exit 1; }
+            workdir="$(mktemp -d)"
+            unzip -q "$zip" -d "$workdir"
+            app="$(find "$workdir" -maxdepth 2 -type d -name '*.app' | head -1)"
+            [[ -d "$app" ]] || { echo "No .app inside $zip" >&2; exit 1; }
+            # SPACEKAI FEATURE: publish the DMG under the SpaceKai release name.
+            out="dist/SpaceKai-${VERSION}-mac-${arch}.dmg"
+            scripts/wrap-mac-dmg.sh \
+              "$app" \
+              build/dmg/dmg-bg-1400x800.png \
+              composeApp/icon/circle_app_icon.icns \
+              "$out"
+            rm -rf "$workdir"
+          done
+          ls -lh dist/
+
+      - name: Upload Mac .dmg artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-mac-dmg
+          path: dist/*.dmg
+
+  create-github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [validate-tag, build-full-release, build-desktop-packages, wrap-mac-dmg]
+    # Only create a release when a tag (e.g. v1.2.3) is pushed, or on a manual
+    # dry-run run (which validates everything but skips gh release create).
+    # `always()` + failure check: still run when the desktop jobs were SKIPPED
+    # (no Conveyor key → APK-only release) but never when any needed job FAILED.
+    if: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') && always() && !cancelled() && !contains(needs.*.result, 'failure') }}
+    permissions:
+      contents: write
+    steps:
+      # Full history + all tags are required by the release-notes step, which
+      # reads gradle/libs.versions.toml, lists tags and diffs commits.
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download APK (full)
+        uses: actions/download-artifact@v4
+        with:
+          name: app-full-release
+          path: release/apk/full
+
+      - name: Download AppImage
+        if: ${{ needs.build-desktop-packages.outputs.built == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-appimage
+          path: release/desktop
+
+      - name: Download macOS DMG
+        if: ${{ needs.build-desktop-packages.outputs.built == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-mac-dmg
+          path: release/desktop
+
+      - name: Download Windows installer
+        if: ${{ needs.build-desktop-packages.outputs.built == 'true' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-windows
+          path: release/desktop
+
+      - name: Build release notes
+        id: notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Prefer the hand-written fastlane changelog (keyed by version code,
+          # e.g. 56.txt for version 1.7.0). Fall back to auto-generated notes
+          # from git history when no changelog file exists for this version.
+          VERSION_CODE=$(grep '^version-code' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+          CHANGELOG="fastlane/metadata/android/en-US/changelogs/${VERSION_CODE}.txt"
+          NOTES_FILE="$(mktemp)"
+          if [ -f "$CHANGELOG" ]; then
+            cp "$CHANGELOG" "$NOTES_FILE"
+            echo "Using fastlane changelog $CHANGELOG"
+          else
+            # Generate from commits since the previous tag (full history is
+            # available thanks to fetch-depth: 0 above).
+            PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
+            if [ -n "$PREV_TAG" ]; then
+              RANGE="$PREV_TAG..HEAD"
+              echo "Generated notes from commits since $PREV_TAG"
+            else
+              RANGE="HEAD"
+              echo "Generated notes from full history (no previous tag)"
+            fi
+            # Collect commit subjects once: no merges, no dependency-bot noise.
+            COMMITS=$(git log "$RANGE" --no-merges --pretty=format:'%s' \
+              | grep -viE '^(bump .*|update dependency|chore\(deps\)|build\(deps\)|dependabot|renovate|⬆|🔧|merge (pull request|branch))' || true)
+            # Group conventional-commit subjects by type; anything that does
+            # not match falls into a generic list.
+            {
+              echo "# SpaceKai $GITHUB_REF_NAME"
+              echo ""
+              echo "> Released $(git log -1 --pretty=format:'%cs')"
+              echo ""
+              echo "## What's changed"
+              echo ""
+              echo "### Added"
+              echo "$COMMITS" | grep -E '^(feat|feature)\(?' | sed -E 's/^(feat|feature)(\([^)]*\))?: ?//' | sed 's/^/- /' || true
+              echo ""
+              echo "### Fixed"
+              echo "$COMMITS" | grep -E '^(fix|bugfix)\(?' | sed -E 's/^(fix|bugfix)(\([^)]*\))?: ?//' | sed 's/^/- /' || true
+              echo ""
+              echo "### Other"
+              echo "$COMMITS" | grep -vE '^(feat|feature|fix|bugfix)' | sed -E 's/^[a-z]+(\([^)]*\))?: ?//' | sed 's/^/- /' || true
+            } > "$NOTES_FILE"
+            # Persist the generated changelog into the fastlane metadata so the
+            # Play Store listing and the GitHub release stay in sync. The
+            # maintainer can also regenerate it locally with
+            # scripts/generate-fastlane-changelog.sh.
+            if [ ! -d "$(dirname "$CHANGELOG")" ]; then
+              mkdir -p "$(dirname "$CHANGELOG")"
+            fi
+            cp "$NOTES_FILE" "$CHANGELOG"
+            echo "Persisted generated changelog to $CHANGELOG"
+          fi
+          # ZERO-FALSE-POSITIVE: every release note must list the not-finished
+          # SpaceKai features (the FEATURE AUDIT gaps) plus Installation/
+          # SHA-256 — appended to the hand-written changelog too, so nothing
+          # ships without the honesty block.
+          bash scripts/append-feature-audit-gaps.sh "$NOTES_FILE"
+          echo "notes_file=$NOTES_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Pre-release report
+        env:
+          DESKTOP_ARTIFACTS_DIR: release/desktop
+        run: |
+          # Checklist of every gate before publishing. Fails the job (and thus
+          # blocks the release) when a critical check fails — a broken release
+          # is never published. Desktop artifacts are only warned on, since the
+          # desktop build may legitimately be skipped in a dry-run.
+          ./scripts/pre-release-report.sh release/apk/full
+          echo "::notice::Pre-release report complete — see log above."
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+        run: |
+          # Fail loudly if any expected artifact is missing rather than
+          # silently publishing a release without its files. The public release
+          # ships exactly ONE universal APK (the full variant) + SHA256SUMS.txt.
+          APK_FULL=$(ls release/apk/full/*.apk 2>/dev/null || true)
+          DESKTOP=$(ls release/desktop/* 2>/dev/null || true)
+          if [ -z "$APK_FULL" ]; then
+            echo "::error::Missing release APK. Release aborted."
+            exit 1
+          fi
+          # Exactly one APK must be published — never a split/debug/unsigned set.
+          if [ "$(echo "$APK_FULL" | wc -l | tr -d ' ')" -ne 1 ]; then
+            echo "::error::Expected exactly 1 release APK, found multiple. Release aborted."
+            exit 1
+          fi
+          if [ -z "$DESKTOP" ]; then
+            echo "::warning::No desktop artifacts found — APK-only release."
+          fi
+
+          # SHA-256 checksum over every public release asset. Generated with
+          # plain basenames so the file matches exactly what users download
+          # from the release page — not the workspace-relative paths the build
+          # left behind (which would never match the downloaded files).
+          {
+            for f in $APK_FULL $DESKTOP; do
+              (cd "$(dirname "$f")" && sha256sum "$(basename "$f")")
+            done
+          } > SHA256SUMS.txt
+          echo "SHA256SUMS.txt:"
+          cat SHA256SUMS.txt
+
+          # Publish a readable summary of what the release contains.
+          {
+            echo "## Release $GITHUB_REF_NAME artifacts"
+            echo ""
+            echo "| File | Size |"
+            echo "| --- | --- |"
+            for f in $APK_FULL $DESKTOP SHA256SUMS.txt; do
+              size=$(du -h "$f" | cut -f1)
+              echo "| $(basename "$f") | $size |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$DRY_RUN" == "true" ]; then
+            echo "DRY RUN — validating pipeline only; no release was created."
+            echo "Artifacts ready and notes generated:"
+            echo ""
+            cat "${{ steps.notes.outputs.notes_file }}"
+            exit 0
+          fi
+
+          # IMMUTABILITY GUARD (learned the hard way on v1.7.4): GitHub
+          # permanently tombstones a tag_name once a PUBLISHED release that
+          # used it is deleted — "tag_name was used by an immutable release",
+          # and the ref cannot be recreated even after deleting the tag. So:
+          #  1. Always create the release as a DRAFT first (below) with every
+          #     asset attached in the SAME `gh release create` call — never
+          #     create it published, then try to add assets (422 "Cannot
+          #     upload assets to an immutable release").
+          #  2. NEVER delete a published release on this repo: the tag name is
+          #     consumed forever. A failed upload must leave the draft in place
+          #     for the operator to inspect, not be deleted and re-created.
+          #  3. If the tag was already burned (e.g. a previously deleted
+          #     release), `gh release create` fails with "creations being
+          #     restricted" — do NOT retry the same tag; bump to vX.Y.Z-1.
+          # Refuse to run when the tag already has a release (or was burned):
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "::error::A release for $GITHUB_REF_NAME already exists. " >&2
+            echo "::error::If it was deleted, the tag_name is permanently burned by GitHub — " >&2
+            echo "::error::reuse is impossible (immutable releases). Use a new tag (vX.Y.Z-1)." >&2
+            exit 1
+          fi
+
+          # Stable tags (v1.7.0) become a draft, reviewed and published by hand.
+          # Pre-release tags (v1.7.0-beta.1, v1.7.0-rc.1, ...) are published
+          # immediately as pre-releases so testers can grab them.
+          EXTRA_FLAGS="--draft"
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            EXTRA_FLAGS="--prerelease"
+            echo "Pre-release tag detected — publishing immediately as pre-release."
+          fi
+
+          gh release create "$GITHUB_REF_NAME" \
+            --title "SpaceKai $GITHUB_REF_NAME" \
+            $APK_FULL \
+            $DESKTOP \
+            SHA256SUMS.txt \
+            $EXTRA_FLAGS \
+            --notes-file "${{ steps.notes.outputs.notes_file }}"
+          echo "Release created: https://github.com/$GITHUB_REPOSITORY/releases"
+
+      - name: Notify Discord
+        if: ${{ !github.event.inputs.dry_run }}
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          CHANGELOG_URL: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+          RELEASE_URL: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK" ]; then
+            echo "::warning::DISCORD_WEBHOOK secret not set — skipping Discord notification."
+            exit 0
+          fi
+          # Pre-release tags are published immediately; stable tags are drafts
+          # awaiting a manual Publish click.
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            STATUS="pre-release publiée"
+          else
+            STATUS="brouillon prêt à publier"
+          fi
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            COLOR=16753920  # orange for pre-releases
+          else
+            COLOR=3447003   # blue for stable drafts
+          fi
+          # Build a compact artifact list from the step summary table.
+          ARTIFACTS=$(sed -n '/| File | Size |/,/^$/p' "$GITHUB_STEP_SUMMARY" | tail -n +3 | sed 's/^| //; s/ | / — /; s/ |$//' | head -8 || true)
+          PAYLOAD=$(jq -n \
+            --arg title "SpaceKai $GITHUB_REF_NAME" \
+            --arg desc "Release **$STATUS**" \
+            --arg url "$RELEASE_URL" \
+            --arg color "$COLOR" \
+            --arg changelog "$CHANGELOG_URL" \
+            --arg artifacts "$ARTIFACTS" \
+            '{embeds: [{title: $title, description: $desc, color: ($color|tonumber), url: $url, fields: [{name: "Changelog", value: $changelog, inline: true}, {name: "Artifacts", value: $artifacts}]}]}')
+          curl -sf -X POST "$DISCORD_WEBHOOK" \
+            -H 'Content-Type: application/json' \
+            -d "$PAYLOAD" || echo "::warning::Discord notification failed (non-blocking)."

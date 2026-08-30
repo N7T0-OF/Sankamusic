@@ -13,12 +13,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
@@ -59,10 +65,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.window.core.layout.WindowSizeClass.Companion.WIDTH_DP_MEDIUM_LOWER_BOUND
 import coil3.toUri
 import com.maxrave.domain.data.player.GenericMediaItem
-import com.maxrave.common.SpaceKaiFeatures
 import com.maxrave.domain.manager.DataStoreManager
 import com.maxrave.domain.manager.DataStoreManager.Values.TRUE
-import com.maxrave.domain.repository.SpotifySyncRepository
 import com.maxrave.logger.Logger
 import com.maxrave.simpmusic.expect.Orientation
 import com.maxrave.simpmusic.expect.currentOrientation
@@ -70,10 +74,13 @@ import com.maxrave.simpmusic.expect.openUrl
 import com.maxrave.simpmusic.expect.ui.layerBackdrop
 import com.maxrave.simpmusic.expect.ui.rememberBackdrop
 import com.maxrave.simpmusic.extension.copy
+import com.maxrave.simpmusic.spacekai.SpaceKaiFeatures
+import com.maxrave.simpmusic.spacekai.SpaceKaiUpdateConfig
+import com.maxrave.simpmusic.spacekai.applyPersistedSpaceKaiFeatures
+import com.maxrave.simpmusic.spacekai.isSpaceKaiFeatureEnabled
 import com.maxrave.simpmusic.ui.component.AppBottomNavigationBar
 import com.maxrave.simpmusic.ui.component.AppNavigationRail
 import com.maxrave.simpmusic.ui.component.LiquidGlassAppBottomNavigationBar
-import com.maxrave.simpmusic.ui.component.MinimalisticAppBottomNavigationBar
 import com.maxrave.simpmusic.ui.icon.ArrowForwardIos
 import com.maxrave.simpmusic.ui.icon.SimpIcons
 import com.maxrave.simpmusic.ui.navigation.destination.home.AnalyticsDestination
@@ -90,6 +97,7 @@ import com.maxrave.simpmusic.ui.navigation.graph.AppNavigationGraph
 import com.maxrave.simpmusic.ui.screen.MiniPlayer
 import com.maxrave.simpmusic.ui.screen.player.NowPlayingScreen
 import com.maxrave.simpmusic.ui.screen.player.NowPlayingScreenContent
+import com.maxrave.simpmusic.ui.screen.player.NowPlayingScreenLandscape
 import com.maxrave.simpmusic.ui.theme.AppTheme
 import com.maxrave.simpmusic.ui.theme.ForceDarkContent
 import com.maxrave.simpmusic.ui.theme.desktopPanelDark
@@ -100,6 +108,7 @@ import com.maxrave.simpmusic.ui.theme.parseThemeColorHex
 import com.maxrave.simpmusic.ui.theme.typo
 import com.maxrave.simpmusic.utils.VersionManager
 import com.maxrave.simpmusic.viewModel.SharedViewModel
+import com.maxrave.simpmusic.viewModel.UIEvent
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownTypography
 import dev.chrisbanes.haze.hazeEffect
@@ -135,7 +144,6 @@ import kotlin.time.ExperimentalTime
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalTime::class, ExperimentalFoundationApi::class)
 @Composable
 fun App(viewModel: SharedViewModel = koinInject()) {
-    val spotifySyncRepository: SpotifySyncRepository = koinInject()
     val windowSize = currentWindowAdaptiveInfo().windowSizeClass
     val navController = rememberNavController()
     val isDesktopShell = getPlatform() == Platform.Desktop
@@ -148,7 +156,8 @@ fun App(viewModel: SharedViewModel = koinInject()) {
 
     val isTranslucentBottomBar by viewModel.getTranslucentBottomBar().collectAsStateWithLifecycle(DataStoreManager.FALSE)
     val isLiquidGlassEnabled by viewModel.getEnableLiquidGlass().collectAsStateWithLifecycle(DataStoreManager.FALSE)
-    val isMinimalisticNavBar by viewModel.getMinimalisticNavBar().collectAsStateWithLifecycle(DataStoreManager.FALSE)
+    // SPACEKAI FEATURE: icons-only navigation bar (“hide text”).
+    val hideNavLabel by viewModel.getHideNavLabel().collectAsStateWithLifecycle(false)
     // Analytics only makes sense with local tracking on, so its tab follows that setting.
     val isLocalTrackingEnabled by viewModel.getLocalTrackingEnabled().collectAsStateWithLifecycle(DataStoreManager.FALSE)
     val showAnalyticsTab = isLocalTrackingEnabled == TRUE
@@ -160,6 +169,28 @@ fun App(viewModel: SharedViewModel = koinInject()) {
     val themeMode by viewModel.getThemeMode().collectAsStateWithLifecycle(DataStoreManager.THEME_MODE_DARK)
     val themeColorSource by viewModel.getThemeColorSource().collectAsStateWithLifecycle(DataStoreManager.THEME_COLOR_DEFAULT)
     val customThemeColorHex by viewModel.getCustomThemeColor().collectAsStateWithLifecycle(DataStoreManager.DEFAULT_THEME_COLOR_HEX)
+
+    // SPACEKAI FEATURE: re-issue configSpaceKai with persisted flag overrides at startup,
+    // so a user who turned a SpaceKai flag OFF keeps it off after a restart (the release
+    // build defaults to allEnabled via SimpMusicApplication/DesktopApp).
+    LaunchedEffect(Unit) {
+        applyPersistedSpaceKaiFeatures(
+            getString = { key -> viewModel.getString(key) },
+        )
+    }
+    // SPACEKAI FEATURE: horizontal swipe on the navigation bar/rail skips tracks
+    // (left = next, right = previous). Gated behind customNavigation, the same
+    // flag that drives the SpaceKai navigation customizations.
+    val navBarSwipeEnabled = isSpaceKaiFeatureEnabled(SpaceKaiFeatures::customNavigation)
+    // SPACEKAI FEATURE: minimalisticNavigation — compact nav variant. When ON the
+    // optional Mix-for-you / Analytics tabs are dropped from every bar style
+    // (liquid glass, translucent, and the landscape rail); Home/Library/Search stay.
+    val minimalisticNav = isSpaceKaiFeatureEnabled(SpaceKaiFeatures::minimalisticNavigation)
+    // SPACEKAI FEATURE: landscapePlayer — dedicated landscape Now Playing layout.
+    // When ON and the device is in phone landscape, the Now Playing screen renders
+    // as a side-by-side composition (artwork left, info/controls right) instead of
+    // the portrait-first full-screen overlay. OFF = upstream portrait behaviour.
+    val landscapePlayerEnabled = isSpaceKaiFeatureEnabled(SpaceKaiFeatures::landscapePlayer)
     // MiniPlayer visibility logic
     var isShowMiniPlayer by rememberSaveable {
         mutableStateOf(true)
@@ -214,16 +245,6 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                 // of it. The token is handed straight to the shared view model, and the screen
                 // closes itself when it sees a session key appear.
                 token?.let { viewModel.completeLastfmLogin(it) }
-            } else if (SpaceKaiFeatures.SPOTIFY_SYNC && data.scheme == "simpmusic" && data.host == "spotify-auth") {
-                // Spotify OAuth PKCE callback: simpmusic://spotify-auth?code=xxx. Handled here,
-                // not on the sync screen, so it survives a process kill. The screen learns the
-                // login succeeded by watching oauthLoggedIn, exactly like Last.fm.
-                val code = data.getQueryParameter("code")
-                Logger.d("MainActivity", "Spotify OAuth callback, code present: ${!code.isNullOrEmpty()}")
-                viewModel.setIntent(null)
-                if (!code.isNullOrEmpty()) {
-                    spotifySyncRepository.completeOAuthLogin(code)
-                }
             } else if (data.host == "simpmusic.org" || data.scheme == "simpmusic") {
                 // https://simpmusic.org/app/watch?v=VIDEO_ID
                 // https://simpmusic.org/app/playlist?list=PLAYLIST_ID
@@ -423,8 +444,8 @@ fun App(viewModel: SharedViewModel = koinInject()) {
     }
     val isTablet = windowSize.isWidthAtLeastBreakpoint(WIDTH_DP_MEDIUM_LOWER_BOUND)
     val isTabletLandscape = isTablet && currentOrientation() == Orientation.LANDSCAPE
-    // Phone in landscape: the portrait NowPlaying modal would render squashed to ~1/4 of the
-    // screen. Route it to the dedicated FullscreenPlayer (a true full-screen layout) instead.
+    // Phones in landscape: the bottom bar moves to the right edge as a compact rail instead of
+    // staying at the bottom, where it would eat the already-short landscape height.
     val isPhoneLandscape = !isTablet && currentOrientation() == Orientation.LANDSCAPE
 
     AppTheme(
@@ -447,7 +468,7 @@ fun App(viewModel: SharedViewModel = koinInject()) {
             containerColor =
                 if (isDesktopShell) desktopWindow else MaterialTheme.colorScheme.background,
             bottomBar = {
-                if (!isTablet) {
+                if (!isTablet && !isPhoneLandscape) {
                     AnimatedVisibility(
                         isNavBarVisible,
                         enter = fadeIn() + slideInHorizontally(),
@@ -478,15 +499,7 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                     },
                                 )
                             }
-                            if (isMinimalisticNavBar == TRUE) {
-                                MinimalisticAppBottomNavigationBar(
-                                    navController = navController,
-                                    showAnalyticsTab = showAnalyticsTab,
-                                    showMixForYouTab = showMixForYouTab,
-                                ) { klass ->
-                                    viewModel.reloadDestination(klass)
-                                }
-                            } else if (isLiquidGlassEnabled == TRUE) {
+                            if (isLiquidGlassEnabled == TRUE) {
                                 LiquidGlassAppBottomNavigationBar(
                                     navController = navController,
                                     backdrop = backdrop,
@@ -495,6 +508,7 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                     isScrolledToTop = isScrolledToTop,
                                     showAnalyticsTab = showAnalyticsTab,
                                     showMixForYouTab = showMixForYouTab,
+                                    minimalistic = minimalisticNav,
                                 ) { klass ->
                                     viewModel.reloadDestination(klass)
                                 }
@@ -502,11 +516,14 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                 AppBottomNavigationBar(
                                     navController = navController,
                                     isTranslucentBackground = isTranslucentBottomBar == TRUE,
+                                    showLabels = !hideNavLabel,
                                     showAnalyticsTab = showAnalyticsTab,
                                     showMixForYouTab = showMixForYouTab,
-                                ) { klass ->
-                                    viewModel.reloadDestination(klass)
-                                }
+                                    minimalistic = minimalisticNav,
+                                    reloadDestinationIfNeeded = { klass -> viewModel.reloadDestination(klass) },
+                                    onSwipeToNext = if (navBarSwipeEnabled) ({ viewModel.onUIEvent(UIEvent.Next) }) else null,
+                                    onSwipeToPrevious = if (navBarSwipeEnabled) ({ viewModel.onUIEvent(UIEvent.SkipToPrevious) }) else null,
+                                )
                             }
                         }
                     }
@@ -532,9 +549,11 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                 navController = navController,
                                 showAnalyticsTab = showAnalyticsTab,
                                 showMixForYouTab = showMixForYouTab,
-                            ) { klass ->
-                                viewModel.reloadDestination(klass)
-                            }
+                                minimalistic = minimalisticNav,
+                                reloadDestinationIfNeeded = { klass -> viewModel.reloadDestination(klass) },
+                                onSwipeToNext = if (navBarSwipeEnabled) ({ viewModel.onUIEvent(UIEvent.Next) }) else null,
+                                onSwipeToPrevious = if (navBarSwipeEnabled) ({ viewModel.onUIEvent(UIEvent.SkipToPrevious) }) else null,
+                            )
                         }
                         // Desktop only: the content sits in its own rounded panel floating on a
                         // pure black window, Spotify style, while the rail stays flat black
@@ -638,6 +657,29 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                 )
                             }
                         }
+                        // Phones in landscape: the navigation moves to the RIGHT edge as a compact
+                        // rail (same component and tabs as the bottom bar — only the layout changes,
+                        // per the responsive rule). Labels stay on so the user can still read the
+                        // destination; the “hide text” setting (workstream B) will shrink this to
+                        // icons only. Insets: status bar top, navigation bar bottom, display cutout
+                        // on the right (landscape cutouts sit on a side, not the top).
+                        if (isPhoneLandscape && !isInFullscreen) {
+                            AppNavigationRail(
+                                navController = navController,
+                                showAnalyticsTab = showAnalyticsTab,
+                                showMixForYouTab = showMixForYouTab,
+                                showHeader = false,
+                                showLabels = !hideNavLabel,
+                                windowInsets =
+                                    WindowInsets.safeDrawing.only(
+                                        WindowInsetsSides.Top + WindowInsetsSides.Bottom + WindowInsetsSides.End,
+                                    ),
+                                minimalistic = minimalisticNav,
+                                reloadDestinationIfNeeded = { klass -> viewModel.reloadDestination(klass) },
+                                onSwipeToNext = if (navBarSwipeEnabled) ({ viewModel.onUIEvent(UIEvent.Next) }) else null,
+                                onSwipeToPrevious = if (navBarSwipeEnabled) ({ viewModel.onUIEvent(UIEvent.SkipToPrevious) }) else null,
+                            )
+                        }
                         if (isTablet && isTabletLandscape && !isInFullscreen) {
                             AnimatedVisibility(
                                 isShowNowPlaylistScreen,
@@ -695,16 +737,17 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                 }
 
                 if (isShowNowPlaylistScreen && !isTabletLandscape) {
-                    if (isPhoneLandscape) {
-                        // Phone in landscape: don't render the squashed portrait modal. Open the
-                        // dedicated full-screen player instead and clear the sheet flag so the
-                        // back button / dismiss return to the normal UI.
-                        LaunchedEffect(Unit) {
-                            isShowNowPlaylistScreen = false
-                            navController.navigate(FullscreenDestination)
-                        }
-                    } else {
-                        ForceDarkContent {
+                    ForceDarkContent {
+                        // SPACEKAI FEATURE: landscapePlayer — dedicated phone-landscape Now
+                        // Playing layout (artwork left, info/controls right). OFF or portrait
+                        // orientation keeps the upstream portrait-first full-screen overlay.
+                        if (isPhoneLandscape && landscapePlayerEnabled) {
+                            NowPlayingScreenLandscape(
+                                navController = navController,
+                            ) {
+                                isShowNowPlaylistScreen = false
+                            }
+                        } else {
                             NowPlayingScreen(
                                 navController = navController,
                             ) {
@@ -767,7 +810,11 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                 onClick = {
                                     shouldShowUpdateDialog = false
                                     viewModel.showedUpdateDialog = false
-                                    openUrl("https://simpmusic.org/download")
+                                    // SPACEKAI CUSTOMIZATION: the upstream dialog opens the official
+                                    // SimpMusic download page, which would hand SpaceKai users the
+                                    // upstream APK (signed with a different key → "Application non
+                                    // installée"). Point at the SpaceKai releases page instead.
+                                    openUrl(SpaceKaiUpdateConfig.releasesPageUrl)
                                 },
                             ) {
                                 Text(

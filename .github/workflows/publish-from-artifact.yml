@@ -1,0 +1,150 @@
+name: Publish release from artifact
+
+# Bridge between "the APK is built" and "the release is published".
+#
+# The live release pipeline builds the single universal APK + SHA256SUMS.txt
+# and stores them as a run artifact, but never creates the GitHub release.
+# This workflow publishes an already-built artifact as a release — no manual
+# download / re-upload in the browser:
+#
+#   1. Pick the build run (Actions page URL contains the run ID, e.g. 32786125330).
+#   2. Enter the tag (v1.7.4).
+#   3. Run → the artifact is downloaded, verified (exactly ONE SpaceKai-v*.apk,
+#      SHA256SUMS.txt present and matching), and a release is created with the
+#      tag + title + those assets.
+#
+# Only the APK + checksums are published; never debug/unsigned/ABI-split sets.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Workflow run ID that produced the artifact (from the Actions page URL)'
+        required: true
+        type: string
+      tag:
+        description: 'Release tag (e.g. v1.7.4)'
+        required: true
+        type: string
+      artifact_name:
+        description: 'Artifact name to publish (default: android-release)'
+        required: false
+        default: 'android-release'
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Validate inputs
+        env:
+          TAG: ${{ inputs.tag }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          if [ -z "$TAG" ] || [ -z "$RUN_ID" ]; then
+            echo "::error::tag and run_id are required."
+            exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "::error::Tag $TAG already exists. Use a new tag (or delete it first)."
+            exit 1
+          fi
+          echo "Will publish tag $TAG from run $RUN_ID."
+
+      - name: Download artifact from run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+          ARTIFACT: ${{ inputs.artifact_name }}
+        run: |
+          mkdir -p artifact
+          gh run download "$RUN_ID" -n "$ARTIFACT" -D artifact
+          echo "Downloaded from $RUN_ID:"
+          find artifact -type f | sort
+
+      - name: Verify artifact (single APK + checksums)
+        run: |
+          set -euo pipefail
+          # Exactly one release APK.
+          APKS=$(find artifact -name 'SpaceKai-v*.apk' 2>/dev/null | sort)
+          COUNT=$(printf '%s\n' "$APKS" | grep -c '\.apk$' || true)
+          if [ "$COUNT" -ne 1 ]; then
+            echo "::error::Expected exactly 1 SpaceKai-v*.apk in the artifact, found $COUNT."
+            exit 1
+          fi
+          APK="$APKS"
+          echo "APK: $(basename "$APK")"
+          # No forbidden variants.
+          if echo "$(basename "$APK")" | grep -qE 'debug|unsigned|aligned|arm64|armv7|x86|foss|universal'; then
+            echo "::error::APK name suggests a non-release variant: $(basename "$APK")"
+            exit 1
+          fi
+          # SHA256SUMS.txt present and matching.
+          SUMS=$(find artifact -name 'SHA256SUMS.txt' | head -1)
+          if [ -z "$SUMS" ]; then
+            echo "::error::SHA256SUMS.txt missing from the artifact."
+            exit 1
+          fi
+          ( cd "$(dirname "$SUMS")" && sha256sum -c "$(basename "$SUMS")" )
+          echo "Artifact verified."
+
+      # ZERO-FALSE-POSITIVE: the 1-click publish path must NOT bypass the
+      # gates. android-release.yml runs the full pre-release report; this path
+      # runs the same report on the downloaded artifact (all 12 code gates +
+      # APK: signature, upstream hotspots, decorative toggles, UI overlap,
+      # Spotify flow, landscape player, updater chain, navigation, dynamic
+      # color, provider architecture, locked icons, perf keys, gate parity,
+      # FEATURE AUDIT). A FAIL here blocks the release — the artifact is
+      # never published unvetted.
+      - name: Pre-release report (all gates)
+        run: |
+          set -euo pipefail
+          # The artifact may nest the APK; stage the flat dir the report
+          # expects (exactly one release APK + SHA256SUMS.txt).
+          STAGE=$(mktemp -d)
+          find artifact -name 'SpaceKai-v*.apk' -exec cp {} "$STAGE"/ \;
+          find artifact -name 'SHA256SUMS.txt' -exec cp {} "$STAGE"/ \;
+          ./scripts/pre-release-report.sh "$STAGE"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          APK=$(find artifact -name 'SpaceKai-v*.apk' | head -1)
+          SUMS=$(find artifact -name 'SHA256SUMS.txt' | head -1)
+          # IMMUTABILITY GUARD (learned the hard way on v1.7.4): GitHub
+          # permanently tombstones a tag_name once a PUBLISHED release that
+          # used it is deleted — "tag_name was used by an immutable release".
+          # So: always create as DRAFT with all assets attached in ONE call;
+          # never create published then add assets; NEVER delete a published
+          # release (the tag name is consumed forever). If the tag was already
+          # burned, `gh release create` fails — use a new tag (vX.Y.Z-1).
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::A release for $TAG already exists. If it was deleted, the " >&2
+            echo "::error::tag_name is permanently burned by GitHub (immutable releases) — " >&2
+            echo "::error::reuse is impossible. Use a new tag (vX.Y.Z-1)." >&2
+            exit 1
+          fi
+          # Stable tags become a draft (human validation); pre-release tags
+          # (containing a dash, e.g. v1.7.4-beta.1) publish immediately.
+          EXTRA_FLAGS="--draft"
+          if [[ "$TAG" == *-* ]]; then
+            EXTRA_FLAGS="--prerelease"
+          fi
+          gh release create "$TAG" \
+            --title "SpaceKai $TAG" \
+            "$APK" "$SUMS" \
+            $EXTRA_FLAGS
+          echo "Release created: https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
+          echo "For a draft, open it and click Publish."

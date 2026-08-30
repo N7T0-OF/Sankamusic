@@ -392,9 +392,17 @@ fun ArtistScreen(
                                             val logo = artistLogo
                                             if (logo != null) {
                                                 // Artist name rendered as a logo image (hidden catalog),
-                                                // in place of the plain-text title.
+                                                // in place of the plain-text title. SPACEKAI FIX: explicit
+                                                // disk cache (matching the header image above) so the logo
+                                                // is not re-downloaded on every revisit.
                                                 AsyncImage(
-                                                    model = logo.logoUrl,
+                                                    model =
+                                                        ImageRequest
+                                                            .Builder(LocalPlatformContext.current)
+                                                            .data(logo.logoUrl)
+                                                            .diskCachePolicy(CachePolicy.ENABLED)
+                                                            .diskCacheKey(logo.logoUrl)
+                                                            .build(),
                                                     contentDescription = state.data.title,
                                                     contentScale = ContentScale.Fit,
                                                     modifier =

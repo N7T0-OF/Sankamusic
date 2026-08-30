@@ -34,6 +34,9 @@ expect fun LiquidGlassAppBottomNavigationBar(
     isScrolledToTop: Boolean = false,
     showAnalyticsTab: Boolean = false,
     showMixForYouTab: Boolean = false,
+    // SPACEKAI FEATURE: minimalisticNavigation — compact variant: the optional
+    // Mix-for-you / Analytics tabs are dropped from the tab lists.
+    minimalistic: Boolean = false,
     onOpenNowPlaying: () -> Unit = {},
     reloadDestinationIfNeeded: (KClass<*>) -> Unit = { _ -> },
 )

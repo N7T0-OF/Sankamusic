@@ -159,10 +159,10 @@ fun CreditScreen(
                 }
             }
 
-            // GitHub button
+            // GitHub button — SPACEKAI FEATURE: points at the SpaceKai repo.
             TextButton(
                 onClick = {
-                    openUrl("https://github.com/maxrave-dev/SimpMusic")
+                    openUrl("https://github.com/N7T0-OF/Sankamusic")
                 },
                 modifier =
                     Modifier
@@ -173,10 +173,10 @@ fun CreditScreen(
                 Text(text = stringResource(Res.string.github))
             }
 
-            // Issue tracker button
+            // Issue tracker button — SPACEKAI FEATURE: SpaceKai repo issues.
             TextButton(
                 onClick = {
-                    openUrl("https://github.com/maxrave-dev/SimpMusic/issues")
+                    openUrl("https://github.com/N7T0-OF/Sankamusic/issues")
                 },
                 modifier =
                     Modifier

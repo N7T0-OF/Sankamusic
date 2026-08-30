@@ -1,30 +1,8 @@
-## SpaceKai
-
-SpaceKai is a **customization layer over SimpMusic** — a personal build with its own
-features, UI and branding on top of the upstream engine. It is not the original project.
-
-- **Upstream**: [SimpMusic](https://github.com/maxrave-dev/SimpMusic) (GPL-3.0, license and notices preserved)
-- **SpaceKai releases**: https://github.com/N7T0-OF/Sankamusic/releases
-- **Architecture**: see [docs/UPSTREAM.md](docs/UPSTREAM.md) — upstream tracking, sync procedure, conflict surfaces
-- **Release format**: one universal signed APK `SpaceKai-vX.Y.Z.apk` + `SHA256SUMS.txt`, plus desktop packages
-- **Locked assets**: `circle_app_icon.png` / `app_icon.png` are never modified by the build pipeline
-
-SpaceKai features beyond upstream:
-
-- Spotify playlist import (OAuth PKCE) — Settings → Spotify → *Importer vos playlists Spotify*
-- Customizable navigation (translucent / liquid glass / minimalistic) with reorderable sections
-- Haptic feedback (vibration) with intensity control
-- Fullscreen landscape player
-- Dynamic color fixes + custom theme colors
-- Update checker pointed at SpaceKai releases
-
----
-
 <div align="center"> <img src="https://raw.githubusercontent.com/maxrave-dev/SimpMusic/main/fastlane/metadata/android/en-US/images/featureGraphic.png"> <h1>SimpMusic</h1>  
 A FOSS YouTube Music client for Android and Desktop with many features from<br>Spotify, SponsorBlock, ReturnYouTubeDislike using Compose Multiplatform to develop.
 <br> 
 <br>
-<a href="https://github.com/maxrave-dev/SimpMusic/releases"><img src="https://img.shields.io/github/v/release/maxrave-dev/SimpMusic"></a> <a href="https://github.com/maxrave-dev/SimpMusic/releases"><img src="https://img.shields.io/github/downloads/maxrave-dev/SimpMusic/total"></a> <br> <br> <a href="https://trendshift.io/repositories/13482" target="_blank"><img src="https://trendshift.io/api/badge/repositories/13482" alt="maxrave-dev%2FSimpMusic | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+<a href="https://github.com/N7T0-OF/Sankamusic/releases"><img src="https://img.shields.io/github/v/release/N7T0-OF/Sankamusic"></a> <a href="https://github.com/N7T0-OF/Sankamusic/releases"><img src="https://img.shields.io/github/downloads/N7T0-OF/Sankamusic/total"></a> <br> <br> <a href="https://trendshift.io/repositories/13482" target="_blank"><img src="https://trendshift.io/api/badge/repositories/13482" alt="maxrave-dev%2FSimpMusic | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 <br>
 <br>
 <a href="https://www.producthunt.com/products/simpmusic/reviews?utm_source=badge-product_rating&utm_medium=badge&utm_source=badge-simpmusic" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/product_rating.svg?product_id=903836&theme=dark" alt="SimpMusic - A&#0032;FOSS&#0032;YouTube&#0032;Music&#0032;client&#0032;for&#0032;Android&#0032;with&#0032;many&#0032;features | Product Hunt" style="width: 242px; height: 108px;" width="242" height="108" /></a>
@@ -36,10 +14,25 @@ A FOSS YouTube Music client for Android and Desktop with many features from<br>S
 <a href="https://github.com/maxrave-dev/SimpMusic/releases"><img src="https://raw.githubusercontent.com/NeoApplications/Neo-Backup/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" width="200"></a> 
 <h4>Nightly Build</h4>  
 <a href="https://simpmusic.org/nightly-download"><img src="https://github.com/maxrave-dev/SimpMusic/actions/workflows/android.yml/badge.svg"></a><br/> <a href="https://simpmusic.org/nightly-download"><img src="https://raw.githubusercontent.com/NeoApplications/Neo-Backup/034b226cea5c1b30eb4f6a6f313e4dadcbb0ece4/badge_github.png" width="200"></a> 
+<br>
+<br>
+<img src="https://github.com/N7T0-OF/Sankamusic/actions/workflows/android-release.yml/badge.svg"> <img src="https://github.com/N7T0-OF/Sankamusic/actions/workflows/validate-workflows.yml/badge.svg"> <img src="https://github.com/N7T0-OF/Sankamusic/actions/workflows/playstore-publish.yml/badge.svg"> <img src="https://github.com/N7T0-OF/Sankamusic/actions/workflows/verify-release.yml/badge.svg"> 
 </div>  
 
 > SimpMusic is available on Desktop now!
-  
+
+## SpaceKai
+
+**SpaceKai** is a personalized add-on layer over **SimpMusic** — same engine,
+with SpaceKai branding, theme, navigation, player and feature customizations on
+top. It is designed to keep receiving SimpMusic upstream updates without
+redoing SpaceKai work by hand.
+
+- 📚 [Upstream synchronization](docs/UPSTREAM.md) — how SpaceKai tracks SimpMusic
+- 🏗️ [Add-on architecture](docs/SPACEKAI-ARCHITECTURE.md) — feature flags, extension points, how to add a feature
+- 📦 [Release process](RELEASE.md) — how to ship a SpaceKai release
+- 🛠️ [CI/CD guide](docs/ci-cd.md) — workflows, secrets, debugging
+
 ## Features ✨️    
 - Play music from YouTube Music or YouTube for free, without ads and in the background
 - High quality up-to 256kbps stream for YouTube Music Premium users (NEW)

@@ -1,0 +1,3 @@
+# fastlane Appfile
+# Package name of the app on the Google Play Store.
+package_name "com.maxrave.simpmusic"

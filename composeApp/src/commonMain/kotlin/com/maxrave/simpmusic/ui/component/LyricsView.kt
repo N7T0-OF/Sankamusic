@@ -4,6 +4,7 @@ import androidx.compose.animation.Animatable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -11,10 +12,8 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.MarqueeAnimationMode
 import androidx.compose.foundation.background
@@ -67,6 +66,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -1101,50 +1101,49 @@ fun FullscreenLyricsSheet(
                         }
 
                         item {
-                            // Control Buttons - Animated visibility
-                            AnimatedVisibility(
-                                visible = showControlButtons,
-                                enter =
-                                    expandVertically(
-                                        tween(300),
-                                    ),
-                                exit =
-                                    shrinkVertically(
-                                        tween(300),
-                                    ),
+                            // SPACEKAI FIX: fade-only inside a lazy item. A size-transform
+                            // animation (expandVertically/shrinkVertically) here measures the
+                            // content with unbounded height and can draw the control buttons
+                            // over the following item while the layout animates. The container
+                            // animates its own height (layout-driven) and clips to bounds.
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clipToBounds()
+                                    .animateContentSize(),
                             ) {
-                                PlayerControlLayout(controllerState) {
-                                    sharedViewModel.onUIEvent(it)
-                                }
-                            }
-                            AnimatedVisibility(
-                                visible = showControlButtons,
-                                enter =
-                                    expandVertically(
-                                        tween(300),
-                                    ),
-                                exit =
-                                    shrinkVertically(
-                                        tween(300),
-                                    ),
-                            ) {
-                                // List Bottom Buttons
-                                Box(
-                                    modifier =
-                                        Modifier
-                                            .height(32.dp)
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 40.dp),
+                                // Control Buttons - Animated visibility
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visible = showControlButtons,
+                                    enter = fadeIn(tween(350)),
+                                    exit = fadeOut(tween(350)),
                                 ) {
-                                    IconButton(
+                                    PlayerControlLayout(controllerState) {
+                                        sharedViewModel.onUIEvent(it)
+                                    }
+                                }
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visible = showControlButtons,
+                                    enter = fadeIn(tween(350)),
+                                    exit = fadeOut(tween(350)),
+                                ) {
+                                    // List Bottom Buttons
+                                    Box(
                                         modifier =
                                             Modifier
-                                                .size(24.dp)
-                                                .aspectRatio(1f)
-                                                .align(Alignment.CenterStart)
-                                                .clip(
-                                                    CircleShape,
-                                                ),
+                                                .height(32.dp)
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 40.dp),
+                                    ) {
+                                        IconButton(
+                                            modifier =
+                                                Modifier
+                                                    .size(24.dp)
+                                                    .aspectRatio(1f)
+                                                    .align(Alignment.CenterStart)
+                                                    .clip(
+                                                        CircleShape,
+                                                    ),
                                         onClick = {
                                             showInfoBottomSheet = true
                                             showControlButtons = true
@@ -1177,7 +1176,8 @@ fun FullscreenLyricsSheet(
                                         }
                                     }
                                 }
-                                Spacer(modifier = Modifier.height(20.dp))
+                                    Spacer(modifier = Modifier.height(20.dp))
+                                }
                             }
                         }
                     }

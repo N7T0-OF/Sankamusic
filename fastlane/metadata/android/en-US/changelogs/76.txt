@@ -1,0 +1,8 @@
+Sankamusic v0.2.1
+
+- SPACEKAI TOGGLES FIXED: flipping a SpaceKai switch now applies immediately. The flags were stored in a plain global, so Compose never recomposed and every toggle looked dead; the layer now bumps a snapshot-backed epoch so all flag readers recompose on change.
+- LANDSCAPE PLAYER: a real landscape Now Playing layout ships (square artwork left, title/controls right) instead of the broken stacked view.
+- DYNAMIC COLOR FIXED: the wallpaper colour scheme no longer forces a pure-black background; dark dynamic color now uses the unpinned wallpaper surface, and the OLED black pinning follows the dynamicColor flag.
+- SETTINGS UI: SpaceKai section cleanly lists per-feature toggles; "reduce sections" and feature controls behave consistently.
+- UPDATE CHANNEL: the update checker is pointed at this fork's GitHub releases, so the in-app update and Discord link target the right repo.
+- Release pipeline and audits pass (features, navigation, landscape player, dynamic color, updater flow, settings UI, upstream hotspots).

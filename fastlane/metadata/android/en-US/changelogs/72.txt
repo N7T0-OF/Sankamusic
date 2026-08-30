@@ -1,0 +1,7 @@
+SpaceKai v1.8.1
+
+- Release pipeline hardened: version-code floor raised to 71 (v1.8.0) so the upgrade never hits "Application non installée"
+- SpaceKai add-on layer: feature flags, Settings section, haptics on the player
+- Update checker points at SpaceKai releases (N7T0-OF/Sankamusic)
+- Review dialog stars the SpaceKai repo
+- Locked brand icons verified (SHA-256)

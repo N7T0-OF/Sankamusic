@@ -1,0 +1,9 @@
+SpaceKai v2.0.0
+Consolidation release — the 1.9.x feature work ships as a major version with a hardened release pipeline.
+
+- The 1.9.x feature work (landscape navigation, navigation-bar settings, swipe-to-skip, persisted flags, home performance) is carried into this major version; the landscape-player layout is still work-in-progress (see "Known / not done")
+- Release pipeline hardened end-to-end: the guard scripts are syntax-checked, gate parity is enforced across ALL release gates, and test-gates.sh now also runs 3 wiring-procedure simulations (spotifySync removal, downloadWifiOnly removal, 4-toggles wiring) that keep the procedures honest at every run
+- test-gates.sh is state-agnostic: it passes both before AND after the remaining decorative toggles are wired or removed — the correct release procedure is never mis-flagged as a regression
+- The feature-audit generator no longer references decorative flag names; verdicts are evidence-based (the Spotify login row is judged by the real sp_dc wiring chain, not a toggle flag)
+- Releasing to the public is now a single command chain: publish.sh (gates + tag) → CI draft → publish-draft.sh (assets re-verified, honesty block present AND fresh vs the regenerated audit, then publish)
+- Publication honesty guard: publish-draft.sh refuses any draft whose release note is missing the "Known / not done" block, or whose gap lines are stale vs the freshly generated audit — nothing ships hiding unfinished work

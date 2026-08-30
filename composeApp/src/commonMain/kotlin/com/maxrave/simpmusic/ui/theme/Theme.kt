@@ -20,6 +20,9 @@ import com.materialkolor.rememberDynamicColorScheme
 import com.maxrave.domain.manager.DataStoreManager
 import com.maxrave.simpmusic.expect.ui.SystemBarAppearanceEffect
 import com.maxrave.simpmusic.expect.ui.platformDynamicColorScheme
+import com.maxrave.simpmusic.expect.ui.platformDynamicColorSchemeUnpinned
+import com.maxrave.simpmusic.spacekai.SpaceKaiFeatures
+import com.maxrave.simpmusic.spacekai.isSpaceKaiFeatureEnabled
 
 /**
  * Semantic colors that sit outside the Material 3 ColorScheme.
@@ -129,14 +132,28 @@ fun AppTheme(
         } else {
             seed
         }
+    // SPACEKAI FEATURE: dynamicColor — SpaceKai colour override on top of the
+    // upstream theme. ON = dark surfaces are not pinned to pure black
+    // (isAmoled = false — the "dark background pinned to black" fix); OFF =
+    // upstream behaviour (isAmoled = isDark). Wallpaper/seed sources untouched.
+    val spaceKaiDynamicColor =
+        isSpaceKaiFeatureEnabled(SpaceKaiFeatures::dynamicColor)
+    // When the flag is on AND the wallpaper source is selected, use the unpinned
+    // system palette (dark bg follows Material You instead of being forced to black).
+    val effectiveWallpaperScheme =
+        if (spaceKaiDynamicColor && wallpaperScheme != null) {
+            platformDynamicColorSchemeUnpinned(isDark)
+        } else {
+            wallpaperScheme
+        }
     // Symmetric base: dark pins background/surface to pure black via isAmoled; light pins them to
     // pure white with a neutral-grey ramp (the seed otherwise tints the light neutrals warm/cream).
     val colorScheme =
-        wallpaperScheme
+        effectiveWallpaperScheme
             ?: rememberDynamicColorScheme(
                 seedColor = seedColor,
                 isDark = isDark,
-                isAmoled = isDark,
+                isAmoled = if (spaceKaiDynamicColor) false else isDark,
                 style = PaletteStyle.TonalSpot,
                 modifyColorScheme = { cs -> if (isDark) cs else cs.withNeutralLightSurfaces() },
             )

@@ -275,7 +275,6 @@ import simpmusic.composeapp.generated.resources.your_playlists
 import simpmusic.composeapp.generated.resources.your_sp_dc_param_of_spotify_cookie
 import simpmusic.composeapp.generated.resources.your_youtube_cookie
 import simpmusic.composeapp.generated.resources.your_youtube_playlists
-import simpmusic.composeapp.generated.resources.import_data
 import simpmusic.composeapp.generated.resources.youtube_transcript
 import simpmusic.composeapp.generated.resources.youtube_url
 
@@ -2908,7 +2907,6 @@ fun LocalPlaylistBottomSheet(
     onSync: () -> Unit,
     onUpdatePlaylist: () -> Unit,
     onDelete: () -> Unit,
-    onExportJson: (() -> Unit)? = null,
 ) {
     val coroutineScope = rememberCoroutineScope()
     var showEditTitle by remember { mutableStateOf(false) }
@@ -3052,15 +3050,6 @@ fun LocalPlaylistBottomSheet(
                     ) {
                         val url = "https://music.youtube.com/playlist?list=${ytPlaylistId?.replaceFirst("VL", "")}"
                         shareUrl(shareTitle, url)
-                    }
-                    onExportJson?.let { onExport ->
-                        ActionButton(
-                            icon = SimpIcons.ContentCopy,
-                            text = Res.string.import_data,
-                        ) {
-                            onExport()
-                            hideModalBottomSheet()
-                        }
                     }
                     EndOfModalBottomSheet()
                 }

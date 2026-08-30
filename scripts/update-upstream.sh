@@ -1,100 +1,182 @@
 #!/bin/bash
-# ============================================================
-# SpaceKai — upstream synchronisation helper
+# Synchronize SpaceKai with the upstream SimpMusic repository.
 #
-# Fetches SimpMusic (upstream), reports what changed, opens a
-# sync branch and merges upstream/dev into it. Conflicts are
-# DETECTED and REPORTED, never resolved automatically — the
-# maintainer decides.
+# SpaceKai is an add-on layer over SimpMusic. This script pulls the latest
+# upstream changes into the current branch WITHOUT overwriting SpaceKai
+# customizations: conflicts are reported for the maintainer to resolve by
+# hand. Nothing is pushed or published automatically.
 #
-# Usage: ./scripts/update-upstream.sh
-# ============================================================
+# Usage:  ./scripts/update-upstream.sh
+# Env:    UPSTREAM_URL (default: https://github.com/maxrave-dev/SimpMusic.git)
+#         UPSTREAM_BRANCH (default: main)
+#         SYNC_BRANCH (default: upstream-sync)
+
 set -euo pipefail
 
-UPSTREAM_REMOTE="upstream"
-UPSTREAM_BRANCH="dev"          # branch followed on maxrave-dev/SimpMusic
-CORE_UPSTREAM_BRANCH="dev"     # branch followed on maxrave-dev/core
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
 
-info()  { echo -e "\033[1;36m[upstream]\033[0m $*"; }
-warn()  { echo -e "\033[1;33m[upstream]\033[0m $*"; }
-fail()  { echo -e "\033[1;31m[upstream]\033[0m $*" >&2; exit 1; }
+UPSTREAM_URL="${UPSTREAM_URL:-https://github.com/maxrave-dev/SimpMusic.git}"
+UPSTREAM_BRANCH="${UPSTREAM_BRANCH:-main}"
+SYNC_BRANCH="${SYNC_BRANCH:-upstream-sync}"
 
-# --- 1. Clean working tree -----------------------------------
-info "Checking git status..."
+echo "============================================"
+echo "SpaceKai ← SimpMusic upstream synchronization"
+echo "============================================"
+echo "Upstream:  $UPSTREAM_URL ($UPSTREAM_BRANCH)"
+echo "Sync branch: $SYNC_BRANCH"
+echo ""
+
+# --- 1. Sanity checks -------------------------------------------------------
+if ! git rev-parse --git-dir >/dev/null 2>&1; then
+  echo "::error::Not a git repository. Run this from the SpaceKai checkout."
+  exit 1
+fi
+
 if [ -n "$(git status --porcelain)" ]; then
-  fail "Working tree is not clean. Commit or stash your changes first."
+  echo "::error::Working tree is not clean. Commit or stash your changes first."
+  git status --short
+  exit 1
 fi
 
-# --- 2. Upstream remote present? -----------------------------
-if ! git remote | grep -qx "$UPSTREAM_REMOTE"; then
-  warn "Remote '$UPSTREAM_REMOTE' not found — adding it."
-  git remote add "$UPSTREAM_REMOTE" https://github.com/maxrave-dev/SimpMusic.git
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+echo "[1/7] Current branch: $CURRENT_BRANCH (clean)"
+
+# --- 2. Upstream remote -----------------------------------------------------
+if ! git remote get-url upstream >/dev/null 2>&1; then
+  echo "[2/7] Adding upstream remote: $UPSTREAM_URL"
+  git remote add upstream "$UPSTREAM_URL"
+else
+  echo "[2/7] Upstream remote already configured: $(git remote get-url upstream)"
 fi
 
-# --- 3. Fetch upstream ---------------------------------------
-info "Fetching $UPSTREAM_REMOTE/$UPSTREAM_BRANCH..."
-git fetch "$UPSTREAM_REMOTE" "$UPSTREAM_BRANCH"
+# --- 3. Fetch upstream ------------------------------------------------------
+echo "[3/7] Fetching upstream..."
+git fetch upstream "$UPSTREAM_BRANCH"
 
-UPSTREAM_HEAD=$(git rev-parse "$UPSTREAM_REMOTE/$UPSTREAM_BRANCH")
-LOCAL_HEAD=$(git rev-parse HEAD)
+# --- 4. Report available version --------------------------------------------
+echo "[4/7] Comparing versions"
+echo ""
+echo "------------------------------------------------------------"
+echo "Local version:   v$(grep '^version-name' gradle/libs.versions.toml | head -1 | cut -d'\"' -f2) (code $(grep '^version-code' gradle/libs.versions.toml | head -1 | cut -d'\"' -f2))"
+UPSTREAM_VERSION=$(git show "upstream/$UPSTREAM_BRANCH:gradle/libs.versions.toml" 2>/dev/null | grep '^version-name' | head -1 | cut -d'"' -f2 || echo "?")
+echo "Upstream version: v${UPSTREAM_VERSION:-?}"
+echo "------------------------------------------------------------"
+echo ""
 
-info "Local  HEAD: $(git log -1 --format='%h %s' HEAD)"
-info "Upstream HEAD: $(git log -1 --format='%h %s' "$UPSTREAM_REMOTE/$UPSTREAM_BRANCH")"
-
-if [ "$UPSTREAM_HEAD" = "$LOCAL_HEAD" ]; then
-  info "Already up to date — nothing to do."
-  exit 0
-fi
-
-AHEAD=$(git rev-list --count "$UPSTREAM_REMOTE/$UPSTREAM_BRANCH"..HEAD 2>/dev/null || echo "?")
-BEHIND=$(git rev-list --count HEAD.."$UPSTREAM_REMOTE/$UPSTREAM_BRANCH" 2>/dev/null || echo "?")
-info "Local is $AHEAD commit(s) ahead, $BEHIND commit(s) behind upstream."
-
-# New upstream commits (changelog hint)
-info "New upstream commits since the merge base:"
-git log --oneline "$(git merge-base HEAD "$UPSTREAM_REMOTE/$UPSTREAM_BRANCH")".."$UPSTREAM_REMOTE/$UPSTREAM_BRANCH" | head -30
-
-# --- 4. Core submodule first --------------------------------
-if [ -d core/.git ]; then
-  info "Synchronising core submodule..."
-  (
-    cd core
-    if ! git remote | grep -qx "$UPSTREAM_REMOTE"; then
-      git remote add "$UPSTREAM_REMOTE" https://github.com/maxrave-dev/core.git
-    fi
-    git fetch "$UPSTREAM_REMOTE" "$CORE_UPSTREAM_BRANCH"
-    git merge-base --is-ancestor HEAD "$UPSTREAM_REMOTE/$CORE_UPSTREAM_BRANCH" \
-      && info "core is up to date with upstream." \
-      || warn "core has diverged from upstream — merge core/ manually (see docs/UPSTREAM.md)."
-  )
-fi
-
-# --- 5. Open a sync branch ------------------------------------
-DATE=$(date +%Y-%m-%d)
-SYNC_BRANCH="sync/upstream-$DATE"
-if git show-ref --verify --quiet "refs/heads/$SYNC_BRANCH"; then
-  info "Sync branch $SYNC_BRANCH already exists — reusing it."
+# --- 5. Create a sync branch and merge --------------------------------------
+if git rev-parse --verify "$SYNC_BRANCH" >/dev/null 2>&1; then
+  echo "[5/7] Reusing existing sync branch: $SYNC_BRANCH"
   git checkout "$SYNC_BRANCH"
 else
-  info "Creating sync branch $SYNC_BRANCH from dev..."
+  echo "[5/7] Creating sync branch: $SYNC_BRANCH"
   git checkout -b "$SYNC_BRANCH"
 fi
 
-# --- 6. Merge upstream/dev ------------------------------------
-info "Merging $UPSTREAM_REMOTE/$UPSTREAM_BRANCH into $SYNC_BRANCH..."
-if git merge --no-commit --no-ff "$UPSTREAM_REMOTE/$UPSTREAM_BRANCH" 2>/dev/null; then
-  info "Merge succeeded without conflicts — changes are staged on $SYNC_BRANCH."
-  info "Review, then:"
-  info "  git commit"
-  info "  ./gradlew :composeApp:compileKotlinJvm"
-  info "  git push origin $SYNC_BRANCH   (CI runs android.yml)"
-  info "  merge into dev, fast-forward main, cut a release"
+echo "Merging upstream/$UPSTREAM_BRANCH into $SYNC_BRANCH..."
+echo "NOTE: conflicts are left for manual resolution — nothing is auto-chosen."
+if git merge "upstream/$UPSTREAM_BRANCH" --no-edit; then
+  echo "Merge completed with no conflicts."
 else
-  warn "Merge has CONFLICTS — NOT resolved automatically."
-  warn "You are on $SYNC_BRANCH in a conflicted state. Resolve each conflict by hand"
-  warn "(see docs/UPSTREAM.md for the known conflict surfaces), then:"
-  warn "  git add <resolved files> && git commit"
-  warn "  ./gradlew :composeApp:compileKotlinJvm"
-  warn "  git push origin $SYNC_BRANCH"
-  exit 1
+  echo ""
+  echo "::warning::Merge finished with conflicts. Resolve them manually, then:"
+  echo "  git add <resolved files> && git commit"
 fi
+
+# --- 6. Report --------------------------------------------------------------
+echo "[6/7] Sync report"
+echo ""
+echo "============================================"
+echo "SYNC REPORT"
+echo "============================================"
+echo "SpaceKai branch:    $CURRENT_BRANCH"
+echo "Sync branch:        $SYNC_BRANCH"
+echo "Upstream:           $UPSTREAM_URL ($UPSTREAM_BRANCH)"
+echo "Upstream version:   v${UPSTREAM_VERSION:-?}"
+echo ""
+if [ -n "$(git diff --name-only --diff-filter=U)" ]; then
+  echo "CONFLICTS (resolve by hand, then commit):"
+  git diff --name-only --diff-filter=U | sed 's/^/  /'
+else
+  echo "Conflicts: none"
+fi
+echo ""
+
+# --- 7. SpaceKai touchpoints hit by upstream --------------------------------
+# Files upstream changed that carry a SPACEKAI marker are silent-break
+# hotspots: the merge may look clean while dropping the SpaceKai behaviour
+# (the update-checker URL is the classic one — see docs/UPSTREAM.md). List
+# them so the maintainer re-applies the marked hooks by hand. This mirrors
+# the conflict rule in docs/SPACEKAI-ARCHITECTURE.md: upstream-owned files
+# take upstream, then the SPACEKAI FEATURE hooks go back on top.
+echo "[7/7] Scanning upstream-changed files for SpaceKai markers..."
+CHANGED=$(git diff --name-only "HEAD...upstream/$UPSTREAM_BRANCH" || true)
+if [ -z "$CHANGED" ]; then
+  echo "  (no upstream-changed files to scan — nothing to re-apply)"
+else
+  echo "  Upstream changed $(echo "$CHANGED" | wc -l | tr -d ' ') file(s); checking for SPACEKAI markers..."
+  echo ""
+  echo "SPACEKAI TOUCHPOINTS TO RE-APPLY (files upstream changed that contain SpaceKai hooks):"
+  echo "------------------------------------------------------------"
+  found=0
+  while IFS= read -r file; do
+    if [ -f "$file" ] && grep -nE '// SPACEKAI (FEATURE|CUSTOMIZATION|FIX)|SPACEKAI FEATURE|SPACEKAI CUSTOMIZATION' "$file" >/dev/null 2>&1; then
+      echo "  $file"
+      grep -nE '// SPACEKAI (FEATURE|CUSTOMIZATION|FIX)' "$file" | sed 's/^/      L/' | head -5
+      found=1
+    fi
+  done <<< "$CHANGED"
+  if [ "$found" -eq 0 ]; then
+    echo "  (none — no SpaceKai hook sits in a file upstream touched)"
+  fi
+  echo "------------------------------------------------------------"
+  echo "  Also grep upstream-owned areas by hand for known silent-break spots:"
+  echo "    composeApp/.../App.kt  (SPACEKAI hooks: persistence, swipe, bar styles)"
+  echo "    core/data/.../update/UpdateRepositoryImpl.kt  (SimpMusic release URL)"
+fi
+
+# --- 7b. Critical hook survival (even without a conflict marker) ------------
+# A clean merge can still LOSE a SpaceKai hook when upstream restructures the
+# region around it (no conflict marker, but the behaviour is gone). The marker
+# scan above only lists files upstream changed that STILL carry a marker; this
+# pass checks that the critical hooks — the ones whose loss is invisible —
+# still exist in the merged tree. File absent = module not checked out here,
+# verify on the live repo (skip, not fail).
+echo ""
+echo "[7b] Critical SpaceKai hook survival (post-merge)..."
+CRITICAL_HOOKS=(
+  "composeApp/src/commonMain/kotlin/com/maxrave/simpmusic/App.kt|applyPersistedSpaceKaiFeatures("
+  "composeApp/src/commonMain/kotlin/com/maxrave/simpmusic/App.kt|isSpaceKaiFeatureEnabled(SpaceKaiFeatures::customNavigation)"
+  "composeApp/src/commonMain/kotlin/com/maxrave/simpmusic/App.kt|LiquidGlassAppBottomNavigationBar("
+  "conveyor.conf|vcs-url = \"https://github.com/N7T0-OF/Sankamusic\""
+  "core/data/src/main/kotlin/com/maxrave/simpmusic/data/repository/UpdateRepositoryImpl.kt|SpaceKaiUpdateConfig"
+)
+hooks_missing=0
+for entry in "${CRITICAL_HOOKS[@]}"; do
+  file="${entry%%|*}"
+  sig="${entry#*|}"
+  if [ ! -f "$file" ]; then
+    echo "  ?   $file — not present in this checkout (module absent); verify on the live repo"
+  elif grep -qF "$sig" "$file"; then
+    echo "  OK  $file contains: $sig"
+  else
+    echo "  !!  $file LOST: $sig — re-apply the SpaceKai hook (silent-break!)"
+    hooks_missing=1
+  fi
+done
+if [ "$hooks_missing" -ne 0 ]; then
+  echo "  -> CRITICAL: at least one SpaceKai hook was dropped by the merge — re-apply before testing."
+fi
+
+echo ""
+echo "Next steps (do NOT auto-publish):"
+echo "  1. Resolve any conflicts above (never blindly pick ours/theirs)."
+echo "  2. Re-apply the SpaceKai touchpoints listed above — and any hook the"
+echo "     7b check reported as LOST (a clean merge can still drop a hook)."
+echo "  3. Run ./scripts/pre-release-report.sh — it gates EVERYTHING:"
+echo "     decorative toggles, UI overlap, upstream hotspots, Spotify flow,"
+echo "     landscape player, updater chain, navigation, dynamic color, icons,"
+echo "     perf keys, and the FEATURE AUDIT (see docs/FEATURE-AUDIT.md)."
+echo "  4. Test (build + install) before considering a release."
+echo "  5. Merge the sync branch back into your release branch when ready."
+echo "============================================"

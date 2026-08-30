@@ -57,6 +57,9 @@ import org.koin.core.context.loadKoinModules
 import org.koin.core.context.startKoin
 import org.koin.java.KoinJavaComponent.inject
 import org.koin.mp.KoinPlatform.getKoin
+import com.maxrave.simpmusic.spacekai.SpaceKaiFeatures
+import com.maxrave.simpmusic.spacekai.configSpaceKai
+import com.maxrave.simpmusic.spacekai.spacekaiModule
 import org.simpmusic.lastfm.configLastfm
 import simpmusic.composeapp.generated.resources.Res
 import simpmusic.composeapp.generated.resources.app_name
@@ -174,7 +177,12 @@ fun runDesktopApp(args: Array<String> = emptyArray()) {
     startKoin {
         loadAllModules()
         loadKoinModules(viewModelModule)
+        loadKoinModules(spacekaiModule)
     }
+
+    // SPACEKAI FEATURE: enable the SpaceKai add-on layer (feature flags).
+    // Pass SpaceKaiFeatures.allEnabled for a full SpaceKai build.
+    configSpaceKai(SpaceKaiFeatures.allEnabled)
 
     val language =
         runBlocking {

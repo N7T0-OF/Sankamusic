@@ -45,6 +45,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -106,6 +107,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -127,6 +129,9 @@ import com.maxrave.domain.mediaservice.handler.RepeatState
 import com.maxrave.logger.Logger
 import com.maxrave.simpmusic.Platform
 import com.maxrave.simpmusic.expect.toggleMiniPlayer
+import com.maxrave.simpmusic.spacekai.SpaceKaiFeatures
+import com.maxrave.simpmusic.spacekai.features.haptics.HapticsSpaceKai
+import com.maxrave.simpmusic.spacekai.isSpaceKaiFeatureEnabled
 import com.maxrave.simpmusic.expect.ui.MediaPlayerView
 import com.maxrave.simpmusic.expect.ui.MediaPlayerViewWithSubtitle
 import com.maxrave.simpmusic.expect.ui.PlatformCastButton
@@ -153,6 +158,8 @@ import com.maxrave.simpmusic.ui.component.InfoPlayerBottomSheet
 import com.maxrave.simpmusic.ui.component.LyricsView
 import com.maxrave.simpmusic.ui.component.NowPlayingBottomSheet
 import com.maxrave.simpmusic.ui.component.PlayPauseButton
+import com.maxrave.simpmusic.ui.icon.SkipNext
+import com.maxrave.simpmusic.ui.icon.SkipPrevious
 import com.maxrave.simpmusic.ui.component.PlayerControlLayout
 import com.maxrave.simpmusic.ui.component.QueueBottomSheet
 import com.maxrave.simpmusic.ui.component.VoteLyricsDialog
@@ -289,8 +296,17 @@ fun NowPlayingScreenContent(
 ) {
     val screenInfo = getScreenSizeInfo()
 
+    // SPACEKAI FEATURE: customPlayerInfo — "infos player désactivables". OFF = the
+    // description and lyrics info lines are hidden; ON = default behaviour (shown).
+    // The release starts allEnabled, so they are visible; the user can disable them
+    // in Settings → SpaceKai.
+    val showPlayerInfo = isSpaceKaiFeatureEnabled(SpaceKaiFeatures::customPlayerInfo)
+
     val localDensity = LocalDensity.current
     val uriHandler = LocalUriHandler.current
+    // SPACEKAI FEATURE: haptics — hoisted so the onClick lambdas (non-composable)
+    // can pass it without reading LocalHapticFeedback.current inside them.
+    val hapticFeedback = LocalHapticFeedback.current
 
     // ViewModel State
     val controllerState by sharedViewModel.controllerState.collectAsStateWithLifecycle()
@@ -1031,7 +1047,14 @@ fun NowPlayingScreenContent(
                                         .fillMaxWidth()
                                         .padding(horizontal = 20.dp)
                                         .alpha(if (pageHasCanvas) 0f else 1f)
-                                        .aspectRatio(1f),
+                                        // SPACEKAI FIX: in landscape the width is the LONG side, so a
+                                        // width-driven square would be ~2× the screen height and push the
+                                        // controls off-screen (the “player trapped in a portrait rectangle”
+                                        // symptom). matchHeightConstraintsFirst makes the square fit the
+                                        // height when height is the tighter constraint (landscape) and
+                                        // the width when width is tighter (portrait) — same portrait
+                                        // behaviour, proportionate artwork in landscape.
+                                        .aspectRatio(1f, matchHeightConstraintsFirst = true),
                             ) {
                                 if (isCurrentArtworkPage) {
                                     // Live artwork (drives palette extraction via setBitmap).
@@ -2164,8 +2187,10 @@ fun NowPlayingScreenContent(
                     }
                     Column(Modifier.padding(horizontal = 20.dp)) {
                         // Lyrics Layout
+                        // SPACEKAI FEATURE: customPlayerInfo — OFF hides the whole lyrics
+                        // card (header, lyrics, provider/sync-type metadata).
                         AnimatedVisibility(
-                            visible = screenDataState.lyricsData != null,
+                            visible = screenDataState.lyricsData != null && showPlayerInfo,
                             modifier = Modifier.padding(top = 10.dp),
                         ) {
                             ElevatedCard(
@@ -2448,30 +2473,34 @@ fun NowPlayingScreenContent(
                                         style = typo().bodyMedium,
                                     )
                                     Spacer(modifier = Modifier.height(10.dp))
-                                    Text(
-                                        text = stringResource(Res.string.description),
-                                        style = typo().labelSmall,
-                                        color = Color.White,
-                                    )
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                    DescriptionView(
-                                        text = screenDataState.songInfoData?.description ?: "",
-                                        onTimeClicked = { raw ->
-                                            val timestamp = parseTimestampToMilliseconds(raw)
-                                            if (timestamp != 0.0 && timestamp < timelineState.total) {
-                                                sharedViewModel.onUIEvent(
-                                                    UIEvent.UpdateProgress(
-                                                        ((timestamp * 100) / timelineState.total).toFloat(),
-                                                    ),
+                                    // SPACEKAI FEATURE: customPlayerInfo — OFF hides the
+                                    // description info line (title + DescriptionView).
+                                    if (showPlayerInfo) {
+                                        Text(
+                                            text = stringResource(Res.string.description),
+                                            style = typo().labelSmall,
+                                            color = Color.White,
+                                        )
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        DescriptionView(
+                                            text = screenDataState.songInfoData?.description ?: "",
+                                            onTimeClicked = { raw ->
+                                                val timestamp = parseTimestampToMilliseconds(raw)
+                                                if (timestamp != 0.0 && timestamp < timelineState.total) {
+                                                    sharedViewModel.onUIEvent(
+                                                        UIEvent.UpdateProgress(
+                                                            ((timestamp * 100) / timelineState.total).toFloat(),
+                                                        ),
+                                                    )
+                                                }
+                                            },
+                                            onURLClicked = { url ->
+                                                uriHandler.openUri(
+                                                    url,
                                                 )
-                                            }
-                                        },
-                                        onURLClicked = { url ->
-                                            uriHandler.openUri(
-                                                url,
-                                            )
-                                        },
-                                    )
+                                            },
+                                        )
+                                    }
                                 }
                             }
                             Spacer(modifier = Modifier.height(5.dp))
@@ -2596,6 +2625,8 @@ fun NowPlayingScreenContent(
                                 }
                             } else {
                                 PlayPauseButton(isPlaying = controllerState.isPlaying, modifier = Modifier.size(48.dp)) {
+                                    // SPACEKAI FEATURE: haptics (no-op when the flag is off or on desktop)
+                                    HapticsSpaceKai.onClick(hapticFeedback)
                                     sharedViewModel.onUIEvent(UIEvent.PlayPause)
                                 }
                             }
@@ -2623,6 +2654,162 @@ fun NowPlayingScreenContent(
                             drawStopIndicator = {},
                         )
                     }
+                }
+            }
+        }
+    }
+}
+/**
+ * SPACEKAI FEATURE: landscapePlayer — dedicated phone-landscape Now Playing layout.
+ *
+ * Side-by-side composition: artwork (square, height-driven) on the left, and a right
+ * column holding title/artist, the timeline slider and the transport controls. Reuses
+ * the same ViewModel state as [NowPlayingScreenContent]; layout ONLY, no behaviour
+ * change. Shown instead of the portrait-first full-screen overlay when the SpaceKai
+ * landscapePlayer flag is on and the phone is rotated to landscape.
+ */
+@Composable
+fun NowPlayingScreenLandscape(
+    sharedViewModel: SharedViewModel = koinInject(),
+    navController: NavController,
+    onDismiss: () -> Unit = {},
+) {
+    val screenDataState by sharedViewModel.nowPlayingScreenData.collectAsStateWithLifecycle()
+    val controllerState by sharedViewModel.controllerState.collectAsStateWithLifecycle()
+    val timelineState by sharedViewModel.timeline.collectAsStateWithLifecycle()
+    val hapticFeedback = LocalHapticFeedback.current
+
+    var isSliding by rememberSaveable { mutableStateOf(false) }
+    var sliderValue by rememberSaveable { mutableFloatStateOf(0f) }
+    LaunchedEffect(key1 = timelineState, key2 = isSliding) {
+        if (!isSliding) {
+            sliderValue =
+                if (timelineState.total > 0L) {
+                    timelineState.current.toFloat() * 100 / timelineState.total.toFloat()
+                } else {
+                    0f
+                }
+        }
+    }
+
+    Row(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .statusBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Left: artwork square sized by the (short) landscape height.
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxHeight()
+                    .aspectRatio(1f, matchHeightConstraintsFirst = true)
+                    .weight(1f),
+            contentAlignment = Alignment.Center,
+        ) {
+            AsyncImage(
+                model =
+                    ImageRequest
+                        .Builder(LocalPlatformContext.current)
+                        .data(screenDataState.thumbnailURL)
+                        .crossfade(true)
+                        .build(),
+                contentDescription = null,
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(12.dp)),
+            )
+        }
+        Spacer(modifier = Modifier.width(24.dp))
+        // Right: metadata + timeline + controls, vertically centred.
+        Column(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(vertical = 12.dp),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = screenDataState.nowPlayingTitle ?: "",
+                style = typo().titleMedium,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = screenDataState.artistName ?: "",
+                style = typo().bodyMedium,
+                color = Color.White.copy(alpha = 0.7f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            // Timeline: same 0..100 fraction contract as the portrait slider.
+            Slider(
+                value = sliderValue / 100f,
+                onValueChangeFinished = {
+                    isSliding = false
+                    sharedViewModel.onUIEvent(UIEvent.UpdateProgress(sliderValue))
+                },
+                onValueChange = {
+                    isSliding = true
+                    sliderValue = it * 100f
+                },
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp, bottom = 4.dp),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = formatDuration(if (isSliding) (sliderValue / 100f * timelineState.total).toLong() else timelineState.current),
+                    style = typo().labelSmall,
+                    color = Color.White.copy(alpha = 0.7f),
+                )
+                Text(
+                    text = formatDuration(timelineState.total),
+                    style = typo().labelSmall,
+                    color = Color.White.copy(alpha = 0.7f),
+                )
+            }
+            // Transport controls.
+            Row(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(
+                    onClick = {
+                        HapticsSpaceKai.onClick(hapticFeedback)
+                        sharedViewModel.onUIEvent(UIEvent.SkipToPrevious)
+                    },
+                ) {
+                    Icon(imageVector = SimpIcons.SkipPrevious, tint = Color.White, contentDescription = null)
+                }
+                Spacer(modifier = Modifier.width(24.dp))
+                PlayPauseButton(isPlaying = controllerState.isPlaying, modifier = Modifier.size(64.dp)) {
+                    HapticsSpaceKai.onClick(hapticFeedback)
+                    sharedViewModel.onUIEvent(UIEvent.PlayPause)
+                }
+                Spacer(modifier = Modifier.width(24.dp))
+                IconButton(
+                    onClick = {
+                        HapticsSpaceKai.onClick(hapticFeedback)
+                        sharedViewModel.onUIEvent(UIEvent.Next)
+                    },
+                ) {
+                    Icon(imageVector = SimpIcons.SkipNext, tint = Color.White, contentDescription = null)
                 }
             }
         }

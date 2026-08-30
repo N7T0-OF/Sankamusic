@@ -15,6 +15,7 @@ actual fun LiquidGlassAppBottomNavigationBar(
     isScrolledToTop: Boolean,
     showAnalyticsTab: Boolean,
     showMixForYouTab: Boolean,
+    minimalistic: Boolean,
     onOpenNowPlaying: () -> Unit,
     reloadDestinationIfNeeded: (KClass<*>) -> Unit
 ) {

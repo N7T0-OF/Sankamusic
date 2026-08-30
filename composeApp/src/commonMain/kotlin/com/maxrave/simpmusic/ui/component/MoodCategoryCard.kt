@@ -22,6 +22,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
 import com.maxrave.simpmusic.extension.angledGradientBackground
 import com.maxrave.simpmusic.ui.theme.typo
 import org.jetbrains.compose.resources.painterResource
@@ -77,8 +80,18 @@ fun MoodCategoryCard(
                 }.clickable(onClick = onClick),
     ) {
         if (artworkUrl != null) {
+            // SPACEKAI FIX: pin disk caching explicitly (CachePolicy + explicit key), matching
+            // every other artwork AsyncImage in the app. The artwork-less category list resolves
+            // covers late (a separate browse per category), and these tiles sit in a lazy grid,
+            // so an explicit disk cache keeps them from being re-downloaded on every re-scroll.
             AsyncImage(
-                model = artworkUrl,
+                model =
+                    ImageRequest
+                        .Builder(LocalPlatformContext.current)
+                        .data(artworkUrl)
+                        .diskCachePolicy(CachePolicy.ENABLED)
+                        .diskCacheKey(artworkUrl)
+                        .build(),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier =

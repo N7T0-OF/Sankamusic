@@ -1,0 +1,53 @@
+# fastlane configuration for SimpMusic
+#
+# Uploads the single universal release APK to the Google Play Store along
+# with the per-locale changelogs kept in fastlane/metadata.
+#
+# Requires a Google Play service-account JSON (with Upload releases permission)
+# passed as the PLAY_STORE_SERVICE_ACCOUNT secret, written to
+# fastlane/service-account.json by the CI workflow.
+
+default_platform(:android)
+
+platform :android do
+  desc "Upload the release APK to the Google Play Store (internal track)"
+  lane :upload_playstore do
+    # The universal release APK produced by androidApp:assembleRelease.
+    apk_path = File.join(Dir.pwd, "androidApp", "build", "outputs", "apk", "release", "*.apk")
+    apk = Dir.glob(apk_path).first
+    UI.user_error!("No APK found at #{apk_path}") if apk.nil?
+
+    supply(
+      track: "internal",
+      json_key: "fastlane/service-account.json",
+      apk_paths: [apk],
+      metadata_path: "fastlane/metadata/android",
+      # Skip the long description / screenshots; only version notes are needed
+      # for a release. Set to true if you want full metadata sync.
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      # The changelogs/<versionCode>.txt files are picked up automatically.
+      skip_upload_changelogs: false
+    )
+  end
+
+  desc "Promote the latest internal build to production"
+  lane :promote_to_production do
+    # Moves the most recent internal-track release to production. Run manually
+    # from the Play Console workflow once the internal build has been tested.
+    from_track = ENV["PROMOTE_FROM_TRACK"] || "internal"
+    UI.message("Promoting from #{from_track} to production")
+    supply(
+      track: "production",
+      json_key: "fastlane/service-account.json",
+      track_promote_to: from_track,
+      metadata_path: "fastlane/metadata/android",
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_changelogs: true
+    )
+  end
+end

@@ -1,12 +1,21 @@
 #!/bin/bash
 
-# Exit on error
+# Build + sign the single SpaceKai release APK.
+#
+# Produces ONE universal, signed, installable APK named:
+#   SpaceKai-v<version-name>.apk
+# (no per-ABI splits, no debug/unsigned/aligned artifacts in the output)
+# plus a SHA256SUMS.txt containing only the final APK.
+#
+# NOTE: the release workflow builds the FULL variant only, so the public
+# release ships exactly one APK. A --foss build appends "-foss" to the name
+# so it never clobbers the full one during local builds.
+
 set -e
 
 # Default variables
 BUILD_TYPE="release"
 BUILD_VARIANT="full"
-SINGLE_APK="false"
 KEYSTORE_PATH="./simpmusic.jks"
 # Read passwords from environment variables or use default (for backward compatibility)
 KEYSTORE_PASSWORD="${KEYSTORE_PASSWORD}"
@@ -29,17 +38,14 @@ if [ -z "$KEY_ALIAS" ]; then
   exit 1
 fi
 
-
-
 # Parse command line arguments
 print_usage() {
   echo "Usage: $0 [options]"
   echo "Options:"
   echo "  --release          Build in release mode (default)"
   echo "  --debug            Build in debug mode"
-  echo "  --full             Build full with Sentry"
+  echo "  --full             Build full with Sentry (default)"
   echo "  --foss             Build foss, compatibility with F-Droid, no Sentry"
-  echo "  --single           Build ONE universal APK (SpaceKai-vX.Y.Z.apk) + SHA256SUMS.txt"
   echo "  -h, --help         Show this help message"
   echo ""
   echo "Environment variables:"
@@ -49,19 +55,24 @@ print_usage() {
   exit 0
 }
 
-# Process command line arguments
 while [[ "$#" -gt 0 ]]; do
   case $1 in
     --full) BUILD_VARIANT="full" ;;
     --foss) BUILD_VARIANT="foss" ;;
     --release) BUILD_TYPE="release" ;;
     --debug) BUILD_TYPE="debug" ;;
-    --single) SINGLE_APK="true" ;;
     -h|--help) print_usage ;;
     *) echo "Unknown parameter: $1"; print_usage ;;
   esac
   shift
 done
+
+# Version from the version catalog — drives the APK filename.
+VERSION_NAME=$(grep '^version-name' gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+if [ -z "$VERSION_NAME" ]; then
+  echo "Error: could not read version-name from gradle/libs.versions.toml"
+  exit 1
+fi
 
 # Set derived variables based on selected options
 APK_OUTPUT_DIR="./androidApp/build/outputs/apk/$BUILD_TYPE"
@@ -72,8 +83,13 @@ BUILD_TOOLS_PATH="$ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools | sor
 APKSIGNER="$BUILD_TOOLS_PATH/apksigner"
 ZIPALIGN="$BUILD_TOOLS_PATH/zipalign"
 
-# App version from the version catalog
-APP_VERSION=$(grep '^version-name' ./gradle/libs.versions.toml | head -1 | cut -d'"' -f2)
+# Single final release APK (full = the public release). A foss build gets a
+# "-foss" suffix so it never overwrites the full one locally.
+if [ "$BUILD_VARIANT" == "foss" ]; then
+  FINAL_APK="SpaceKai-v${VERSION_NAME}-foss.apk"
+else
+  FINAL_APK="SpaceKai-v${VERSION_NAME}.apk"
+fi
 
 # Create output directory for signed APKs
 mkdir -p "$SIGNED_APK_OUTPUT_DIR"
@@ -83,9 +99,9 @@ echo "===================="
 echo "Building APK Process"
 echo "===================="
 echo "Build Type: $BUILD_TYPE"
-echo "Build Variant: $BUILD_VARIANT"
-echo "Single APK: $SINGLE_APK"
-echo "App Version: $APP_VERSION"
+echo "Variant:    $BUILD_VARIANT"
+echo "Version:    $VERSION_NAME"
+echo "Final APK:  $FINAL_APK"
 echo "===================="
 
 # Step 1: Clean the project
@@ -95,79 +111,68 @@ echo "Project cleaned successfully."
 
 # Step 2: Build the APK
 echo "[Step 2] Building APK..."
-if [ "$SINGLE_APK" == "true" ]; then
-  # Disable ABI splits → exactly one universal APK containing all ABIs
-  ./gradlew androidApp:assemble"$BUILD_TYPE" -PsingleReleaseApk=true
-else
-  ./gradlew androidApp:assemble"$BUILD_TYPE"
-fi
+./gradlew androidApp:assemble"$BUILD_TYPE"
 echo "APK built successfully."
 
-# Step 3: Locate the built APKs
+# Step 3: Locate the built APK (expect exactly one universal APK)
 APK_PATHS=$(find "$APK_OUTPUT_DIR" -name "*.apk")
 if [ -z "$APK_PATHS" ]; then
   echo "Error: APKs not found in $APK_OUTPUT_DIR"
   exit 1
 fi
-echo "Built APKs located: $APK_PATHS"
-
-# Step 4: Align and sign each APK
-for APK_PATH in $APK_PATHS; do
-  ALIGNED_APK_PATH="$SIGNED_APK_OUTPUT_DIR/aligned-$(basename "${APK_PATH/-unsigned/}")"
-  RELEASE_NAME=$(basename "${APK_PATH/-unsigned/}")
-  RELEASE_NAME="${RELEASE_NAME/app-/}"
-  RELEASE_NAME="${RELEASE_NAME/androidApp-/}"
-  SIGNED_APK_PATH="$SIGNED_APK_OUTPUT_DIR/SimpMusic-$BUILD_VARIANT-$(basename "$RELEASE_NAME")"
-
-  echo "[Step 4] Aligning the APK: $APK_PATH..."
-  if [ ! -f "$ZIPALIGN" ]; then
-    echo "Error: zipalign tool not found in Android SDK."
-    exit 1
-  fi
-  "$ZIPALIGN" -v 4 "$APK_PATH" "$ALIGNED_APK_PATH"
-  echo "APK aligned and saved to: $ALIGNED_APK_PATH"
-
-  echo "[Step 5] Signing the APK: $ALIGNED_APK_PATH..."
-  "$APKSIGNER" sign \
-    --alignment-preserved \
-    --ks "$KEYSTORE_PATH" \
-    --ks-key-alias "$KEY_ALIAS" \
-    --ks-pass pass:"$KEYSTORE_PASSWORD" \
-    --key-pass pass:"$KEY_PASSWORD" \
-    --out "$SIGNED_APK_PATH" \
-    "$ALIGNED_APK_PATH"
-  echo "APK signed successfully: $SIGNED_APK_PATH"
-
-  echo "[Step 6] Verifying the signed APK: $SIGNED_APK_PATH..."
-  "$APKSIGNER" verify --verbose "$SIGNED_APK_PATH"
-  echo "Signed APK verified successfully: $SIGNED_APK_PATH"
-done
-
-# Step 7: Single-APK mode — rename to SpaceKai-vX.Y.Z.apk and write SHA256SUMS.txt
-if [ "$SINGLE_APK" == "true" ]; then
-  echo "[Step 7] Producing the single user-facing APK + checksums..."
-  RELEASE_APK="$SIGNED_APK_OUTPUT_DIR/SpaceKai-v${APP_VERSION}.apk"
-  # Exactly one signed APK is expected in single mode
-  SIGNED_APK=$(find "$SIGNED_APK_OUTPUT_DIR" -maxdepth 1 -name "SimpMusic-*.apk" | head -1)
-  if [ -z "$SIGNED_APK" ]; then
-    echo "Error: no signed APK found for the single release"
-    exit 1
-  fi
-  cp "$SIGNED_APK" "$RELEASE_APK"
-  ( cd "$SIGNED_APK_OUTPUT_DIR" && sha256sum "SpaceKai-v${APP_VERSION}.apk" > SHA256SUMS.txt )
-  echo "Release APK: $RELEASE_APK"
-  cat "$SIGNED_APK_OUTPUT_DIR/SHA256SUMS.txt"
+COUNT=$(echo "$APK_PATHS" | wc -l | tr -d ' ')
+if [ "$COUNT" -ne 1 ]; then
+  echo "Error: expected exactly 1 universal APK, found $COUNT. Refusing to sign a split release."
+  exit 1
 fi
+APK_PATH="$APK_PATHS"
+echo "Built APK: $APK_PATH"
 
-# Step 8: Clean up temporary files
-echo "[Step 8] Cleaning up temporary files..."
+# Step 4: Align
+ALIGNED_APK_PATH="$SIGNED_APK_OUTPUT_DIR/aligned-${FINAL_APK}"
+echo "[Step 4] Aligning the APK: $APK_PATH..."
+if [ ! -f "$ZIPALIGN" ]; then
+  echo "Error: zipalign tool not found in Android SDK."
+  exit 1
+fi
+"$ZIPALIGN" -v 4 "$APK_PATH" "$ALIGNED_APK_PATH"
+echo "APK aligned and saved to: $ALIGNED_APK_PATH"
+
+# Step 5: Sign
+SIGNED_APK_PATH="$SIGNED_APK_OUTPUT_DIR/$FINAL_APK"
+echo "[Step 5] Signing the APK: $ALIGNED_APK_PATH..."
+"$APKSIGNER" sign \
+  --alignment-preserved \
+  --ks "$KEYSTORE_PATH" \
+  --ks-key-alias "$KEY_ALIAS" \
+  --ks-pass pass:"$KEYSTORE_PASSWORD" \
+  --key-pass pass:"$KEY_PASSWORD" \
+  --out "$SIGNED_APK_PATH" \
+  "$ALIGNED_APK_PATH"
+echo "APK signed successfully: $SIGNED_APK_PATH"
+
+# Step 6: Verify signature
+echo "[Step 6] Verifying the signed APK: $SIGNED_APK_PATH..."
+"$APKSIGNER" verify --verbose "$SIGNED_APK_PATH"
+echo "Signed APK verified successfully: $SIGNED_APK_PATH"
+
+# Step 7: Clean up temporary files
+echo "[Step 7] Cleaning up temporary files..."
 cd "$SIGNED_APK_OUTPUT_DIR"
 rm -f *.idsig
 rm -f *aligned*
 rm -f *unsigned*
+rm -f SimpMusic-*.apk 2>/dev/null || true
+
+# Step 8: SHA-256 checksum of the final APK only
+echo "[Step 8] Generating SHA256SUMS.txt..."
+sha256sum "$FINAL_APK" > SHA256SUMS.txt
+echo "SHA256SUMS.txt written:"
+cat SHA256SUMS.txt
 
 # Completion message
 echo "===================="
 echo "Process Completed Successfully!"
-echo "Signed APKs Path: $SIGNED_APK_OUTPUT_DIR"
+echo "Signed APK: $SIGNED_APK_PATH"
+echo "SHA256:     $SIGNED_APK_OUTPUT_DIR/SHA256SUMS.txt"
 echo "===================="
