@@ -20,7 +20,7 @@ private const val TAG = "SpaceKai"
 const val SPACEKAI_BASED_ON_UPSTREAM: String = "1.7.0"
 
 /** The SpaceKai release version (aligned with `version-name` in libs.versions.toml). */
-const val SPACEKAI_VERSION: String = "0.2.1"
+const val SPACEKAI_VERSION: String = "0.2.2"
 
 // The configured feature set. `null` = no config was handed in (vanilla).
 //

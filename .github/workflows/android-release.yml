@@ -156,7 +156,7 @@ jobs:
 
       - name: Update environment variables
         env:
-          BASE_64_SIGNING_KEY: ${{ secrets.BASE_64_SIGNING_KEY }}
+          BASE_64_SIGNING_KEY: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run:
           echo $BASE_64_SIGNING_KEY | base64 -d > simpmusic.jks
 
@@ -167,9 +167,9 @@ jobs:
 
       - name: Build full release APK
         env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         # The script always builds ONE universal APK named SpaceKai-v<version>.apk
         # (single-APK mode is now the default — the old --single flag is gone). The
         # public release ships exactly one universal APK; the pre-release report

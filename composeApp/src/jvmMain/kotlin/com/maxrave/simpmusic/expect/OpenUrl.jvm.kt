@@ -30,6 +30,13 @@ actual fun openUrl(url: String) {
     showToast("Could not open the link")
 }
 
+// SPACEKAI FEATURE: on desktop we cannot drive the Android package installer; hand the
+// user over to the browser (which starts the APK download) instead.
+actual fun installApk(url: String?) {
+    if (url.isNullOrBlank()) return
+    openUrl(url)
+}
+
 private fun openWithDesktopApi(url: String): Boolean =
     runCatching {
         if (!Desktop.isDesktopSupported()) return@runCatching false

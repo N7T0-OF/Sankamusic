@@ -1,0 +1,5 @@
+Sankamusic v0.2.2
+
+- IN-APP UPDATE & INSTALL: the "Download" button in the update dialog now downloads the matching release APK and hands it straight to the Android package installer — no browser, no manual uninstall. Picks the correct (universal or ABI-fit) APK automatically, works both to update an existing install and as a first-time install, entirely inside the app.
+- RELEASE PIPELINE FIXED: the CI signing step read secrets under the wrong names, so every release build died with "KEY_PASSWORD must be set" and no new version ever shipped. The workflow now reads the keystore/alias/password secrets that actually exist in this repository, so release builds sign and publish again.
+- The in-app updater stays pointed at this fork's GitHub releases, so downloads install correctly on top of a SpaceKai build.

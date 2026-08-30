@@ -70,7 +70,7 @@ import com.maxrave.domain.manager.DataStoreManager.Values.TRUE
 import com.maxrave.logger.Logger
 import com.maxrave.simpmusic.expect.Orientation
 import com.maxrave.simpmusic.expect.currentOrientation
-import com.maxrave.simpmusic.expect.openUrl
+import com.maxrave.simpmusic.expect.installApk
 import com.maxrave.simpmusic.expect.ui.layerBackdrop
 import com.maxrave.simpmusic.expect.ui.rememberBackdrop
 import com.maxrave.simpmusic.extension.copy
@@ -810,11 +810,10 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                 onClick = {
                                     shouldShowUpdateDialog = false
                                     viewModel.showedUpdateDialog = false
-                                    // SPACEKAI CUSTOMIZATION: the upstream dialog opens the official
-                                    // SimpMusic download page, which would hand SpaceKai users the
-                                    // upstream APK (signed with a different key → "Application non
-                                    // installée"). Point at the SpaceKai releases page instead.
-                                    openUrl(SpaceKaiUpdateConfig.releasesPageUrl)
+                                    // SPACEKAI FEATURE: download the matching release APK and install
+                                    // it straight through the system package installer — no browser,
+                                    // no manual uninstall. Falls back to the releases page.
+                                    installApk(response.apkUrl)
                                 },
                             ) {
                                 Text(
