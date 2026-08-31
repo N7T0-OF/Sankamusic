@@ -51,6 +51,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
+
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -62,12 +64,18 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+
+import kotlin.math.roundToInt
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -139,6 +147,8 @@ import com.maxrave.simpmusic.ui.navigation.destination.login.LastfmLoginDestinat
 import com.maxrave.simpmusic.ui.navigation.destination.login.LoginDestination
 import com.maxrave.simpmusic.ui.navigation.destination.login.SpotifyLoginDestination
 import com.maxrave.simpmusic.spacekai.ui.SpaceKaiSettingsSection
+
+import com.maxrave.simpmusic.spacekai.features.haptics.HapticsSpaceKai
 import com.maxrave.simpmusic.spacekai.ui.SpaceKaiUpdatesSection
 import com.maxrave.simpmusic.ui.theme.md_theme_dark_primary
 import com.maxrave.simpmusic.ui.theme.parseThemeColorHex
@@ -1319,67 +1329,44 @@ fun SettingScreen(
                     )
                     AnimatedVisibility(visible = crossfadeEnabled) {
                         Column {
-                            SettingItem(
-                            title = stringResource(Res.string.crossfade_duration),
-                            subtitle =
-                            if (castState.isRemote) {
-                                stringResource(Res.string.not_available_while_casting)
-                            } else if (crossfadeDuration == DataStoreManager.CROSSFADE_DURATION_AUTO) {
-                                stringResource(Res.string.crossfade_auto)
-                            } else {
-                                "${crossfadeDuration / 1000}s"
-                            },
-                            isEnable = !castState.isRemote,
-                            onClick = {
-                                viewModel.setAlertData(
-                                SettingAlertState(
-                                title = runBlocking { getString(Res.string.crossfade_duration) },
-                                selectOne =
-                                SettingAlertState.SelectData(
-                                listSelect =
-                                listOf(
-                                (crossfadeDuration == DataStoreManager.CROSSFADE_DURATION_AUTO) to
-                                runBlocking { getString(Res.string.crossfade_auto) },
-                                (crossfadeDuration == 1000) to "1s",
-                                (crossfadeDuration == 2000) to "2s",
-                                (crossfadeDuration == 3000) to "3s",
-                                (crossfadeDuration == 5000) to "5s",
-                                (crossfadeDuration == 8000) to "8s",
-                                (crossfadeDuration == 10000) to "10s",
-                                (crossfadeDuration == 12000) to "12s",
-                                (crossfadeDuration == 15000) to "15s",
-                                (crossfadeDuration == 20000) to "20s",
-                                (crossfadeDuration == 30000) to "30s",
-                                ),
-                                ),
-                                confirm =
-                                runBlocking { getString(Res.string.change) } to { state ->
-                                    val duration =
-                                    when (state.selectOne?.getSelected()) {
-                                        runBlocking {
-                                            getString(
-                                            Res.string.crossfade_auto,
-                                            )
-                                        },
-                                        -> DataStoreManager.CROSSFADE_DURATION_AUTO
-                                        "1s" -> 1000
-                                        "2s" -> 2000
-                                        "3s" -> 3000
-                                        "5s" -> 5000
-                                        "8s" -> 8000
-                                        "10s" -> 10000
-                                        "12s" -> 12000
-                                        "15s" -> 15000
-                                        "20s" -> 20000
-                                        "30s" -> 30000
-                                        else -> 5000
-                                    }
-                                    viewModel.setCrossfadeDuration(duration)
-                                },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                                ),
+                                                        val crossfadeHaptic = LocalHapticFeedback.current
+                            // SPACEKAI FEATURE (P2): crossfade duration now a live visual slider
+                            // instead of the upstream value dropdown. 0 means Auto (upstream
+                            // CROSSFADE_DURATION_AUTO); otherwise the value is seconds. Haptic
+                            // feedback fires when the drag is released, gated by the haptics flag.
+                            var crossfadeSliderSec by remember {
+                                mutableFloatStateOf(
+                                    if (crossfadeDuration == DataStoreManager.CROSSFADE_DURATION_AUTO) 0f
+                                    else crossfadeDuration / 1000f
                                 )
-                            },
+                            }
+                            SettingItem(
+                                title = stringResource(Res.string.crossfade_duration),
+                                subtitle =
+                                if (castState.isRemote) {
+                                    stringResource(Res.string.not_available_while_casting)
+                                } else if (crossfadeSliderSec.roundToInt() == 0) {
+                                    stringResource(Res.string.crossfade_auto)
+                                } else {
+                                    "${crossfadeSliderSec.roundToInt()}s"
+                                },
+                                isEnable = !castState.isRemote,
+                            )
+                            Slider(
+                                value = crossfadeSliderSec.coerceIn(0f, 30f),
+                                onValueChange = { crossfadeSliderSec = it },
+                                onValueChangeFinished = {
+                                    val seconds = crossfadeSliderSec.roundToInt()
+                                    val duration =
+                                        if (seconds <= 0) DataStoreManager.CROSSFADE_DURATION_AUTO
+                                        else seconds * 1000
+                                    viewModel.setCrossfadeDuration(duration)
+                                    HapticsSpaceKai.onClick(crossfadeHaptic)
+                                },
+                                enabled = !castState.isRemote,
+                                valueRange = 0f..30f,
+                                steps = 29, // 1..30 integer seconds; 0 = Auto
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                             )
                             //                        if (getPlatform() == Platform.Android) {
                                 SettingItem(

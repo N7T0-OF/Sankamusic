@@ -19,8 +19,12 @@
 #     ⇒ In dark mode the background NEVER follows Dynamic Color. That is
 #       exactly "le fond noir fixe" the user reports. Fix path: keep the OLED
 #       pinning only as an explicit option, not the default for dynamic schemes.
-#   SpaceKai flag `dynamicColor` is DECORATIVE (0 real call sites) — it toggles
-#   nothing; the base capability exists independently of it.
+#   SpaceKai flag `dynamicColor` (rewired 2026): when ON, Theme.kt resolves
+#   platformDynamicColorSchemeUnpinned — the system Material You palette WITHOUT
+#   the OLED-black pin — so background/surfaces follow the palette. Flag OFF keeps
+#   upstream behaviour (pinned black for wallpaper dark + seed via isAmoled=isDark).
+#   The pinned platformDynamicColorScheme (background=Color.Black) now feeds only the
+#   flag-OFF wallpaper path.
 #   Also: 194 hardcoded Color.Black / Color(0xFF000000) occurrences across
 #   composeApp (many legitimate: text over artwork, immersive ForceDarkContent
 #   screens, scrims — but the count is worth a manual pass).
@@ -50,9 +54,9 @@ echo "============================================"
 echo "DYNAMIC COLOR AUDIT (capability exists, dark background pinned to black)"
 echo "============================================"
 echo "Finding: system palette (Android 12+) + wallpaper/seed schemes exist."
-echo "CONFIRMED BUG: dark backgrounds are pinned to pure black even with a"
-echo "dynamic scheme (PlatformColorScheme.android.kt + isAmoled = isDark) —"
-echo "the 'fond noir fixe'. SpaceKai flag dynamicColor is decorative."
+echo "FIXED (2026): SpaceKai dynamicColor ON now uses the unpinned system palette"
+echo "via platformDynamicColorSchemeUnpinned — dark background/surfaces follow"
+echo "Material You, never forced to black. Flag OFF keeps upstream OLED pin."
 echo ""
 
 # --- 1. System palette capability -------------------------------------------
@@ -95,10 +99,11 @@ fi
 
 # --- 4. Known gap: dark background pinned to black ----------------------------
 echo ""
-echo "Known gap (documented, not blocking):"
+echo "Residual pinning (flag-OFF wallpaper path only; SpaceKai dynamicColor ON is unpinned):"
 if grep -q 'background = Color.Black' "$ANDROID_PLATFORM" 2>/dev/null; then
-  echo "  GAP: system dark scheme overrides background/surface to Color.Black"
-  echo "       (PlatformColorScheme.android.kt) — dark bg never follows the palette"
+  echo "  NOTE: platformDynamicColorScheme (flag-OFF wallpaper path) still pins dark"
+  echo "       background/surface to Color.Black (OLED look). Unpinned variant"
+  echo "       (platformDynamicColorSchemeUnpinned) is used when SpaceKai dynamicColor is ON."
 fi
 if grep -q 'isAmoled = isDark' "$THEME" 2>/dev/null; then
   echo "  GAP: seed scheme built with isAmoled = isDark (Theme.kt) — dark bg pinned black"
@@ -109,8 +114,8 @@ echo "  INFO: ${BLACKS} hardcoded Color.Black / Color(0xFF000000) in composeApp 
 echo ""
 echo "============================================"
 if [ "$fail" -eq 0 ]; then
-  echo "RESULT: dynamic color capability intact. Dark background pinning to black"
-  echo "        remains the known gap — fix before claiming dynamic background."
+  echo "RESULT: dynamic color capability intact. SpaceKai dynamicColor ON uses the"
+  echo "        unpinned palette; residual black pin is flag-OFF wallpaper-only."
   exit 0
 else
   echo "RESULT: DYNAMIC COLOR CAPABILITY BROKEN — release blocked (see scripts/audit-dynamic-color.sh)"

@@ -130,36 +130,32 @@ fun AppTheme(
         () -> Unit,
 ) {
     val isDark = isDarkTheme(themeMode)
-    val wallpaperScheme =
-        if (themeColorSource == DataStoreManager.THEME_COLOR_WALLPAPER) {
-            platformDynamicColorScheme(isDark)
-        } else {
-            null
+    // SPACEKAI FEATURE: dynamicColor — when ON, always resolve the system Material You
+    // palette and use it UNPINNED: background + surfaces follow the M3 colors Android
+    // generates, never forced to pure black. The wallpaper/source setting is what selects
+    // that palette in the upstream theme; the SpaceKai flag EXPLICITLY requests it and
+    // removes the OLED-black pin. So Dynamic-Color-ON can never yield background = Color.Black.
+    // OFF keeps upstream behaviour (system palette only for the wallpaper source, OLED pin
+    // in dark, seed otherwise).
+    val spaceKaiDynamicColor =
+        isSpaceKaiFeatureEnabled(SpaceKaiFeatures::dynamicColor)
+    val dynamicScheme =
+        when {
+            spaceKaiDynamicColor -> platformDynamicColorSchemeUnpinned(isDark)
+            themeColorSource == DataStoreManager.THEME_COLOR_WALLPAPER ->
+                platformDynamicColorScheme(isDark)
+            else -> null
         }
     val seedColor =
-        if (themeColorSource == DataStoreManager.THEME_COLOR_CUSTOM) {
+        if (themeColorSource == DataStoreManager.THEME_COLOR_CUSTOM && !spaceKaiDynamicColor) {
             customThemeColor ?: seed
         } else {
             seed
         }
-    // SPACEKAI FEATURE: dynamicColor — SpaceKai colour override on top of the
-    // upstream theme. ON = dark surfaces are not pinned to pure black
-    // (isAmoled = false — the "dark background pinned to black" fix); OFF =
-    // upstream behaviour (isAmoled = isDark). Wallpaper/seed sources untouched.
-    val spaceKaiDynamicColor =
-        isSpaceKaiFeatureEnabled(SpaceKaiFeatures::dynamicColor)
-    // When the flag is on AND the wallpaper source is selected, use the unpinned
-    // system palette (dark bg follows Material You instead of being forced to black).
-    val effectiveWallpaperScheme =
-        if (spaceKaiDynamicColor && wallpaperScheme != null) {
-            platformDynamicColorSchemeUnpinned(isDark)
-        } else {
-            wallpaperScheme
-        }
     // Symmetric base: dark pins background/surface to pure black via isAmoled; light pins them to
     // pure white with a neutral-grey ramp (the seed otherwise tints the light neutrals warm/cream).
     val colorScheme =
-        effectiveWallpaperScheme
+        dynamicScheme
             ?: rememberDynamicColorScheme(
                 seedColor = seedColor,
                 isDark = isDark,
