@@ -127,6 +127,7 @@ import com.maxrave.simpmusic.extension.isTwoLetterCode
 import com.maxrave.simpmusic.extension.isValidProxyHost
 import com.maxrave.simpmusic.getPlatform
 import com.maxrave.simpmusic.ui.component.ActionButton
+import com.maxrave.simpmusic.ui.component.AmbientGlowHeight
 import com.maxrave.simpmusic.ui.component.AmbientThemeGlow
 import com.maxrave.simpmusic.ui.component.CenterLoadingBox
 import com.maxrave.simpmusic.ui.component.EndOfPage
@@ -670,14 +671,26 @@ fun SettingScreen(
                 .padding(horizontal = 16.dp)
                 .hazeSource(hazeState),
     ) {
-        item(key = "user_interface") {
-            Column {
-                // Was its own item. Folded in so item 0 is taller than the glow — the glow's
-                // translation tracks item 0's offset exactly and parks once it scrolls past, and a
-                // 64dp item 0 would have switched branches while the glow was still half-visible.
-                Spacer(Modifier.height(64.dp))
-                Spacer(Modifier.height(16.dp))
-                Text(text = stringResource(Res.string.user_interface), style = typo().labelMedium, color = MaterialTheme.colorScheme.onBackground)
+        item(key = "glow_anchor") {
+            // Dedicated anchor preserving the ambient-glow rule (item 0 must stay taller than
+            // the glow so its translation parks without a jump). Interface is now collapsible
+            // and closed by default, so this spacer is the new tall item 0 while every section
+            // below is collapsed on first view.
+            Spacer(Modifier.height(AmbientGlowHeight + 16.dp))
+        }
+        item(key = "interface_header") {
+            SettingsCollapsibleHeader(
+                title = stringResource(Res.string.user_interface),
+                expanded = expandedSettingsSection == "interface",
+                onClick = {
+                    expandedSettingsSection =
+                        if (expandedSettingsSection == "interface") null else "interface"
+                },
+            )
+        }
+        if (expandedSettingsSection == "interface") {
+            item(key = "user_interface") {
+                Column {
                 val themeModeLabels =
                     listOf(
                         DataStoreManager.THEME_MODE_SYSTEM to stringResource(Res.string.theme_mode_system),
@@ -939,6 +952,7 @@ fun SettingScreen(
                     switch = (hideNavLabel to { viewModel.setHideNavLabel(it) }),
                 )
             }
+        }
         }
         item(key = "content_header") {
             SettingsCollapsibleHeader(
