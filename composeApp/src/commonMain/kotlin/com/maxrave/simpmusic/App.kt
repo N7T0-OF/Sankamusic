@@ -82,6 +82,7 @@ import com.maxrave.simpmusic.spacekai.SpaceKaiFeatures
 import com.maxrave.simpmusic.spacekai.SpaceKaiUpdateConfig
 import com.maxrave.simpmusic.spacekai.applyPersistedSpaceKaiFeatures
 import com.maxrave.simpmusic.spacekai.isSpaceKaiFeatureEnabled
+import com.maxrave.simpmusic.spacekai.isVersionNewer
 import com.maxrave.simpmusic.ui.component.AppBottomNavigationBar
 import com.maxrave.simpmusic.ui.component.AppNavigationRail
 import com.maxrave.simpmusic.ui.component.LiquidGlassAppBottomNavigationBar
@@ -411,8 +412,11 @@ fun App(viewModel: SharedViewModel = koinInject()) {
 
     LaunchedEffect(updateData) {
         val response = updateData ?: return@LaunchedEffect
+        // SPACEKAI FEATURE: compare SEMANTICALLY (isVersionNewer), same as the Updates
+        // screen — a string inequality would fire a phantom update dialog for a re-cut
+        // tag like "v0.3.2-1" or a differently formatted tag on the same version.
         if (viewModel.showedUpdateDialog &&
-            response.tagName != getString(Res.string.version_format, VersionManager.getVersionName())
+            isVersionNewer(response.tagName, "v${VersionManager.getVersionName()}")
         ) {
             shouldShowUpdateDialog = true
         }
