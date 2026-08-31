@@ -48,9 +48,10 @@ echo "============================================"
 echo "NAVIGATION BAR AUDIT (styles + hide-text + landscape rail)"
 echo "============================================"
 echo "Finding: liquid-glass + translucent styles exist (base, DataStore)."
-echo "Hide-text (M3 compact) and the landscape right rail exist. MISSING:"
-echo "minimalist style (flag decorative), section config, reorder, shortcuts,"
-echo "preview — none of these are implemented."
+echo "Hide-text (M3 compact) and the landscape right rail exist."
+echo "minimalisticNavigation is WIRED as icons-only (labels hidden, reduced"
+echo "height on the flat bar; labels hidden on the rail). Still MISSING:"
+echo "unified style selector, section config/reorder, shortcuts."
 echo ""
 
 if [ ! -f "$APP" ]; then
@@ -81,9 +82,10 @@ fi
 echo ""
 echo "============================================"
 if [ "$fail" -eq 0 ]; then
-  echo "RESULT: nav wiring intact. Real customization (minimalist style,"
-  echo "        sections, order, shortcuts) still missing — SpaceKai"
-  echo "        customNavigation/minimalisticNavigation are decorative."
+  echo "RESULT: nav wiring intact. minimalisticNavigation is now wired as an"
+  echo "        icons-only style (labels hidden + reduced height on the flat bar,"
+  echo "        labels hidden on the rail). Remaining gaps: unified style selector,"
+  echo "        section config/reorder, shortcuts."
   exit 0
 else
   echo "RESULT: NAVIGATION WIRING BROKEN — release blocked (see scripts/audit-navigation.sh)"

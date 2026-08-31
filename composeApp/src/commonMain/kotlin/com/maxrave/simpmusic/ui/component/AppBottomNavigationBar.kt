@@ -159,6 +159,12 @@ fun AppBottomNavigationBar(
 
     // Search rides in its own circular button, so the capsule holds everything else.
     val barTabs = bottomNavScreens.filter { it != BottomNavScreen.Search }
+    // SPACEKAI FEATURE: minimalisticNavigation — icons-only. Hides the item texts and
+    // shrinks the capsule to the icon height. independent of the "hide text" setting
+    // (showLabels), so either one can blank the labels; minimalistic also reduces size.
+    val showItemLabels = showLabels && !minimalistic
+    val barHeight = if (showItemLabels) FlatBarHeight else FlatIconBarHeight
+    val indicatorHeight = if (showItemLabels) FlatIndicatorHeight else FlatIconIndicatorHeight
 
     // The translucent switch tints the CAPSULE ITSELF, never a strip behind it — the area around
     // the floating cluster always shows the page. ON reads the content through the pill; OFF is a
@@ -195,8 +201,8 @@ fun AppBottomNavigationBar(
             Box(
                 modifier =
                     Modifier
-                        .height(FlatBarHeight)
-                        .clip(RoundedCornerShape(FlatBarHeight / 2))
+                        .height(barHeight)
+                        .clip(RoundedCornerShape(barHeight / 2))
                         .background(capsuleColor)
                         .padding(horizontal = CapsuleInset),
                 contentAlignment = Alignment.CenterStart,
@@ -208,7 +214,7 @@ fun AppBottomNavigationBar(
                         modifier =
                             Modifier
                                 .offset(x = indicatorOffset)
-                                .size(width = tabWidth, height = FlatIndicatorHeight)
+                                .size(width = tabWidth, height = indicatorHeight)
                                 .clip(RoundedCornerShape(FlatIndicatorHeight / 2))
                                 .background(indicatorColor),
                     )
@@ -227,7 +233,7 @@ fun AppBottomNavigationBar(
                                 Modifier
                                     .width(tabWidth)
                                     .fillMaxHeight()
-                                    .clip(RoundedCornerShape(FlatIndicatorHeight / 2))
+                                    .clip(RoundedCornerShape(indicatorHeight / 2))
                                     .clickable { selectTab(screen) },
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
@@ -235,12 +241,14 @@ fun AppBottomNavigationBar(
                             CompositionLocalProvider(LocalContentColor provides contentColor) {
                                 screen.icon()
                             }
-                            Text(
-                                stringResource(screen.title),
-                                style = typo().bodySmall,
-                                color = contentColor,
-                                maxLines = 1,
-                            )
+                            if (showItemLabels) {
+                                Text(
+                                    stringResource(screen.title),
+                                    style = typo().bodySmall,
+                                    color = contentColor,
+                                    maxLines = 1,
+                                )
+                            }
                         }
                     }
                 }
@@ -277,6 +285,9 @@ private val FlatTabWidth = 96.dp
 private val FlatBarHeight = 64.dp
 private val FlatIndicatorHeight = 56.dp
 private val CapsuleInset = 6.dp
+// SPACEKAI FEATURE: minimalisticNavigation — icons-only compact geometry.
+private val FlatIconBarHeight = 52.dp
+private val FlatIconIndicatorHeight = 44.dp
 
 @Composable
 fun AppNavigationRail(
@@ -369,7 +380,7 @@ fun AppNavigationRail(
             NavigationRailItem(
                 icon = screen.icon,
                 label =
-                    if (showLabels) {
+                    if (showLabels && !minimalistic) {
                         {
                             Text(
                                 stringResource(screen.title),

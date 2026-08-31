@@ -562,6 +562,7 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                 navController = navController,
                                 showAnalyticsTab = showAnalyticsTab,
                                 showMixForYouTab = showMixForYouTab,
+                                showLabels = !hideNavLabel,
                                 minimalistic = minimalisticNav,
                                 reloadDestinationIfNeeded = { klass -> viewModel.reloadDestination(klass) },
                                 onSwipeToNext = if (navBarSwipeEnabled) ({ viewModel.onUIEvent(UIEvent.Next) }) else null,
