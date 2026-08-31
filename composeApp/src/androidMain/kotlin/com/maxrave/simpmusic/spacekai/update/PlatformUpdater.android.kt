@@ -1,5 +1,6 @@
 package com.maxrave.simpmusic.spacekai.update
 
+import android.content.Context
 import android.content.Intent
 import android.content.Intent.FLAG_ACTIVITY_NEW_TASK
 import androidx.appcompat.app.AppCompatActivity
@@ -24,7 +25,9 @@ private const val TAG = "SpaceKaiUpdater"
  *   2. If the release ships a SHA256SUMS.txt (checksumsUrl), download it and verify
  *      the APK's SHA-256 matches its line. On mismatch the install is aborted and the
  *      file is deleted - a corrupted/tampered APK is never handed to the installer.
- *   3. Hand the verified file to the system package installer via FileProvider.
+ *   3. Verify the APK's package name matches the running app (PackageManager
+ *      getPackageArchiveInfo) so a mismatched release is never installed.
+ *   4. Hand the verified file to the system package installer via FileProvider.
  *
  * The FileProvider authority and provider_paths.xml are already registered in the
  * androidApp manifest (the same wiring openUrl uses).
@@ -63,19 +66,33 @@ internal actual object PlatformUpdater {
                         tmp.copyTo(apkFile, overwrite = true)
                         tmp.delete()
                     }
-                    val uri =
-                        FileProvider.getUriForFile(
-                            context,
-                            "${context.packageName}.FileProvider",
-                            apkFile,
+                    // PACKAGE CHECK (P0, milestone 0.4.x): SHA-256 proves the bytes came from
+                    // the release, not that they are SimpMusic/SpaceKai. Refuse anything whose
+                    // parsed package name differs from the running app's, and delete the file,
+                    // so a mismatched APK never reaches the installer.
+                    val expectedPackage = context.packageName
+                    val actualPackage = packageNameOfApk(context, apkFile)
+                    if (actualPackage == null || actualPackage != expectedPackage) {
+                        apkFile.delete()
+                        SpaceKaiUpdateResult.Failure(
+                            "Package name mismatch - the APK is not $expectedPackage" +
+                                if (actualPackage == null) " (unparsable APK)." else " (got $actualPackage).",
                         )
-                    val installIntent =
-                        Intent(Intent.ACTION_VIEW).apply {
-                            setDataAndType(uri, "application/vnd.android.package-archive")
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or FLAG_ACTIVITY_NEW_TASK)
-                        }
-                    context.startActivity(installIntent)
-                    SpaceKaiUpdateResult.Success
+                    } else {
+                        val uri =
+                            FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.FileProvider",
+                                apkFile,
+                            )
+                        val installIntent =
+                            Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(uri, "application/vnd.android.package-archive")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or FLAG_ACTIVITY_NEW_TASK)
+                            }
+                        context.startActivity(installIntent)
+                        SpaceKaiUpdateResult.Success
+                    }
                 }
             } catch (e: Exception) {
                 Logger.e(TAG, "In-app update failed: ${e.message}")
@@ -160,3 +177,12 @@ private fun verifySha256(
     Logger.d(TAG, "SHA-256 verified for downloaded APK")
     return true
 }
+
+/**
+ * Parse an APK's package name without installing it (PackageManager parses the
+ * archive in place). Null means the file is not a parseable APK at all.
+ */
+private fun packageNameOfApk(context: Context, apkFile: File): String? =
+    context.packageManager
+        .getPackageArchiveInfo(apkFile.absolutePath, 0)
+        ?.packageName

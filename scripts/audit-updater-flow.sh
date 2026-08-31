@@ -15,7 +15,9 @@
 #   P0-1 (implemented in composeApp/spacekai/update/): the Download button now
 #     drives the internal updater — GitHub API → asset `SpaceKai-v<version>.apk`
 #     (universal only) → real byte-progress download → SHA-256 verification
-#     against SHA256SUMS.txt → Android Package Installer via FileProvider,
+#     against SHA256SUMS.txt → package-name check (getPackageArchiveInfo, the
+#     APK must be the running app's package) → Android Package Installer via
+#     FileProvider,
 #     driven by a state machine (DOWNLOADING / VERIFYING / READY_TO_INSTALL /
 #     INSTALLING / SUCCESS / FAILED). Desktop falls back to the browser.
 #     This half is compile + jvm + gate + Android-CI verified; the full
@@ -123,6 +125,18 @@ if grep -q 'SettingsCollapsibleHeader' "$SETTINGS" && grep -q 'expandedSettingsS
   pass "P0-2 settings collapse present (collapsed by default, single-open)"
 else
   crit "P0-2 settings collapse missing — Settings sections no longer collapsible"
+fi
+
+# --- 4. Package-name gate before install (Android actual) ---------------------
+AND_UPDATE="composeApp/src/androidMain/kotlin/com/maxrave/simpmusic/spacekai/update"
+if [ -f "$AND_UPDATE/PlatformUpdater.android.kt" ]; then
+  if grep -q 'getPackageArchiveInfo' "$AND_UPDATE/PlatformUpdater.android.kt"; then
+    pass "Package-name check present (getPackageArchiveInfo — mismatched APK refused before install)"
+  else
+    crit "Package-name check missing — a mismatched APK could be installed blind"
+  fi
+else
+  crit "PlatformUpdater.android.kt missing — Android install pipeline gone"
 fi
 
 echo ""
