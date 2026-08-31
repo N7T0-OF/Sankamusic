@@ -114,6 +114,9 @@ import com.maxrave.simpmusic.ui.theme.typo
 import com.maxrave.simpmusic.utils.VersionManager
 import com.maxrave.simpmusic.viewModel.SharedViewModel
 import com.maxrave.simpmusic.viewModel.UIEvent
+import com.maxrave.simpmusic.viewModel.NAV_STYLE_LIQUID_GLASS
+import com.maxrave.simpmusic.viewModel.NAV_STYLE_MINIMALIST
+import com.maxrave.simpmusic.viewModel.NAV_STYLE_TRANSLUCENT
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownTypography
 import dev.chrisbanes.haze.hazeEffect
@@ -160,8 +163,21 @@ fun App(viewModel: SharedViewModel = koinInject()) {
     val intent by viewModel.intent.collectAsStateWithLifecycle()
     val showNotificationPermissionDialog by viewModel.showNotificationPermissionDialog.collectAsStateWithLifecycle()
 
+    // SPACEKAI FEATURE: nav bar style is a SINGLE exclusive choice (minimalist / translucent /
+    // liquid glass). It is derived here from the two legacy DataStore booleans with the same
+    // priority as SettingsViewModel.deriveNavBarStyle (liquid glass > translucent > minimalist),
+    // so the render path can never show both styles ON at once — choosing one style in Settings
+    // deactivates the others.
     val isTranslucentBottomBar by viewModel.getTranslucentBottomBar().collectAsStateWithLifecycle(DataStoreManager.FALSE)
     val isLiquidGlassEnabled by viewModel.getEnableLiquidGlass().collectAsStateWithLifecycle(DataStoreManager.FALSE)
+    val navBarStyle =
+        when {
+            isLiquidGlassEnabled == TRUE -> NAV_STYLE_LIQUID_GLASS
+            isTranslucentBottomBar == TRUE -> NAV_STYLE_TRANSLUCENT
+            else -> NAV_STYLE_MINIMALIST
+        }
+    val isLiquidGlassStyle = navBarStyle == NAV_STYLE_LIQUID_GLASS
+    val isTranslucentStyle = navBarStyle == NAV_STYLE_TRANSLUCENT
     // SPACEKAI FEATURE: icons-only navigation bar (“hide text”).
     val hideNavLabel by viewModel.getHideNavLabel().collectAsStateWithLifecycle(false)
     // Analytics only makes sense with local tracking on, so its tab follows that setting.
@@ -464,7 +480,7 @@ fun App(viewModel: SharedViewModel = koinInject()) {
         customThemeColor = parseThemeColorHex(customThemeColorHex),
         // Desktop is unconditionally true — the liquid-glass setting row is Android-only, and the
         // Desktop capsule player is glass by design. Same rule as MiniPlayer's useGlassSurface.
-        liquidGlassEnabled = isLiquidGlassEnabled == TRUE || getPlatform() == Platform.Desktop,
+        liquidGlassEnabled = isLiquidGlassStyle || getPlatform() == Platform.Desktop,
     ) {
         // Backdrop base must match the theme: white page → white glass, dark/AMOLED → black glass.
         // Read inside AppTheme so MaterialTheme reflects the resolved scheme (light background is #FFFFFF).
@@ -489,7 +505,7 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                     ) {
                         Column {
                             AnimatedVisibility(
-                                isShowMiniPlayer && isLiquidGlassEnabled == DataStoreManager.FALSE,
+                                isShowMiniPlayer && !isLiquidGlassStyle,
                                 enter = fadeIn() + slideInHorizontally(),
                                 exit = fadeOut(),
                             ) {
@@ -512,7 +528,7 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                     },
                                 )
                             }
-                            if (isLiquidGlassEnabled == TRUE) {
+                            if (isLiquidGlassStyle) {
                                 LiquidGlassAppBottomNavigationBar(
                                     navController = navController,
                                     backdrop = backdrop,
@@ -528,7 +544,7 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                             } else {
                                 AppBottomNavigationBar(
                                     navController = navController,
-                                    isTranslucentBackground = isTranslucentBottomBar == TRUE,
+                                    isTranslucentBackground = isTranslucentStyle,
                                     showLabels = !hideNavLabel,
                                     showAnalyticsTab = showAnalyticsTab,
                                     showMixForYouTab = showMixForYouTab,
@@ -547,7 +563,7 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                     Modifier
                         .fillMaxSize()
                         .then(
-                            if (isLiquidGlassEnabled == TRUE && !isTablet) {
+                            if (isLiquidGlassStyle && !isTablet) {
                                 Modifier.layerBackdrop(backdrop)
                             } else {
                                 Modifier
@@ -597,7 +613,7 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                         // plain transparency. Gating the source on the setting while the
                                         // capsule ignored it was exactly the nested-flag split that kept
                                         // the capsule see-through.
-                                        if ((isLiquidGlassEnabled == TRUE || getPlatform() == Platform.Desktop) &&
+                                        if ((isLiquidGlassStyle || getPlatform() == Platform.Desktop) &&
                                             isTablet &&
                                             !isInFullscreen
                                         ) {

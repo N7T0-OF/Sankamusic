@@ -84,7 +84,10 @@ echo "============================================"
 if [ "$fail" -eq 0 ]; then
   echo "RESULT: nav wiring intact. minimalisticNavigation is now wired as an"
   echo "        icons-only style (labels hidden + reduced height on the flat bar,"
-  echo "        labels hidden on the rail). Remaining gaps: unified style selector,"
+  echo "        labels hidden on the rail). Nav bar style is a SINGLE exclusive"
+  echo "        choice (minimalist / translucent / liquid glass): Settings exposes"
+  echo "        one selector and App.kt renders from one derived style, so the two"
+  echo "        legacy booleans can never show both styles at once. Remaining gaps:"
   echo "        section config/reorder, shortcuts."
   exit 0
 else
