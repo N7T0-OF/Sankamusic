@@ -4,7 +4,7 @@ import com.maxrave.domain.data.model.update.UpdateData
 
 /**
  * SPACEKAI FEATURE: Compatibility Matrix between the installed SpaceKai layer and
- * the latest SimpMusic (upstream) release.
+ * the latest SimpMusic (upstream) OFFICIAL release.
  *
  * Model chosen with the "one app, SpaceKai replaces SimpMusic" architecture:
  *   - SpaceKai IS the installed app (`com.maxrave.simpmusic`, SpaceKai signing key).
@@ -14,22 +14,54 @@ import com.maxrave.domain.data.model.update.UpdateData
  *     signing key → either refused or it would replace SpaceKai). We only report
  *     the newest SimpMusic release and whether the installed layer still runs on it.
  *
+ * "Base intégrée" and "Dernière release officielle" are TWO DIFFERENT things:
+ *   - `basedOnUpstream` is the upstream version this SpaceKai build was compiled
+ *     against (a build-time constant, e.g. "2.0.0").
+ *   - `latestUpstream` is what GitHub's `/releases/latest` reports TODAY (fetched
+ *     dynamically — never hardcoded).
+ *
  * A SpaceKai build is considered COMPATIBLE with the latest upstream when the
  * upstream release falls within the tested range declared by this build:
  *   [SPACEKAI_BASED_ON_UPSTREAM .. SPACEKAI_MAX_TESTED_UPSTREAM].
  * Use OPT_IN upgrades for a newer base: it only counts once the SpaceKai layer
  * has actually been rebuilt on top of it.
+ *
+ * HONESTY RULES (see scripts/audit-updater-flow.sh + docs/UPSTREAM.md):
+ *   - An unknown / errored / not-yet-run check NEVER claims "compatible" or
+ *     "up to date". Network failure, rate limit (403/429) and timeout are shown
+ *     as "Impossible de vérifier actuellement" — never as a false "à jour".
+ *   - When the integrated base is NEWER than the official release (e.g. base
+ *     2.0.0 vs release 1.7.0) SpaceKai is "already newer" — NO update offered,
+ *     NO downgrade suggested, and above all NOT a false "⚠ new version".
+ *   - Only GitHub PUBLISHED releases count. Branches, milestones, commits,
+ *     pull requests, workflows and nightlies are never treated as releases.
  */
+enum class UpstreamCheckState {
+    /** No check has run yet in this session and no cached value exists. */
+    NOT_CHECKED,
+
+    /** A check is currently in flight. */
+    CHECKING,
+
+    /** GitHub answered successfully; [UpstreamCompatibility.latestUpstream] is fresh. */
+    OK,
+
+    /** The last check failed (offline, rate limit, timeout, API unavailable). */
+    ERROR,
+}
+
 data class UpstreamCompatibility(
-    /** The SimpMusic release this SpaceKai build is based on (e.g. "1.7.0"). */
+    /** The SimpMusic release this SpaceKai build is based on (e.g. "2.0.0"). */
     val basedOnUpstream: String,
     /** Highest SimpMusic release tested against this SpaceKai build. */
     val maxTestedUpstream: String,
     /** Latest SimpMusic release reported by GitHub, without leading "v" (null = not checked / error). */
     val latestUpstream: String?,
-    /** True when latestUpstream falls inside the tested range (or is unknown). */
+    /** How the latest check ended (drives the honest label). */
+    val checkState: UpstreamCheckState,
+    /** True ONLY when a successful check found latestUpstream inside the tested range. */
     val compatible: Boolean,
-    /** Human label: "✓ Compatible", "⚠ Nouvelle version détectée" or "— Pas encore vérifié". */
+    /** Human label: "✓ À jour", "⚠ Nouvelle release détectée", "✓ base plus récente" or "Impossible de vérifier". */
     val statusLabel: String,
 )
 
@@ -71,6 +103,20 @@ data class Version(
 }
 
 /**
+ * True when [candidate] is a NEWER release than [reference], compared semantically
+ * (not by string inequality). "v0.3.1" vs "v0.3.1-1" (a re-cut tag) compare EQUAL
+ * so a re-cut never triggers a false update; "v0.3.0" < "v0.3.1" does.
+ *
+ * Used by the SpaceKai update row so the installed/latest comparison is by
+ * version, not by tag string.
+ */
+fun isVersionNewer(candidate: String?, reference: String?): Boolean {
+    val c = parseVersion(candidate) ?: return false
+    val r = parseVersion(reference) ?: return true // unparseable reference ⇒ treat as older
+    return c > r
+}
+
+/**
  * Computes the compatibility state for the installed SpaceKai build against the
  * latest detected SimpMusic release.
  *
@@ -80,39 +126,69 @@ data class Version(
  *   [SPACEKAI_BASED_ON_UPSTREAM]).
  * @param maxTested highest SimpMusic release tested against this build
  *   (defaults to [SPACEKAI_BASED_ON_UPSTREAM] — a build has only verified its own base).
+ * @param checkState how the last check ended (defaults to OK when a tag is
+ *   present, NOT_CHECKED otherwise).
  */
 fun computeUpstreamCompatibility(
     latestUpstream: String?,
     updateData: UpdateData? = null,
     basedOn: String = SPACEKAI_BASED_ON_UPSTREAM,
     maxTested: String = SPACEKAI_BASED_ON_UPSTREAM,
+    checkState: UpstreamCheckState =
+        if (latestUpstream.isNullOrBlank()) UpstreamCheckState.NOT_CHECKED else UpstreamCheckState.OK,
 ): UpstreamCompatibility {
     val latest = if (latestUpstream.isNullOrBlank()) updateData?.tagName else latestUpstream
     val latestVersion = parseVersion(latest)
-    if (latestVersion == null) {
+
+    // UNKNOWN / ERROR: never claim "compatible" or "à jour". A missing answer is
+    // not a green light — it is an unanswered question.
+    if (latestVersion == null || checkState == UpstreamCheckState.ERROR) {
         return UpstreamCompatibility(
             basedOnUpstream = basedOn,
             maxTestedUpstream = maxTested,
             latestUpstream = latest,
-            compatible = true,
-            statusLabel = "Pas encore vérifié",
+            checkState = checkState,
+            compatible = false,
+            statusLabel =
+                when (checkState) {
+                    UpstreamCheckState.ERROR ->
+                        "Impossible de vérifier actuellement (réseau ou API GitHub)"
+                    UpstreamCheckState.CHECKING -> "Vérification…"
+                    else -> "Pas encore vérifié"
+                },
         )
     }
+
+    val baseVersion = parseVersion(basedOn)
     val maxVersion = parseVersion(maxTested)
-    val minVersion = parseVersion(basedOn)
-    val inRange =
-        (minVersion == null || latestVersion >= minVersion) &&
-            (maxVersion == null || latestVersion <= maxVersion)
+
+    // BASE NEWER THAN RELEASE (e.g. base 2.0.0 vs release 1.7.0): SpaceKai is
+    // already ahead of the official line. No update, no downgrade, and NOT a
+    // "new version detected" warning.
+    if (baseVersion != null && latestVersion < baseVersion) {
+        return UpstreamCompatibility(
+            basedOnUpstream = basedOn,
+            maxTestedUpstream = maxTested,
+            latestUpstream = latest,
+            checkState = checkState,
+            compatible = true,
+            statusLabel =
+                "✓ SpaceKai utilise déjà une base plus récente que la dernière release officielle",
+        )
+    }
+
+    val inRange = maxVersion == null || latestVersion <= maxVersion
     return UpstreamCompatibility(
         basedOnUpstream = basedOn,
         maxTestedUpstream = maxTested,
         latestUpstream = latest,
+        checkState = checkState,
         compatible = inRange,
         statusLabel =
             if (inRange) {
-                "✓ Compatible avec SpaceKai"
+                "✓ À jour avec la dernière release officielle"
             } else {
-                "⚠ Nouvelle version détectée — SpaceKai pas encore compatible"
+                "⚠ Nouvelle release officielle détectée (v$latest) — SpaceKai pas encore compatible"
             },
     )
 }

@@ -236,6 +236,7 @@ class SharedViewModel(
     val shareSavedLyrics: StateFlow<Boolean> get() = _shareSavedLyrics
 
     init {
+        restoreUpstreamCache()
         viewModelScope.launch {
             log("SharedViewModel init")
             if (dataStoreManager.appVersion.first() != VersionManager.getVersionName()) {
@@ -1022,24 +1023,79 @@ class SharedViewModel(
     private var _updateResponse = MutableStateFlow<UpdateData?>(null)
     val updateResponse: StateFlow<UpdateData?> = _updateResponse
 
-    // SPACEKAI FEATURE: latest SimpMusic (upstream) release, for the Compatibility
-    // Matrix in Settings → Updates. INFO-ONLY — the upstream APK is never installed
-    // over SpaceKai; we only report it and whether the installed layer still runs on it.
+    // SPACEKAI FEATURE: latest SimpMusic (upstream) OFFICIAL release, for the
+    // Compatibility Matrix in Settings → Updates. INFO-ONLY — the upstream APK is
+    // never installed over SpaceKai (different signing key); we only report the
+    // newest PUBLISHED SimpMusic release and whether the installed layer runs on it.
+    // The value is fetched dynamically from GitHub (`/releases/latest`) — it is
+    // NEVER hardcoded. See UpstreamCompatibility.kt for the honesty rules.
     private var _upstreamResponse = MutableStateFlow<UpdateData?>(null)
     val upstreamResponse: StateFlow<UpdateData?> = _upstreamResponse
 
     private var _isCheckingUpstream = MutableStateFlow(false)
     val isCheckingUpstream: StateFlow<Boolean> = _isCheckingUpstream
 
+    /** True when the last upstream check FAILED (offline, rate limit, timeout). */
+    private var _upstreamCheckError = MutableStateFlow(false)
+    val upstreamCheckError: StateFlow<Boolean> = _upstreamCheckError
+
+    /** When the last upstream check ran (epoch millis), persisted across restarts. */
+    private var _lastUpstreamCheckAt = MutableStateFlow<Long?>(null)
+    val lastUpstreamCheckAt: StateFlow<Long?> = _lastUpstreamCheckAt
+
+    // DataStore cache keys for the last successful upstream check, so an offline
+    // launch still shows "Dernière vérification: … / Dernière version connue: …"
+    // instead of an invented value. Never a green light: an ERROR state is shown
+    // as "Impossible de vérifier", NOT as "à jour".
+    private companion object {
+        const val UPSTREAM_CACHE_TAG = "spacekai_upstream_tag"
+        const val UPSTREAM_CACHE_CHECKED_AT = "spacekai_upstream_checked_at"
+    }
+
+    /** Loads the cached last upstream check so the UI is truthful while offline. */
+    private fun restoreUpstreamCache() {
+        viewModelScope.launch {
+            val tag = dataStoreManager.getString(UPSTREAM_CACHE_TAG).first()
+            val checkedAt = dataStoreManager.getString(UPSTREAM_CACHE_CHECKED_AT).first()?.toLongOrNull()
+            if (!tag.isNullOrBlank() && _upstreamResponse.value == null) {
+                _upstreamResponse.value =
+                    UpdateData(tagName = tag, releaseTime = null, body = "")
+            }
+            if (checkedAt != null) {
+                _lastUpstreamCheckAt.value = checkedAt
+            }
+        }
+    }
+
     fun checkForUpstreamRelease() {
         if (_isCheckingUpstream.value) return
         viewModelScope.launch {
             _isCheckingUpstream.value = true
+            log("[UpstreamUpdate] Checking maxrave-dev/SimpMusic latest official release…", LogLevel.DEBUG)
             updateRepository.checkForUpstreamRelease().collectLatest { response ->
                 val data = response.data
                 when (response) {
-                    is Resource.Success if (data != null) -> _upstreamResponse.value = data
-                    else -> log("Upstream check error: ${response.message}", LogLevel.WARN)
+                    is Resource.Success if (data != null) -> {
+                        _upstreamResponse.value = data
+                        _upstreamCheckError.value = false
+                        _lastUpstreamCheckAt.value = System.currentTimeMillis()
+                        dataStoreManager.putString(UPSTREAM_CACHE_TAG, data.tagName)
+                        dataStoreManager.putString(
+                            UPSTREAM_CACHE_CHECKED_AT,
+                            System.currentTimeMillis().toString(),
+                        )
+                        log(
+                            "[UpstreamUpdate] Latest official release: ${data.tagName}",
+                            LogLevel.DEBUG,
+                        )
+                    }
+                    else -> {
+                        // 403/429 rate limit, timeout or offline: keep the last known
+                        // value (cache) but NEVER report "up to date" — the UI shows
+                        // "Impossible de vérifier actuellement".
+                        _upstreamCheckError.value = true
+                        log("Upstream check error: ${response.message}", LogLevel.WARN)
+                    }
                 }
                 _isCheckingUpstream.value = false
             }

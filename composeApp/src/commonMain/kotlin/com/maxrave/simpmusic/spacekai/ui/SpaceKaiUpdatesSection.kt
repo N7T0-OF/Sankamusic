@@ -14,9 +14,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.maxrave.simpmusic.spacekai.SPACEKAI_VERSION
+import com.maxrave.simpmusic.spacekai.UpstreamCheckState
 import com.maxrave.simpmusic.spacekai.computeUpstreamCompatibility
 import com.maxrave.simpmusic.spacekai.displayUpstreamVersion
 import com.maxrave.simpmusic.spacekai.isSpaceKaiAvailable
+import com.maxrave.simpmusic.spacekai.isVersionNewer
 import com.maxrave.simpmusic.spacekai.update.SpaceKaiUpdateManager
 import com.maxrave.simpmusic.spacekai.update.SpaceKaiUpdatePhase
 import com.maxrave.simpmusic.spacekai.update.SpaceKaiUpdateState
@@ -37,6 +39,12 @@ import kotlinx.coroutines.launch
 //                       installed over SpaceKai (different signing key would be refused or
 //                       replace SpaceKai) — we only show that a new base exists and that a
 //                       compatible SpaceKai build isn't out yet.
+//
+//   TWO DIFFERENT FACTS, never conflated:
+//     "Base intégrée"           = the upstream version THIS build was compiled against
+//                                 (build-time constant SPACEKAI_BASED_ON_UPSTREAM).
+//     "Dernière release officielle" = what GitHub /releases/latest reports TODAY
+//                                 (fetched dynamically — never hardcoded).
 @Composable
 fun SpaceKaiUpdatesSection(
     sharedViewModel: SharedViewModel,
@@ -46,6 +54,8 @@ fun SpaceKaiUpdatesSection(
     val updateResponse by sharedViewModel.updateResponse.collectAsState()
     val upstreamResponse by sharedViewModel.upstreamResponse.collectAsState()
     val isCheckingUpstream by sharedViewModel.isCheckingUpstream.collectAsState()
+    val upstreamCheckError by sharedViewModel.upstreamCheckError.collectAsState()
+    val lastUpstreamCheckAt by sharedViewModel.lastUpstreamCheckAt.collectAsState()
     val updateUi by SpaceKaiUpdateManager.state.collectAsState()
     val scope = rememberCoroutineScope()
 
@@ -59,11 +69,19 @@ fun SpaceKaiUpdatesSection(
         computeUpstreamCompatibility(
             latestUpstream = upstreamResponse?.tagName,
             updateData = upstreamResponse,
+            checkState =
+                when {
+                    isCheckingUpstream -> UpstreamCheckState.CHECKING
+                    upstreamCheckError -> UpstreamCheckState.ERROR
+                    else -> UpstreamCheckState.OK
+                },
         )
 
     val installedTag = "v$SPACEKAI_VERSION"
     val latestTag = updateResponse?.tagName
-    val isNewer = latestTag != null && latestTag != installedTag
+    // Semantic comparison, not string inequality: a re-cut tag like "v0.3.1-1" is
+    // the SAME version as "v0.3.1" and must never trigger a false update.
+    val isNewer = isVersionNewer(latestTag, installedTag)
 
     Column {
         Text(
@@ -111,15 +129,28 @@ fun SpaceKaiUpdatesSection(
             title = "SimpMusic — Upstream",
             subtitle =
                 buildString {
-                    append("Base utilisée : v${compatibility.basedOnUpstream}\n")
+                    // "Base intégrée" ≠ "Dernière release officielle". The first is a
+                    // build-time constant; the second is the live GitHub answer.
+                    append("Base intégrée : v${compatibility.basedOnUpstream}\n")
                     val latest =
-                        if (isCheckingUpstream) {
-                            "…"
-                        } else {
-                            "v${displayUpstreamVersion(upstreamResponse?.tagName)}"
+                        when {
+                            isCheckingUpstream -> "…"
+                            upstreamCheckError -> "indisponible"
+                            else -> "v${displayUpstreamVersion(upstreamResponse?.tagName)}"
                         }
-                    append("Dernière base disponible : $latest\n")
+                    append("Dernière release officielle : $latest\n")
                     append(compatibility.statusLabel)
+                    lastUpstreamCheckAt?.let { at ->
+                        val ago = (System.currentTimeMillis() - at) / 1000L
+                        val label =
+                            when {
+                                ago < 60L -> "à l'instant"
+                                ago < 3600L -> "il y a ${ago / 60L} min"
+                                ago < 86400L -> "il y a ${ago / 3600L} h"
+                                else -> "il y a ${ago / 86400L} j"
+                            }
+                        append("\nDernière vérification : $label")
+                    }
                 },
             onClick = {
                 sharedViewModel.checkForUpstreamRelease()
