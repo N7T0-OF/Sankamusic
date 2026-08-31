@@ -96,6 +96,9 @@ fun AppBottomNavigationBar(
     // together so the bottom bar and the landscape rail stay consistent.
     minimalistic: Boolean = false,
     reloadDestinationIfNeeded: (KClass<*>) -> Unit = { _ -> },
+    // SPACEKAI FEATURE: personalized navigation — when non-null, this resolved tab list
+    // (reordered / hidden per the user's saved config) replaces the internal order.
+    navTabs: List<BottomNavScreen>? = null,
     // SPACEKAI FEATURE: horizontal swipe on the bar to skip tracks (left = next,
     // right = previous). Null disables the gesture.
     onSwipeToNext: (() -> Unit)? = null,
@@ -106,13 +109,14 @@ fun AppBottomNavigationBar(
     // Library here while keeping the ordinal they were declared with, so that the numbering stays
     // stable whether or not those tabs are present.
     val bottomNavScreens =
-        listOfNotNull(
-            BottomNavScreen.Home,
-            BottomNavScreen.MixForYou.takeIf { showMixForYouTab && !minimalistic },
-            BottomNavScreen.Analytics.takeIf { showAnalyticsTab && !minimalistic },
-            BottomNavScreen.Library,
-            BottomNavScreen.Search,
-        )
+        navTabs
+            ?: listOfNotNull(
+                BottomNavScreen.Home,
+                BottomNavScreen.MixForYou.takeIf { showMixForYouTab && !minimalistic },
+                BottomNavScreen.Analytics.takeIf { showAnalyticsTab && !minimalistic },
+                BottomNavScreen.Library,
+                BottomNavScreen.Search,
+            )
     var selectedIndex by rememberSaveable {
         mutableIntStateOf(
             when (startDestination) {
@@ -309,6 +313,9 @@ fun AppNavigationRail(
     // Window insets to respect (status/navigation bar, display cutout, safe areas).
     // The right-side rail must also pad the end (right) edge, not just top/bottom.
     windowInsets: WindowInsets = NavigationRailDefaults.windowInsets,
+    // SPACEKAI FEATURE: personalized navigation — when non-null, this resolved tab list
+    // (reordered / hidden per the user's saved config) replaces the internal order.
+    navTabs: List<BottomNavScreen>? = null,
     // SPACEKAI FEATURE: horizontal swipe on the rail to skip tracks (left = next,
     // right = previous), same as the bottom bar. Null disables the gesture.
     onSwipeToNext: (() -> Unit)? = null,
@@ -317,13 +324,14 @@ fun AppNavigationRail(
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     // See the note in AppBottomNavigationBar: `ordinal` is the tab's identity, not its position.
     val bottomNavScreens =
-        listOfNotNull(
-            BottomNavScreen.Home,
-            BottomNavScreen.MixForYou.takeIf { showMixForYouTab && !minimalistic },
-            BottomNavScreen.Analytics.takeIf { showAnalyticsTab && !minimalistic },
-            BottomNavScreen.Library,
-            BottomNavScreen.Search,
-        )
+        navTabs
+            ?: listOfNotNull(
+                BottomNavScreen.Home,
+                BottomNavScreen.MixForYou.takeIf { showMixForYouTab && !minimalistic },
+                BottomNavScreen.Analytics.takeIf { showAnalyticsTab && !minimalistic },
+                BottomNavScreen.Library,
+                BottomNavScreen.Search,
+            )
     var selectedIndex by rememberSaveable {
         mutableIntStateOf(
             when (startDestination) {

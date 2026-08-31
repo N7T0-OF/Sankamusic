@@ -37,18 +37,25 @@ expect fun LiquidGlassAppBottomNavigationBar(
     // SPACEKAI FEATURE: minimalisticNavigation — compact variant: the optional
     // Mix-for-you / Analytics tabs are dropped from the tab lists.
     minimalistic: Boolean = false,
+    // SPACEKAI FEATURE: personalized navigation — when non-null, this resolved tab list
+    // (reordered / hidden per the user's saved config) replaces the bar's internal order.
+    navTabs: List<BottomNavScreen>? = null,
     onOpenNowPlaying: () -> Unit = {},
     reloadDestinationIfNeeded: (KClass<*>) -> Unit = { _ -> },
 )
 
 sealed class BottomNavScreen(
     val ordinal: Int,
+    // SPACEKAI FEATURE: stable identity key ("home" / "search" / ...) used by the
+    // personalized-navigation resolver — `ordinal` is a position identity, not a name.
+    val key: String,
     val destination: Any,
     val title: StringResource,
     val icon: @Composable () -> Unit,
 ) {
     data object Home : BottomNavScreen(
         ordinal = 0,
+        key = "home",
         destination = HomeDestination,
         title = Res.string.home,
         icon = {
@@ -61,6 +68,7 @@ sealed class BottomNavScreen(
 
     data object Search : BottomNavScreen(
         ordinal = 1,
+        key = "search",
         destination = SearchDestination,
         title = Res.string.search,
         icon = {
@@ -73,6 +81,7 @@ sealed class BottomNavScreen(
 
     data object Library : BottomNavScreen(
         ordinal = 2,
+        key = "library",
         destination = LibraryDestination,
         title = Res.string.library,
         icon = {
@@ -86,6 +95,7 @@ sealed class BottomNavScreen(
     // Only shown when local tracking is enabled.
     data object Analytics : BottomNavScreen(
         ordinal = 3,
+        key = "analytics",
         destination = AnalyticsDestination,
         title = Res.string.analytics,
         icon = {
@@ -101,6 +111,7 @@ sealed class BottomNavScreen(
     // every tab to be that wide. The screen itself still uses the full title.
     data object MixForYou : BottomNavScreen(
         ordinal = 4,
+        key = "mix",
         destination = MixForYouDestination,
         title = Res.string.mix,
         icon = {

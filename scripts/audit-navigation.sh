@@ -87,8 +87,10 @@ if [ "$fail" -eq 0 ]; then
   echo "        labels hidden on the rail). Nav bar style is a SINGLE exclusive"
   echo "        choice (minimalist / translucent / liquid glass): Settings exposes"
   echo "        one selector and App.kt renders from one derived style, so the two"
-  echo "        legacy booleans can never show both styles at once. Remaining gaps:"
-  echo "        section config/reorder, shortcuts."
+  echo "        legacy booleans can never show both styles at once. Personalized"
+  echo "        navigation (SpaceKai customNavigation) persists a tab order + hidden"
+  echo "        set and every bar receives it via navTabs. Remaining: drag-reorder"
+  echo "        polish and a live preview inside Settings."
   exit 0
 else
   echo "RESULT: NAVIGATION WIRING BROKEN — release blocked (see scripts/audit-navigation.sh)"

@@ -78,6 +78,7 @@ actual fun LiquidGlassAppBottomNavigationBar(
     showAnalyticsTab: Boolean,
     showMixForYouTab: Boolean,
     minimalistic: Boolean,
+    navTabs: List<BottomNavScreen>?,
     onOpenNowPlaying: () -> Unit,
     reloadDestinationIfNeeded: (KClass<*>) -> Unit,
 ) {
@@ -140,22 +141,21 @@ actual fun LiquidGlassAppBottomNavigationBar(
     }
 
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    // SPACEKAI FEATURE: personalized navigation — a non-null navTabs (already resolved by the
+    // caller) replaces the internal order/filtering; the sliding capsule keeps Search as its
+    // own FAB exactly as the default list does.
     val bottomNavScreens =
-        listOfNotNull(
-            BottomNavScreen.Home,
-            BottomNavScreen.MixForYou.takeIf { showMixForYouTab && !minimalistic },
-            BottomNavScreen.Analytics.takeIf { showAnalyticsTab && !minimalistic },
-            BottomNavScreen.Library,
-            BottomNavScreen.Search,
-        )
+        navTabs
+            ?: listOfNotNull(
+                BottomNavScreen.Home,
+                BottomNavScreen.MixForYou.takeIf { showMixForYouTab && !minimalistic },
+                BottomNavScreen.Analytics.takeIf { showAnalyticsTab && !minimalistic },
+                BottomNavScreen.Library,
+                BottomNavScreen.Search,
+            )
     // Tabs shown in the sliding bar (Apple Music style); Search lives in its own FAB.
     val barTabs =
-        listOfNotNull(
-            BottomNavScreen.Home,
-            BottomNavScreen.MixForYou.takeIf { showMixForYouTab && !minimalistic },
-            BottomNavScreen.Analytics.takeIf { showAnalyticsTab && !minimalistic },
-            BottomNavScreen.Library,
-        )
+        (navTabs ?: bottomNavScreens).filter { it != BottomNavScreen.Search }
     var selectedIndex by rememberSaveable {
         mutableIntStateOf(
             when (startDestination) {

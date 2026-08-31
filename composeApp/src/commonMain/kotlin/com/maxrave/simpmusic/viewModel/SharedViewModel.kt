@@ -66,6 +66,10 @@ import com.maxrave.simpmusic.Platform
 import com.maxrave.simpmusic.expect.getDownloadFolderPath
 import com.maxrave.simpmusic.expect.ui.toByteArray
 import com.maxrave.simpmusic.getPlatform
+import com.maxrave.simpmusic.spacekai.SPACEKAI_NAV_HIDDEN_KEY
+import com.maxrave.simpmusic.spacekai.SPACEKAI_NAV_ORDER_KEY
+import com.maxrave.simpmusic.spacekai.parseNavHidden
+import com.maxrave.simpmusic.spacekai.parseNavOrder
 import com.maxrave.simpmusic.utils.VersionManager
 import com.maxrave.simpmusic.viewModel.base.BaseViewModel
 import kotlinx.coroutines.Dispatchers
@@ -1875,6 +1879,14 @@ class SharedViewModel(
     // (see SettingsViewModel.setHideNavLabel) so the SpaceKai layer needs no core changes.
     fun getHideNavLabel() =
         dataStoreManager.getString(HIDE_NAV_LABEL_KEY).map { it == DataStoreManager.TRUE }
+
+    // SPACEKAI FEATURE: personalized navigation — the saved tab order and hidden set,
+    // read through the generic string store so the layer needs no core changes.
+    fun getSpaceKaiNavOrder(): Flow<List<String>> =
+        dataStoreManager.getString(SPACEKAI_NAV_ORDER_KEY).map { parseNavOrder(it) }
+
+    fun getSpaceKaiNavHidden(): Flow<Set<String>> =
+        dataStoreManager.getString(SPACEKAI_NAV_HIDDEN_KEY).map { parseNavHidden(it) }
 
     fun getLocalTrackingEnabled() = dataStoreManager.localTrackingEnabled
 

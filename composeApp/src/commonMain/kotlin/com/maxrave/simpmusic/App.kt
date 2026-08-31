@@ -83,6 +83,8 @@ import com.maxrave.simpmusic.spacekai.SpaceKaiUpdateConfig
 import com.maxrave.simpmusic.spacekai.applyPersistedSpaceKaiFeatures
 import com.maxrave.simpmusic.spacekai.isSpaceKaiFeatureEnabled
 import com.maxrave.simpmusic.spacekai.isVersionNewer
+import com.maxrave.simpmusic.spacekai.resolveNavTabs
+import com.maxrave.simpmusic.ui.component.BottomNavScreen
 import com.maxrave.simpmusic.ui.component.AppBottomNavigationBar
 import com.maxrave.simpmusic.ui.component.AppNavigationRail
 import com.maxrave.simpmusic.ui.component.LiquidGlassAppBottomNavigationBar
@@ -179,6 +181,9 @@ fun App(viewModel: SharedViewModel = koinInject()) {
         }
     val isLiquidGlassStyle = navBarStyle == NAV_STYLE_LIQUID_GLASS
     val isTranslucentStyle = navBarStyle == NAV_STYLE_TRANSLUCENT
+    // SPACEKAI FEATURE: personalized navigation — saved tab order + hidden set.
+    val spaceKaiNavOrder by viewModel.getSpaceKaiNavOrder().collectAsStateWithLifecycle(emptyList())
+    val spaceKaiNavHidden by viewModel.getSpaceKaiNavHidden().collectAsStateWithLifecycle(emptySet())
     // SPACEKAI FEATURE: icons-only navigation bar (“hide text”).
     val hideNavLabel by viewModel.getHideNavLabel().collectAsStateWithLifecycle(false)
     // Analytics only makes sense with local tracking on, so its tab follows that setting.
@@ -204,11 +209,31 @@ fun App(viewModel: SharedViewModel = koinInject()) {
     // SPACEKAI FEATURE: horizontal swipe on the navigation bar/rail skips tracks
     // (left = next, right = previous). Gated behind customNavigation, the same
     // flag that drives the SpaceKai navigation customizations.
-    val navBarSwipeEnabled = isSpaceKaiFeatureEnabled(SpaceKaiFeatures::customNavigation)
+    val customNavigation = isSpaceKaiFeatureEnabled(SpaceKaiFeatures::customNavigation)
+    val navBarSwipeEnabled = customNavigation
     // SPACEKAI FEATURE: minimalisticNavigation — compact nav variant. When ON the
     // optional Mix-for-you / Analytics tabs are dropped from every bar style
     // (liquid glass, translucent, and the landscape rail); Home/Library/Search stay.
     val minimalisticNav = isSpaceKaiFeatureEnabled(SpaceKaiFeatures::minimalisticNavigation)
+    // SPACEKAI FEATURE: personalized navigation — resolve the user's saved order/hidden into
+    // the tab list handed to every bar. Null when the feature is OFF (vanilla behaviour).
+    val customNavTabs =
+        if (customNavigation) {
+            resolveNavTabs(
+                userOrder = spaceKaiNavOrder,
+                hidden = spaceKaiNavHidden,
+                defaultTabs =
+                    listOfNotNull(
+                        BottomNavScreen.Home,
+                        BottomNavScreen.MixForYou.takeIf { showMixForYouTab && !minimalisticNav },
+                        BottomNavScreen.Analytics.takeIf { showAnalyticsTab && !minimalisticNav },
+                        BottomNavScreen.Library,
+                        BottomNavScreen.Search,
+                    ),
+            )
+        } else {
+            null
+        }
     // SPACEKAI FEATURE: landscapePlayer — dedicated landscape Now Playing layout.
     // When ON and the device is in phone landscape, the Now Playing screen renders
     // as a side-by-side composition (artwork left, info/controls right) instead of
@@ -537,6 +562,7 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                     navController = navController,
                                     backdrop = backdrop,
                                     viewModel = viewModel,
+                                    navTabs = customNavTabs,
                                     onOpenNowPlaying = { isShowNowPlaylistScreen = true },
                                     isScrolledToTop = isScrolledToTop,
                                     showAnalyticsTab = showAnalyticsTab,
@@ -553,6 +579,7 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                     showAnalyticsTab = showAnalyticsTab,
                                     showMixForYouTab = showMixForYouTab,
                                     minimalistic = minimalisticNav,
+                                    navTabs = customNavTabs,
                                     reloadDestinationIfNeeded = { klass -> viewModel.reloadDestination(klass) },
                                     onSwipeToNext = if (navBarSwipeEnabled) ({ viewModel.onUIEvent(UIEvent.Next) }) else null,
                                     onSwipeToPrevious = if (navBarSwipeEnabled) ({ viewModel.onUIEvent(UIEvent.SkipToPrevious) }) else null,
@@ -584,6 +611,7 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                 showMixForYouTab = showMixForYouTab,
                                 showLabels = !hideNavLabel,
                                 minimalistic = minimalisticNav,
+                                navTabs = customNavTabs,
                                 reloadDestinationIfNeeded = { klass -> viewModel.reloadDestination(klass) },
                                 onSwipeToNext = if (navBarSwipeEnabled) ({ viewModel.onUIEvent(UIEvent.Next) }) else null,
                                 onSwipeToPrevious = if (navBarSwipeEnabled) ({ viewModel.onUIEvent(UIEvent.SkipToPrevious) }) else null,
@@ -709,6 +737,7 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                                         WindowInsetsSides.Top + WindowInsetsSides.Bottom + WindowInsetsSides.End,
                                     ),
                                 minimalistic = minimalisticNav,
+                                navTabs = customNavTabs,
                                 reloadDestinationIfNeeded = { klass -> viewModel.reloadDestination(klass) },
                                 onSwipeToNext = if (navBarSwipeEnabled) ({ viewModel.onUIEvent(UIEvent.Next) }) else null,
                                 onSwipeToPrevious = if (navBarSwipeEnabled) ({ viewModel.onUIEvent(UIEvent.SkipToPrevious) }) else null,

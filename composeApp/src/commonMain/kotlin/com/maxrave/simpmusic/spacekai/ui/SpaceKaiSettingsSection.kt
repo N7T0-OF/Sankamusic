@@ -131,5 +131,10 @@ fun SpaceKaiSettingsSection(
                     persist("landscape_player", it)
                 }),
         )
+        // SPACEKAI FEATURE: personalized navigation — reorder / hide / re-show the tabs.
+        // Shown only while the feature is ON; persists through the generic string store.
+        if (features.customNavigation) {
+            SpaceKaiNavCustomizer(sharedViewModel = sharedViewModel)
+        }
     }
 }
