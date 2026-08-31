@@ -23,12 +23,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.maxrave.simpmusic.extension.greyScale
+import com.maxrave.simpmusic.spacekai.features.haptics.HapticsSpaceKai
 import com.maxrave.simpmusic.ui.navigation.destination.home.AnalyticsDestination
 import com.maxrave.simpmusic.ui.navigation.destination.home.HomeDestination
 import com.maxrave.simpmusic.ui.navigation.destination.library.LibraryDestination
@@ -139,7 +141,10 @@ fun AppBottomNavigationBar(
             selectedIndex = BottomNavScreen.Home.ordinal
         }
     }
+    val hapticFeedback = LocalHapticFeedback.current
+    // SPACEKAI FEATURE: haptics — fire on tab selection (intensity-aware).
     val selectTab: (BottomNavScreen) -> Unit = { screen ->
+        HapticsSpaceKai.onClick(hapticFeedback)
         if (selectedIndex == screen.ordinal) {
             if (currentBackStackEntry?.destination?.hierarchy?.any {
                     it.hasRoute(screen.destination::class)
@@ -322,6 +327,7 @@ fun AppNavigationRail(
     onSwipeToPrevious: (() -> Unit)? = null,
 ) {
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    val hapticFeedback = LocalHapticFeedback.current
     // See the note in AppBottomNavigationBar: `ordinal` is the tab's identity, not its position.
     val bottomNavScreens =
         navTabs
@@ -405,6 +411,7 @@ fun AppNavigationRail(
                     },
                 selected = selectedIndex == screen.ordinal,
                 onClick = {
+                    HapticsSpaceKai.onClick(hapticFeedback)
                     if (selectedIndex == screen.ordinal) {
                         if (currentBackStackEntry?.destination?.hierarchy?.any {
                                 it.hasRoute(screen.destination::class)

@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.ConstraintSet
@@ -55,6 +56,7 @@ import com.maxrave.simpmusic.ui.navigation.destination.library.LibraryDestinatio
 import com.maxrave.simpmusic.ui.navigation.destination.library.MixForYouDestination
 import com.maxrave.simpmusic.ui.navigation.destination.search.SearchDestination
 import com.maxrave.simpmusic.ui.screen.MiniPlayer
+import com.maxrave.simpmusic.spacekai.features.haptics.HapticsSpaceKai
 import com.maxrave.simpmusic.ui.theme.LocalIsDarkTheme
 import com.maxrave.simpmusic.viewModel.SharedViewModel
 import kotlinx.coroutines.Dispatchers
@@ -141,6 +143,7 @@ actual fun LiquidGlassAppBottomNavigationBar(
     }
 
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    val hapticFeedback = LocalHapticFeedback.current
     // SPACEKAI FEATURE: personalized navigation — a non-null navTabs (already resolved by the
     // caller) replaces the internal order/filtering; the sliding capsule keeps Search as its
     // own FAB exactly as the default list does.
@@ -227,6 +230,7 @@ actual fun LiquidGlassAppBottomNavigationBar(
     }
 
     fun selectTab(index: Int) {
+        HapticsSpaceKai.onClick(hapticFeedback)
         val screen = bottomNavScreens.find { it.ordinal == index } ?: return
         if (selectedIndex == index) {
             if (currentBackStackEntry?.destination?.hierarchy?.any {

@@ -28,17 +28,18 @@ import com.maxrave.simpmusic.spacekai.isSpaceKaiFeatureEnabled
  */
 object HapticsSpaceKai {
     /**
-     * Standard confirmation tick on a click/toggle.
+     * Standard confirmation tick on a click/toggle, forwarded to the centralized
+     * [HapticManager] so the intensity setting (Faible / Moyenne / Forte) is really
+     * applied. Kept for the existing call sites; new code should call
+     * `HapticManager.onClick(hapticFeedback)` directly.
      *
-     * @param type feedback strength; defaults to [HapticFeedbackType.LongPress]
-     *   (the common type available on every Compose platform).
+     * @param type explicit feedback type override; null = resolve from the intensity
+     *   setting (the normal case).
      */
     fun onClick(
         hapticFeedback: HapticFeedback,
-        type: HapticFeedbackType = HapticFeedbackType.LongPress,
+        type: HapticFeedbackType? = null,
     ) {
-        if (isSpaceKaiFeatureEnabled(SpaceKaiFeatures::haptics)) {
-            hapticFeedback.performHapticFeedback(type)
-        }
+        HapticManager.onClick(hapticFeedback, explicitType = type)
     }
 }

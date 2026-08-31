@@ -3,6 +3,7 @@ package com.maxrave.simpmusic.spacekai
 import androidx.compose.runtime.mutableStateOf
 import com.maxrave.simpmusic.BuildKonfig
 import com.maxrave.simpmusic.utils.VersionManager
+import com.maxrave.simpmusic.spacekai.features.haptics.HapticManager
 import com.maxrave.domain.manager.DataStoreManager
 import com.maxrave.logger.Logger
 
@@ -141,4 +142,6 @@ fun applyPersistedSpaceKaiFeatures(
     getString: (String) -> String?,
 ) {
     configSpaceKai(mergePersistedSpaceKaiFeatures(currentFeatures(), getString))
+    // Restore the persisted haptics intensity (separate from the Boolean flags).
+    HapticManager.applyPersisted(getString)
 }

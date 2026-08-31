@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.maxrave.domain.manager.DataStoreManager
@@ -18,6 +19,7 @@ import com.maxrave.simpmusic.spacekai.SpaceKaiFeatures
 import com.maxrave.simpmusic.spacekai.configSpaceKai
 import com.maxrave.simpmusic.spacekai.currentFeatures
 import com.maxrave.simpmusic.spacekai.isSpaceKaiAvailable
+import com.maxrave.simpmusic.spacekai.features.haptics.HapticManager
 import com.maxrave.simpmusic.spacekai.mergePersistedSpaceKaiFeatures
 import com.maxrave.simpmusic.ui.component.SettingItem
 import com.maxrave.simpmusic.ui.theme.typo
@@ -60,6 +62,7 @@ fun SpaceKaiSettingsSection(
                 )
         }
     var features by remember { mutableStateOf(persisted) }
+    val hapticFeedback = LocalHapticFeedback.current
 
     fun persist(feature: String, enabled: Boolean) {
         sharedViewModel.putString(
@@ -68,6 +71,8 @@ fun SpaceKaiSettingsSection(
         )
         // Re-issue so isSpaceKaiFeatureEnabled reflects the change immediately.
         configSpaceKai(features)
+        // SPACEKAI FEATURE: tactile feedback on every toggle (intensity-aware).
+        HapticManager.onClick(hapticFeedback)
     }
 
     Column {
@@ -113,6 +118,10 @@ fun SpaceKaiSettingsSection(
                     persist("haptics", it)
                 }),
         )
+        // SPACEKAI FEATURE: haptics intensity selector — shown only while haptics is ON.
+        if (features.haptics) {
+            SpaceKaiHapticIntensityRow(sharedViewModel = sharedViewModel)
+        }
         SettingItem(
             title = "Custom player info",
             subtitle = "Custom player info line",
