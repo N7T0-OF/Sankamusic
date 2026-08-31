@@ -2112,6 +2112,21 @@ fun SettingScreen(
             }
         }
         }
+        // SPACEKAI FEATURE: the whole SpaceKai layer (settings + update manager) is its
+        // own collapsible category, closed by default like every other section. When
+        // folded, the heavy update-manager UI is NOT composed at all (and its upstream
+        // release check is not kicked on every Settings open) — the P2 perf objective.
+        item(key = "spacekai_header") {
+            SettingsCollapsibleHeader(
+                title = "SpaceKai",
+                expanded = expandedSettingsSection == "spacekai",
+                onClick = {
+                    expandedSettingsSection =
+                        if (expandedSettingsSection == "spacekai") null else "spacekai"
+                },
+            )
+        }
+        if (expandedSettingsSection == "spacekai") {
         // SPACEKAI FEATURE: add-on settings section (renders nothing on a
         // vanilla SimpMusic build — see SpaceKaiSettingsSection).
         item(key = "spacekai") {
@@ -2126,6 +2141,7 @@ fun SettingScreen(
             SpaceKaiUpdatesSection(
                 sharedViewModel = sharedViewModel,
             )
+        }
         }
         item(key = "downloads_header") {
             SettingsCollapsibleHeader(
