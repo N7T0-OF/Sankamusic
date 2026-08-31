@@ -82,10 +82,42 @@ else
     fi
 fi
 
+# --- Hotspot 3: upstream.lock (integrated base manifest, spec §28) --------------
+# The app derives SPACEKAI_BASED_ON_UPSTREAM from this manifest at build time
+# (BuildKonfig.upstreamBaseVersion), so the Updates screen's "Base intégrée"
+# always matches the lock — never a hardcoded constant. Missing lock = the
+# integrated base is untracked again.
+echo ""
+echo "## Hotspot 3: upstream.lock (integrated base manifest, spec §28)"
+LOCK="$ROOT/upstream.lock"
+if [ ! -f "$LOCK" ]; then
+    echo "  FAIL: upstream.lock missing — the integrated SimpMusic base is untracked."
+    echo "        Create it (repository, tag, commit, release, integrated_at,"
+    echo "        core_commit, merge_state); scripts/update-upstream.sh writes it."
+    fail=1
+else
+    LOCK_TAG=$(grep '^tag=' "$LOCK" | head -1 | cut -d= -f2- | tr -d ' ')
+    LOCK_COMMIT=$(grep '^commit=' "$LOCK" | head -1 | cut -d= -f2- | tr -d ' ')
+    LOCK_CORE=$(grep '^core_commit=' "$LOCK" | head -1 | cut -d= -f2- | tr -d ' ')
+    if [ -z "$LOCK_TAG" ] || [ -z "$LOCK_COMMIT" ]; then
+        echo "  FAIL: upstream.lock present but missing tag=/commit= — not a valid manifest."
+        fail=1
+    else
+        echo "  PASS: upstream.lock — tag=$LOCK_TAG, commit=${LOCK_COMMIT:0:8}, core=${LOCK_CORE:0:8}"
+        if grep -q "upstreamBaseVersion" "$ROOT/composeApp/build.gradle.kts" 2>/dev/null; then
+            echo "  PASS: build injects the lock into BuildKonfig.upstreamBaseVersion"
+        else
+            echo "  WARN: build.gradle.kts does not inject upstream.lock into BuildKonfig —"
+            echo "        the app base is a constant again; re-wire SPACEKAI_BASED_ON_UPSTREAM."
+        fi
+    fi
+fi
+
 echo ""
 echo "============================================"
 if [ "$fail" -eq 0 ]; then
-    echo "RESULT:  upstream hotspots OK (vcs-url correct; update checker points to SpaceKai)"
+    echo "RESULT:  upstream hotspots OK (vcs-url correct; update checker points to SpaceKai;"
+    echo "         upstream.lock present and injected into the build)"
 else
     echo "RESULT:  UPSTREAM HOTSPOT DRIFTED — release blocked until re-wired to SpaceKai"
 fi

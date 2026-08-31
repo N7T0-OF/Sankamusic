@@ -1,6 +1,7 @@
 package com.maxrave.simpmusic.spacekai
 
 import androidx.compose.runtime.mutableStateOf
+import com.maxrave.simpmusic.BuildKonfig
 import com.maxrave.simpmusic.utils.VersionManager
 import com.maxrave.domain.manager.DataStoreManager
 import com.maxrave.logger.Logger
@@ -22,8 +23,19 @@ private const val TAG = "SpaceKai"
  * `checkForUpstreamRelease()` — never hardcode it here.
  * Bump only when SpaceKai is actually rebuilt on top of a newer upstream.
  */
-// 2026-08-27: rebased on upstream 2.0.0 (see migrate/upstream-2.0.0, released v0.3.0).
-const val SPACEKAI_BASED_ON_UPSTREAM: String = "2.0.0"
+/**
+ * The SimpMusic upstream release this SpaceKai build is BASED ON — DERIVED from
+ * upstream.lock (the single source of truth maintained by scripts/update-upstream.sh)
+ * via BuildKonfig.upstreamBaseVersion, never a hardcoded constant. Falls back to the
+ * last known base (2.0.0) only when the lock/build field is absent (vanilla build).
+ * Last sync: 2026-08-27, upstream v2.0.0 — see upstream.lock and docs/UPSTREAM.md.
+ */
+val SPACEKAI_BASED_ON_UPSTREAM: String =
+    try {
+        BuildKonfig.upstreamBaseVersion.ifBlank { "2.0.0" }
+    } catch (_: Exception) {
+        "2.0.0"
+    }
 
 /**
  * The SpaceKai release version, DERIVED from the real build (BuildKonfig.versionName,

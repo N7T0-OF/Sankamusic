@@ -831,6 +831,24 @@ buildkonfig {
         buildConfigField(STRING, "versionName", versionName)
         buildConfigField(INT, "versionCode", "$versionCode")
 
+        // SPACEKAI FEATURE: the integrated SimpMusic base version comes from upstream.lock
+        // (single source of truth maintained by scripts/update-upstream.sh), never a hardcoded
+        // constant — same rule as SPACEKAI_VERSION. The Updates screen's "Base intégrée" and the
+        // upstream compatibility matrix read this through SPACEKAI_BASED_ON_UPSTREAM.
+        val upstreamLockFile = rootProject.file("upstream.lock")
+        val upstreamBaseVersion =
+            if (upstreamLockFile.exists()) {
+                upstreamLockFile.readLines()
+                    .firstOrNull { it.startsWith("tag=") }
+                    ?.removePrefix("tag=")
+                    ?.trim()
+                    ?.removePrefix("v")
+                    ?: ""
+            } else {
+                ""
+            }
+        buildConfigField(STRING, "upstreamBaseVersion", upstreamBaseVersion)
+
         if (isFullBuild) {
             try {
                 println("Full build detected, enabling Sentry DSN")

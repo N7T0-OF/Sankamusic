@@ -19,6 +19,7 @@ cd "$ROOT"
 UPSTREAM_URL="${UPSTREAM_URL:-https://github.com/maxrave-dev/SimpMusic.git}"
 UPSTREAM_BRANCH="${UPSTREAM_BRANCH:-main}"
 SYNC_BRANCH="${SYNC_BRANCH:-upstream-sync}"
+LOCK="$ROOT/upstream.lock"
 
 echo "============================================"
 echo "SpaceKai ← SimpMusic upstream synchronization"
@@ -40,36 +41,42 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-echo "[1/7] Current branch: $CURRENT_BRANCH (clean)"
+echo "[1/8] Current branch: $CURRENT_BRANCH (clean)"
 
 # --- 2. Upstream remote -----------------------------------------------------
 if ! git remote get-url upstream >/dev/null 2>&1; then
-  echo "[2/7] Adding upstream remote: $UPSTREAM_URL"
+  echo "[2/8] Adding upstream remote: $UPSTREAM_URL"
   git remote add upstream "$UPSTREAM_URL"
 else
-  echo "[2/7] Upstream remote already configured: $(git remote get-url upstream)"
+  echo "[2/8] Upstream remote already configured: $(git remote get-url upstream)"
 fi
 
 # --- 3. Fetch upstream ------------------------------------------------------
-echo "[3/7] Fetching upstream..."
+echo "[3/8] Fetching upstream..."
 git fetch upstream "$UPSTREAM_BRANCH"
 
 # --- 4. Report available version --------------------------------------------
-echo "[4/7] Comparing versions"
+echo "[4/8] Comparing versions"
 echo ""
 echo "------------------------------------------------------------"
 echo "Local version:   v$(grep '^version-name' gradle/libs.versions.toml | head -1 | cut -d'\"' -f2) (code $(grep '^version-code' gradle/libs.versions.toml | head -1 | cut -d'\"' -f2))"
 UPSTREAM_VERSION=$(git show "upstream/$UPSTREAM_BRANCH:gradle/libs.versions.toml" 2>/dev/null | grep '^version-name' | head -1 | cut -d'"' -f2 || echo "?")
 echo "Upstream version: v${UPSTREAM_VERSION:-?}"
+if [ -f "$LOCK" ]; then
+  LOCKED_TAG=$(grep '^tag=' "$LOCK" | head -1 | cut -d= -f2- | tr -d ' ')
+  echo "Locked base (upstream.lock): ${LOCKED_TAG:-?}"
+else
+  echo "Locked base (upstream.lock): none — will be created after the merge"
+fi
 echo "------------------------------------------------------------"
 echo ""
 
 # --- 5. Create a sync branch and merge --------------------------------------
 if git rev-parse --verify "$SYNC_BRANCH" >/dev/null 2>&1; then
-  echo "[5/7] Reusing existing sync branch: $SYNC_BRANCH"
+  echo "[5/8] Reusing existing sync branch: $SYNC_BRANCH"
   git checkout "$SYNC_BRANCH"
 else
-  echo "[5/7] Creating sync branch: $SYNC_BRANCH"
+  echo "[5/8] Creating sync branch: $SYNC_BRANCH"
   git checkout -b "$SYNC_BRANCH"
 fi
 
@@ -84,7 +91,7 @@ else
 fi
 
 # --- 6. Report --------------------------------------------------------------
-echo "[6/7] Sync report"
+echo "[6/8] Sync report"
 echo ""
 echo "============================================"
 echo "SYNC REPORT"
@@ -109,7 +116,7 @@ echo ""
 # them so the maintainer re-applies the marked hooks by hand. This mirrors
 # the conflict rule in docs/SPACEKAI-ARCHITECTURE.md: upstream-owned files
 # take upstream, then the SPACEKAI FEATURE hooks go back on top.
-echo "[7/7] Scanning upstream-changed files for SpaceKai markers..."
+echo "[7/8] Scanning upstream-changed files for SpaceKai markers..."
 CHANGED=$(git diff --name-only "HEAD...upstream/$UPSTREAM_BRANCH" || true)
 if [ -z "$CHANGED" ]; then
   echo "  (no upstream-changed files to scan — nothing to re-apply)"
@@ -167,6 +174,34 @@ done
 if [ "$hooks_missing" -ne 0 ]; then
   echo "  -> CRITICAL: at least one SpaceKai hook was dropped by the merge — re-apply before testing."
 fi
+
+# --- 8. Write upstream.lock -------------------------------------------------
+# The lock is the single source of truth for "base intégrée": the app derives
+# SPACEKAI_BASED_ON_UPSTREAM from it at build time (BuildKonfig.upstreamBaseVersion),
+# so the Updates screen's "Base intégrée" always matches this manifest. Record the
+# upstream ref the merged tree is based on, the pinned core submodule commit, and
+# the merge state. The maintainer reviews and commits it with the sync.
+echo ""
+echo "[8/8] Writing upstream.lock..."
+NEW_COMMIT=$(git rev-parse "upstream/$UPSTREAM_BRANCH" 2>/dev/null || echo "")
+NEW_TAG=$(git tag --points-at "upstream/$UPSTREAM_BRANCH" 2>/dev/null | head -1)
+[ -z "$NEW_TAG" ] && [ -n "$UPSTREAM_VERSION" ] && NEW_TAG="v$UPSTREAM_VERSION"
+CORE_COMMIT=$(git -C "$ROOT/core" rev-parse HEAD 2>/dev/null || echo "?")
+HAS_CONFLICTS=$(git diff --name-only --diff-filter=U 2>/dev/null | head -1)
+STATE="clean"
+[ -n "$HAS_CONFLICTS" ] && STATE="conflicts"
+{
+  echo "# SpaceKai upstream lock — single source of truth for the integrated SimpMusic base."
+  echo "# Auto-maintained by scripts/update-upstream.sh; review and commit after a sync."
+  echo "repository=$UPSTREAM_URL"
+  echo "tag=${NEW_TAG:-?}"
+  echo "commit=${NEW_COMMIT:-?}"
+  echo "release=${NEW_TAG:-?}"
+  echo "integrated_at=$(date +%Y-%m-%d)"
+  echo "core_commit=${CORE_COMMIT:-?}"
+  echo "merge_state=$STATE"
+} > "$LOCK"
+echo "  Wrote $LOCK (tag=${NEW_TAG:-?}, state=$STATE) — review and commit it."
 
 echo ""
 echo "Next steps (do NOT auto-publish):"

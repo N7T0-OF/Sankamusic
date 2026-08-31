@@ -1,0 +1,11 @@
+# SpaceKai upstream lock — single source of truth for the integrated SimpMusic base.
+# Auto-maintained by scripts/update-upstream.sh; review and commit it after every sync.
+# The app derives SPACEKAI_BASED_ON_UPSTREAM from `tag` at build time (BuildKonfig.upstreamBaseVersion),
+# so the "Base intégrée" line on the Updates screen always matches this manifest — never a constant.
+repository=https://github.com/maxrave-dev/SimpMusic
+tag=v2.0.0
+commit=1b59c775cac15b66884b7bfece51456a35aaaeb7
+release=v2.0.0
+integrated_at=2026-08-27
+core_commit=78f3b54ba100970e6a24bae38528ca4defaef98d
+merge_state=clean
