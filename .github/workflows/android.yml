@@ -60,6 +60,14 @@ jobs:
       - name: Generate aboutLibraries.json
         run: ./gradlew exportLibraryDefinitions
 
+      - name: Fast checks before the heavy build
+        # Tests rapides avant builds lourds: fail fast on the JVM compile + the
+        # static gate suite so a broken push never burns a ~20 min Android build.
+        # Same commands the dev loop runs locally before pushing to dev.
+        run: |
+          ./gradlew :composeApp:compileKotlinJvm
+          bash scripts/test-gates.sh
+
       - name: Build release APK
         run: ./gradlew androidApp:assembleRelease
 
