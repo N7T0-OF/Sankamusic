@@ -273,7 +273,8 @@ fun RecentlySongsScreen(
                 },
                 onOpenActions = { showSelectionSheet = true },
                 modifier = Modifier.align(Alignment.TopCenter),
-                containerColor = Color.Black,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurface,
             )
         }
     }

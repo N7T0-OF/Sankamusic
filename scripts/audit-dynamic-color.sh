@@ -25,9 +25,14 @@
 #   upstream behaviour (pinned black for wallpaper dark + seed via isAmoled=isDark).
 #   The pinned platformDynamicColorScheme (background=Color.Black) now feeds only the
 #   flag-OFF wallpaper path.
-#   Also: 194 hardcoded Color.Black / Color(0xFF000000) occurrences across
-#   composeApp (many legitimate: text over artwork, immersive ForceDarkContent
-#   screens, scrims — but the count is worth a manual pass).
+#   Manual pass (2026-08-31, milestone 0.4.x item 1): all hardcoded
+#   Color.Black / Color(0xFF000000) in composeApp were classified. Solid-black
+#   surfaces exist only on ForceDarkContent (immersive) screens — deliberately
+#   black regardless of theme — plus scrims, artwork overlays, video letterboxes,
+#   adaptive text/icon contrast, animation initial values, previews and icon
+#   paths. The one forced-black surface on regular theme screens (the multi-select
+#   bar on RecentlySongs / LibraryDynamicPlaylist) now follows the palette
+#   (surfaceContainerHigh + onSurface); the hotspot below guards it.
 #
 # THIS GATE protects the capability (an upstream merge must not remove it):
 #   FAIL if the system palette, the wallpaper/seed scheme, or the settings
@@ -105,11 +110,20 @@ if grep -q 'background = Color.Black' "$ANDROID_PLATFORM" 2>/dev/null; then
   echo "       background/surface to Color.Black (OLED look). Unpinned variant"
   echo "       (platformDynamicColorSchemeUnpinned) is used when SpaceKai dynamicColor is ON."
 fi
-if grep -q 'isAmoled = isDark' "$THEME" 2>/dev/null; then
-  echo "  GAP: seed scheme built with isAmoled = isDark (Theme.kt) — dark bg pinned black"
+forced=0
+for f in "$CM/ui/screen/home/RecentlySongsScreen.kt" "$CM/ui/screen/library/LibraryDynamicPlaylistScreen.kt"; do
+  if grep -q 'containerColor = Color.Black' "$f" 2>/dev/null; then
+    echo "  FAIL: forced-black selection bar on regular theme screen: $f"
+    forced=1
+  fi
+done
+if [ "$forced" -eq 0 ]; then
+  pass "no forced-black surface on regular (non-ForceDarkContent) theme screens"
+else
+  fail=1
 fi
 BLACKS=$(grep -rn --include='*.kt' 'Color.Black\|Color(0xFF000000)' "$CM" 2>/dev/null | grep -cv 'ui/theme/Color.kt' || true)
-echo "  INFO: ${BLACKS} hardcoded Color.Black / Color(0xFF000000) in composeApp (many legit)"
+echo "  INFO: ${BLACKS} hardcoded Color.Black / Color(0xFF000000) in composeApp (all classified; ForceDarkContent + scrims/accents remain)"
 
 echo ""
 echo "============================================"
