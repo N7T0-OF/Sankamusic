@@ -1982,8 +1982,10 @@ fun SettingScreen(
         }
         }
         // Hidden entirely when the build carries no Last.fm credentials — a FOSS build, or a full
-        // build whose local.properties has no key.
-        if (viewModel.lastfmAvailable) {
+        // build whose local.properties has no key. SPACEKAI P1: gated behind the (single-open)
+        // discord_integration section so it is composed only while that section is open — a
+        // collapsed Settings page shows headers only, never stray content items.
+        if (viewModel.lastfmAvailable && expandedSettingsSection == "discord") {
             item(key = "lastfm") {
                 Column {
                     Text(
