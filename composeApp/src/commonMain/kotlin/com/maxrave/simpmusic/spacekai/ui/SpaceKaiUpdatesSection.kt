@@ -92,9 +92,15 @@ fun SpaceKaiUpdatesSection(
         )
 
         // ---------- SpaceKai block (the installed app) ----------
+        // Installée = the REAL build version (VersionManager/BuildKonfig); dernière =
+        // the live GitHub answer (N7T0-OF/Sankamusic/releases/latest). Before the first
+        // check the tag is null — render an honest "—", never the broken "v—".
+        val latestSpaceKai =
+            if (updateResponse?.tagName.isNullOrBlank()) "—"
+            else "v${displayUpstreamVersion(updateResponse?.tagName)}"
         SettingItem(
             title = "SpaceKai",
-            subtitle = "Installée v$SPACEKAI_VERSION · dernière : v${displayUpstreamVersion(updateResponse?.tagName)}",
+            subtitle = "Installée v$SPACEKAI_VERSION · dernière : $latestSpaceKai",
             onClick = {
                 sharedViewModel.checkForUpdate()
             },
