@@ -1,6 +1,7 @@
 package com.maxrave.simpmusic.spacekai
 
 import androidx.compose.runtime.mutableStateOf
+import com.maxrave.simpmusic.utils.VersionManager
 import com.maxrave.domain.manager.DataStoreManager
 import com.maxrave.logger.Logger
 
@@ -24,8 +25,14 @@ private const val TAG = "SpaceKai"
 // 2026-08-27: rebased on upstream 2.0.0 (see migrate/upstream-2.0.0, released v0.3.0).
 const val SPACEKAI_BASED_ON_UPSTREAM: String = "2.0.0"
 
-/** The SpaceKai release version (aligned with `version-name` in libs.versions.toml). */
-const val SPACEKAI_VERSION: String = "0.3.1"
+/**
+ * The SpaceKai release version, DERIVED from the real build (BuildKonfig.versionName,
+ * i.e. `version-name` in libs.versions.toml) — never a hardcoded constant. A hardcoded
+ * value drifted from the build before (0.3.1 vs a 0.3.2 build) and made the Updates
+ * screen show a wrong "Installée" version and offer a phantom update to itself.
+ * VersionManager strips the "-dev" suffix so a dev build compares against GitHub tags.
+ */
+val SPACEKAI_VERSION: String = VersionManager.getVersionName()
 
 // The configured feature set. `null` = no config was handed in (vanilla).
 //
