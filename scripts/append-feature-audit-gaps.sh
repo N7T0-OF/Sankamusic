@@ -34,7 +34,17 @@ VERSION=$(grep '^version-name' gradle/libs.versions.toml 2>/dev/null | head -1 |
 # 1. Regenerate the report so the gaps are current (runs all evidence audits).
 bash scripts/generate-feature-audit.sh >/dev/null 2>&1
 
-# 2. Extract the fenced "### Connu / non terminé" block (single fenced block).
+# 2. Idempotency guard: a hand-written changelog produced by
+#    generate-fastlane-changelog.sh already carries the honesty block (this
+#    script is invoked by BOTH local regeneration and CI, so appending again
+#    duplicates the block and trips publish-draft.sh's freshness gate, which
+#    counts gap lines versus the fresh audit).
+if grep -q '^### Connu / non terminé' "$NOTES"; then
+  echo "Notes already carry the 'Connu / non terminé' block — skipping duplicate append."
+  exit 0
+fi
+
+# 3. Extract the fenced "### Connu / non terminé" block (single fenced block).
 BLOCK=$(sed -n '/^```markdown$/,/^```$/p' "$REPORT" 2>/dev/null | sed '1d;$d')
 if [ -z "$BLOCK" ]; then
   echo "WARN: no 'Connu / non terminé' block in $REPORT — gaps not appended" >&2
