@@ -138,6 +138,10 @@ fun computeUpstreamCompatibility(
         if (latestUpstream.isNullOrBlank()) UpstreamCheckState.NOT_CHECKED else UpstreamCheckState.OK,
 ): UpstreamCompatibility {
     val latest = if (latestUpstream.isNullOrBlank()) updateData?.tagName else latestUpstream
+    // SPACEKAI FIX: `latest` keeps its raw GitHub form ("v2.1.0" — the field's own
+    // tests pin that), but the statusLabel must not double-prefix it: "(v$latest)"
+    // rendered "(v v2.1.0)". Strip the leading "v" for display only.
+    val latestDisplay = latest?.removePrefix("v")?.trim()
     val latestVersion = parseVersion(latest)
 
     // UNKNOWN / ERROR: never claim "compatible" or "à jour". A missing answer is
@@ -188,7 +192,7 @@ fun computeUpstreamCompatibility(
             if (inRange) {
                 "✓ À jour avec la dernière release officielle"
             } else {
-                "⚠ Nouvelle release officielle détectée (v$latest) — SpaceKai pas encore compatible"
+                "⚠ Nouvelle release officielle détectée (v$latestDisplay) — SpaceKai pas encore compatible"
             },
     )
 }

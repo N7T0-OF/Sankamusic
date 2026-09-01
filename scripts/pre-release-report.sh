@@ -55,6 +55,33 @@ else
   else
     warn "apksigner not on PATH — signature not verified in this environment"
   fi
+  # Signing-identity pin: the APK must be signed with the SpaceKai key
+  # (CN=Sankamusic Dev, verified against the genuine v0.3.0/v0.3.2 assets).
+  # A rotated key would be refused by Android on install-over ("Application
+  # non installée"), silently breaking the in-app update. Same pin as
+  # verify-release.sh; unzip + openssl are preinstalled on ubuntu-latest.
+  SPACEKAI_CERT_SHA256="D9:BA:FD:4F:AB:87:15:DB:03:B2:67:11:E3:A8:42:A9:6E:90:BA:BA:BF:1A:83:3F:63:57:A9:49:B4:09:63:7E"
+  if command -v unzip >/dev/null 2>&1 && command -v openssl >/dev/null 2>&1; then
+    RSA_FILE=$(unzip -Z1 "$APKS" 'META-INF/*.RSA' 2>/dev/null | head -1)
+    if [ -z "$RSA_FILE" ]; then
+      crit "no META-INF/*.RSA signing block found in APK — unsigned or v1-scheme-less APK"
+    else
+      CERT_FP=$(
+        unzip -p "$APKS" "$RSA_FILE" 2>/dev/null |
+          openssl pkcs7 -inform DER -print_certs 2>/dev/null |
+          openssl x509 -fingerprint -sha256 -noout 2>/dev/null |
+          sed 's/.*=//; s/://g' | tr '[:upper:]' '[:lower:]'
+      )
+      EXPECTED=$(echo "$SPACEKAI_CERT_SHA256" | sed 's/://g' | tr '[:upper:]' '[:lower:]')
+      if [ -n "$CERT_FP" ] && [ "$CERT_FP" = "$EXPECTED" ]; then
+        pass "APK signed with the pinned SpaceKai key (SHA-256 $SPACEKAI_CERT_SHA256)"
+      else
+        crit "APK signing fingerprint MISMATCH — got '$CERT_FP', expected '$SPACEKAI_CERT_SHA256'"
+      fi
+    fi
+  else
+    warn "unzip/openssl not available — signing fingerprint not verified in this environment"
+  fi
 fi
 
 # --- Desktop ----------------------------------------------------------------

@@ -37,6 +37,7 @@ internal actual object PlatformUpdater {
         apkUrl: String,
         checksumsUrl: String?,
         onProgress: (downloaded: Long, total: Long, bytesPerSecond: Long) -> Unit,
+        onPhase: (SpaceKaiUpdatePhase) -> Unit,
     ): SpaceKaiUpdateResult =
         withContext(Dispatchers.IO) {
             try {
@@ -48,24 +49,34 @@ internal actual object PlatformUpdater {
 
                 downloadWithProgress(url = apkUrl, output = tmp, onProgress = onProgress)
 
-                // VERIFYING
-                val verified =
-                    checksumsUrl.isNullOrBlank() ||
+                // VERIFYING: a release without a checksum is NOT installable.
+                // Skipping verification (the old `isNullOrBlank() ||` guard) meant a
+                // release with no SHA256SUMS.txt installed unverified — never hand an
+                // unverifiable APK to the installer.
+                onPhase(SpaceKaiUpdatePhase.VERIFYING)
+                if (checksumsUrl.isNullOrBlank()) {
+                    tmp.delete()
+                    SpaceKaiUpdateResult.Failure(
+                        "Aucun checksum SHA-256 fourni par la release — installation refusée (APK non vérifiable).",
+                    )
+                } else {
+                    val verified =
                         verifySha256(
                             apkFile = tmp,
                             checksumsUrl = checksumsUrl,
                         )
-                if (!verified) {
-                    tmp.delete()
-                    SpaceKaiUpdateResult.Failure(
-                        "SHA-256 verification failed - the APK is corrupt or tampered.",
-                    )
-                } else {
-                    if (!tmp.renameTo(apkFile)) {
-                        apkFile.delete()
-                        tmp.copyTo(apkFile, overwrite = true)
+                    if (!verified) {
                         tmp.delete()
-                    }
+                        SpaceKaiUpdateResult.Failure(
+                            "SHA-256 verification failed - the APK is corrupt or tampered.",
+                        )
+                    } else {
+                        onPhase(SpaceKaiUpdatePhase.INSTALLING)
+                        if (!tmp.renameTo(apkFile)) {
+                            apkFile.delete()
+                            tmp.copyTo(apkFile, overwrite = true)
+                            tmp.delete()
+                        }
                     // PACKAGE CHECK (P0, milestone 0.4.x): SHA-256 proves the bytes came from
                     // the release, not that they are SimpMusic/SpaceKai. Refuse anything whose
                     // parsed package name differs from the running app's, and delete the file,
@@ -93,6 +104,7 @@ internal actual object PlatformUpdater {
                         context.startActivity(installIntent)
                         SpaceKaiUpdateResult.Success
                     }
+                }
                 }
             } catch (e: Exception) {
                 Logger.e(TAG, "In-app update failed: ${e.message}")

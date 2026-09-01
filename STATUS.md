@@ -23,7 +23,7 @@ v1.7.6 → 67        ← dépasse 66 → installable partout
 v1.7.7 → 68 · v1.7.8 → 69 · v1.7.9 → 70 · v1.8.0 → 71   ← MAX actuel
 ```
 
-Signature des APK : `CN=LiquidFlow`, SHA-256 `9D:8E:4A:94:1B:AD:CE:83:66:0C:CF:F3:13:A5:4E:DC:C5:F2:13:6B` (identique sur toutes les versions).
+Signature des APK : `CN=Sankamusic Dev`, SHA-256 `D9:BA:FD:4F:AB:87:15:DB:03:B2:67:11:E3:A8:42:A9:6E:90:BA:BA:BF:1A:83:3F:63:57:A9:49:B4:09:63:7E` (identique sur v0.3.0 et v0.3.2 ; l'ancienne mention `CN=LiquidFlow` / `9D:8E:4A:94:…` ne correspondait à aucun APK publié).
 
 ## 📦 Releases de la session
 
