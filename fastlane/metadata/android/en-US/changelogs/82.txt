@@ -1,0 +1,36 @@
+# SpaceKai v0.3.4
+
+> Released 2026-09-02
+
+## What's changed
+
+v0.3.4 ships the v0.3.3 code line — the one that just passed the on-device
+Gate 0 checks (v0.3.3 release APK installed, existing data intact, Settings
+screens and Analytics / local tracking verified on a physical phone) — plus
+one release-tooling fix. No app code changed since v0.3.3, so runtime
+behaviour is identical to the build that was validated on device.
+
+Its purpose is to close the last unverified link of the in-app Update
+Manager: a running **v0.3.3** (release-signed, `CN=Sankamusic Dev`) detects
+**v0.3.4** (same `applicationId`, same signing certificate, versionCode 82 >
+81) through Settings → Updates and installs it over itself with data
+preserved. After the install, v0.3.4 self-reports as up to date.
+
+### Fixed — release notes pipeline
+- `scripts/append-feature-audit-gaps.sh` is now idempotent: a note that
+  already carries the "Connu / non terminé" honesty block is no longer
+  appended a second time. The v0.3.3 draft had been blocked by
+  `publish-draft.sh`'s freshness gate because the block was duplicated
+  (38 gap lines vs. the fresh audit's 19); regeneration and CI re-runs are
+  now safe against that.
+
+### Known / not finished (honest)
+- The **full on-device update path** (download → SHA-256 → package check →
+  Android installer → data preserved → "Installée v0.3.4" → self-check
+  "À jour") from a *published* v0.3.3 to this v0.3.4 is exactly what this
+  release exists to prove — it runs on the phone right after publication.
+  Until that run completes, this link keeps the same honest status as in
+  v0.3.3: compile/test/gate/CI-verified, not yet proven by a real upgrade.
+- Several SpaceKai feature flags remain PARTIALLY / NOT IMPLEMENTED — the
+  freshly regenerated feature-audit block below is the complete list;
+  nothing here claims them done.
