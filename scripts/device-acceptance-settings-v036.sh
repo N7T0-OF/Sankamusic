@@ -1,6 +1,6 @@
 #!/bin/bash
 # Device-acceptance driver for the v0.3.6 Settings patch (commits 3c210b5f +
-# 7b3a6d09, version 0.3.6 / code 84). Exercises the four flows of
+# 7b3a6d09 + a0d52fb4, version 0.3.6 / code 84). Exercises the four flows of
 # docs/E2E-NAV-SETTINGS-V036.md on a REAL Android device via adb + uiautomator.
 #
 # Honest by design: the machine asserts what a UI dump / dumpsys can prove

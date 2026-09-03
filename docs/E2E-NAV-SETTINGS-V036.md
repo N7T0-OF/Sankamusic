@@ -2,8 +2,9 @@
 
 > Statique et honnêteté : ce protocole décrit le test **device** du patch
 > Settings v0.3.6 — « bande haute mesurée + lignes Ko-fi / Site + section
-> Intégrations » — commits `3c210b5f` (patch) et `7b3a6d09` (bump 0.3.6 / code
-> 84), au-dessus de la v0.3.5 publiée (tag `v0.3.5`, code 83). Le code est
+> Intégrations » — commits `3c210b5f` + `a0d52fb4` (patch, dont le lien réel
+> Ko-fi `ko-fi.com/souanpt`) et `7b3a6d09` (bump 0.3.6 / code 84), au-dessus de
+> la v0.3.5 publiée (tag `v0.3.5`, code 83). Le code est
 > CI-vert (gates shell, `compileKotlinMetadata`, `jvmTest`, `assembleRelease`) ;
 > **rien ici n'est prouvé sur appareil** tant que ce protocole n'a pas été
 > exécuté. Chaque flux cite le fichier:ligne qui l'implémente, et chaque échec
