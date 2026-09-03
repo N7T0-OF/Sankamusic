@@ -24,8 +24,20 @@ if [ -z "$VERSION_CODE" ]; then
   exit 1
 fi
 
-# Find the previous version tag (sorted by version, second entry = previous).
-PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
+# Find the previous version tag: the GREATEST tag strictly below the current
+# version-name. `git tag --sort=-v:refname | sed -n '2p'` used to work while
+# releases were consecutive at the top of the sort (v1.x -> v2.0.0), but on
+# the 0.3.x line the second-highest tag overall is v1.9.0, not the previous
+# 0.3.x release — the range would cover hundreds of commits from another era.
+# (82.txt had to be written by hand for that reason.)
+PREV_TAG=$(git tag --sort=-v:refname | while read -r t; do
+  v="${t#v}"
+  # keep the first tag sorted STRICTLY below the current version-name
+  if [ "$v" != "$VERSION_NAME" ] && [ "$(printf '%s\n%s\n' "$VERSION_NAME" "$v" | sort -V | head -1)" = "$v" ]; then
+    echo "$t"
+    break
+  fi
+done)
 
 if [ -n "$PREV_TAG" ]; then
   RANGE="$PREV_TAG..HEAD"
