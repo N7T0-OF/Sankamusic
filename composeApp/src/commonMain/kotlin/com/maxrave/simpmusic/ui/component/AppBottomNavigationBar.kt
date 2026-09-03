@@ -30,12 +30,11 @@ import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.maxrave.simpmusic.extension.greyScale
+import com.maxrave.simpmusic.spacekai.defaultNavTabs
 import com.maxrave.simpmusic.spacekai.features.haptics.HapticsSpaceKai
-import com.maxrave.simpmusic.ui.navigation.destination.home.AnalyticsDestination
+import com.maxrave.simpmusic.spacekai.resolveInitialNavSelection
+import com.maxrave.simpmusic.spacekai.resolveNavSelectionIndex
 import com.maxrave.simpmusic.ui.navigation.destination.home.HomeDestination
-import com.maxrave.simpmusic.ui.navigation.destination.library.LibraryDestination
-import com.maxrave.simpmusic.ui.navigation.destination.library.MixForYouDestination
-import com.maxrave.simpmusic.ui.navigation.destination.search.SearchDestination
 import com.maxrave.simpmusic.ui.theme.typo
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -93,9 +92,9 @@ fun AppBottomNavigationBar(
     showLabels: Boolean = true,
     showAnalyticsTab: Boolean = false,
     showMixForYouTab: Boolean = false,
-    // SPACEKAI FEATURE: minimalisticNavigation — compact variant: the optional
-    // Mix-for-you / Analytics tabs are dropped. Both tab lists below must filter
-    // together so the bottom bar and the landscape rail stay consistent.
+    // SPACEKAI FEATURE: minimalisticNavigation — compact variant removes Mix-for-you.
+    // Analytics remains available when local tracking is enabled. Both tab lists below
+    // use the same conditioning so the bottom bar and landscape rail stay consistent.
     minimalistic: Boolean = false,
     reloadDestinationIfNeeded: (KClass<*>) -> Unit = { _ -> },
     // SPACEKAI FEATURE: personalized navigation — when non-null, this resolved tab list
@@ -112,34 +111,22 @@ fun AppBottomNavigationBar(
     // stable whether or not those tabs are present.
     val bottomNavScreens =
         navTabs
-            ?: listOfNotNull(
-                BottomNavScreen.Home,
-                BottomNavScreen.MixForYou.takeIf { showMixForYouTab && !minimalistic },
-                BottomNavScreen.Analytics.takeIf { showAnalyticsTab && !minimalistic },
-                BottomNavScreen.Library,
-                BottomNavScreen.Search,
+            ?: defaultNavTabs(
+                showAnalyticsTab = showAnalyticsTab,
+                showMixForYouTab = showMixForYouTab,
+                minimalistic = minimalistic,
             )
     var selectedIndex by rememberSaveable {
         mutableIntStateOf(
-            when (startDestination) {
-                is HomeDestination -> BottomNavScreen.Home.ordinal
-                is SearchDestination -> BottomNavScreen.Search.ordinal
-                is LibraryDestination -> BottomNavScreen.Library.ordinal
-                is AnalyticsDestination -> BottomNavScreen.Analytics.ordinal
-                is MixForYouDestination -> BottomNavScreen.MixForYou.ordinal
-                else -> BottomNavScreen.Home.ordinal // Default to Home if not recognized
-            },
+            resolveInitialNavSelection(startDestination, bottomNavScreens).ordinal,
         )
     }
-    // A tab can disappear from the list under the user: tracking gets turned off while Analytics is
-    // selected, the YouTube session ends while Mix for you is, or the minimalistic variant removes
-    // both. Fall back to Home in all cases so nothing is left highlighted.
-    LaunchedEffect(showAnalyticsTab, showMixForYouTab, minimalistic) {
-        if (((!showAnalyticsTab || minimalistic) && selectedIndex == BottomNavScreen.Analytics.ordinal) ||
-            ((!showMixForYouTab || minimalistic) && selectedIndex == BottomNavScreen.MixForYou.ordinal)
-        ) {
-            selectedIndex = BottomNavScreen.Home.ordinal
-        }
+    // A tab can disappear from the list under the user: tracking gets turned off (Analytics), the
+    // YouTube session ends (Mix for you), or the personalization editor hides the selected tab,
+    // Search, or everything. Re-resolve the highlight through the shared contract so it always
+    // lands on a visible tab.
+    LaunchedEffect(bottomNavScreens.map { it.key }) {
+        selectedIndex = resolveNavSelectionIndex(selectedIndex, bottomNavScreens)
     }
     val hapticFeedback = LocalHapticFeedback.current
     // SPACEKAI FEATURE: haptics — fire on tab selection (intensity-aware).
@@ -263,26 +250,28 @@ fun AppBottomNavigationBar(
                 }
             }
         }
-        Spacer(Modifier.size(12.dp))
-        val searchSelected = selectedIndex == BottomNavScreen.Search.ordinal
-        Box(
-            modifier =
-                Modifier
-                    .size(FlatIndicatorHeight)
-                    .clip(CircleShape)
-                    .background(if (searchSelected) indicatorColor else capsuleColor)
-                    .clickable { selectTab(BottomNavScreen.Search) },
-            contentAlignment = Alignment.Center,
-        ) {
-            CompositionLocalProvider(
-                LocalContentColor provides
-                    if (searchSelected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+        if (bottomNavScreens.any { it == BottomNavScreen.Search }) {
+            Spacer(Modifier.size(12.dp))
+            val searchSelected = selectedIndex == BottomNavScreen.Search.ordinal
+            Box(
+                modifier =
+                    Modifier
+                        .size(FlatIndicatorHeight)
+                        .clip(CircleShape)
+                        .background(if (searchSelected) indicatorColor else capsuleColor)
+                        .clickable { selectTab(BottomNavScreen.Search) },
+                contentAlignment = Alignment.Center,
             ) {
-                BottomNavScreen.Search.icon()
+                CompositionLocalProvider(
+                    LocalContentColor provides
+                        if (searchSelected) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                ) {
+                    BottomNavScreen.Search.icon()
+                }
             }
         }
     }
@@ -304,8 +293,8 @@ fun AppNavigationRail(
     navController: NavController,
     showAnalyticsTab: Boolean = false,
     showMixForYouTab: Boolean = false,
-    // SPACEKAI FEATURE: minimalisticNavigation — compact variant: the optional
-    // Mix-for-you / Analytics tabs are dropped, same as the bottom bar.
+    // SPACEKAI FEATURE: minimalisticNavigation — compact mode removes Mix-for-you;
+    // Analytics remains available when local tracking is enabled, same as the bottom bar.
     minimalistic: Boolean = false,
     reloadDestinationIfNeeded: (KClass<*>) -> Unit = { _ -> },
     modifier: Modifier = Modifier,
@@ -331,34 +320,22 @@ fun AppNavigationRail(
     // See the note in AppBottomNavigationBar: `ordinal` is the tab's identity, not its position.
     val bottomNavScreens =
         navTabs
-            ?: listOfNotNull(
-                BottomNavScreen.Home,
-                BottomNavScreen.MixForYou.takeIf { showMixForYouTab && !minimalistic },
-                BottomNavScreen.Analytics.takeIf { showAnalyticsTab && !minimalistic },
-                BottomNavScreen.Library,
-                BottomNavScreen.Search,
+            ?: defaultNavTabs(
+                showAnalyticsTab = showAnalyticsTab,
+                showMixForYouTab = showMixForYouTab,
+                minimalistic = minimalistic,
             )
     var selectedIndex by rememberSaveable {
         mutableIntStateOf(
-            when (startDestination) {
-                is HomeDestination -> BottomNavScreen.Home.ordinal
-                is SearchDestination -> BottomNavScreen.Search.ordinal
-                is LibraryDestination -> BottomNavScreen.Library.ordinal
-                is AnalyticsDestination -> BottomNavScreen.Analytics.ordinal
-                is MixForYouDestination -> BottomNavScreen.MixForYou.ordinal
-                else -> BottomNavScreen.Home.ordinal // Default to Home if not recognized
-            },
+            resolveInitialNavSelection(startDestination, bottomNavScreens).ordinal,
         )
     }
-    // A tab can disappear from the list under the user: tracking gets turned off while Analytics is
-    // selected, the YouTube session ends while Mix for you is, or the minimalistic variant removes
-    // both. Fall back to Home in all cases so nothing is left highlighted.
-    LaunchedEffect(showAnalyticsTab, showMixForYouTab, minimalistic) {
-        if (((!showAnalyticsTab || minimalistic) && selectedIndex == BottomNavScreen.Analytics.ordinal) ||
-            ((!showMixForYouTab || minimalistic) && selectedIndex == BottomNavScreen.MixForYou.ordinal)
-        ) {
-            selectedIndex = BottomNavScreen.Home.ordinal
-        }
+    // A tab can disappear from the list under the user: tracking gets turned off (Analytics), the
+    // YouTube session ends (Mix for you), or the personalization editor hides the selected tab,
+    // Search, or everything. Re-resolve the highlight through the shared contract so it always
+    // lands on a visible tab.
+    LaunchedEffect(bottomNavScreens.map { it.key }) {
+        selectedIndex = resolveNavSelectionIndex(selectedIndex, bottomNavScreens)
     }
     NavigationRail(
         modifier =

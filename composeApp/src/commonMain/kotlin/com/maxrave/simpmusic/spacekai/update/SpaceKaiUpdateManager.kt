@@ -104,13 +104,33 @@ object SpaceKaiUpdateManager {
                             bytesPerSecond = speed,
                         )
                 },
+                onPhase = { phase ->
+                    _state.value = _state.value.copy(phase = phase)
+                },
             )
-        if (outcome is SpaceKaiUpdateResult.Failure) {
-            _state.value =
-                _state.value.copy(
-                    phase = SpaceKaiUpdatePhase.FAILED,
-                    error = outcome.reason,
-                )
+        // Mirror the terminal result into the shared state so the UI's terminal
+        // branches ("✓ Mise à jour installée" / "Mise à jour annulée" / "❌ …") are
+        // actually reachable. Before this mapping, a successful hand-off left the
+        // phase stuck at DOWNLOADING, so `isBusy` stayed true forever.
+        when (outcome) {
+            is SpaceKaiUpdateResult.Success ->
+                _state.value =
+                    _state.value.copy(
+                        phase = SpaceKaiUpdatePhase.SUCCESS,
+                        error = null,
+                    )
+            is SpaceKaiUpdateResult.Cancelled ->
+                _state.value =
+                    _state.value.copy(
+                        phase = SpaceKaiUpdatePhase.CANCELLED,
+                        error = null,
+                    )
+            is SpaceKaiUpdateResult.Failure ->
+                _state.value =
+                    _state.value.copy(
+                        phase = SpaceKaiUpdatePhase.FAILED,
+                        error = outcome.reason,
+                    )
         }
         return outcome
     }
@@ -127,5 +147,6 @@ internal expect object PlatformUpdater {
         apkUrl: String,
         checksumsUrl: String?,
         onProgress: (downloaded: Long, total: Long, bytesPerSecond: Long) -> Unit,
+        onPhase: (SpaceKaiUpdatePhase) -> Unit,
     ): SpaceKaiUpdateResult
 }

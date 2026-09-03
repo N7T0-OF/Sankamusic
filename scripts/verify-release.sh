@@ -12,7 +12,9 @@
 #   4. The APK's versionCode beats the highest code ever published (downgrade
 #      guard — Android refuses updates with "Application non installée" when
 #      the new APK's versionCode is lower than the installed one's).
-#   5. Desktop packages present (warn only — an APK-only release is allowed).
+#   5. The APK is signed with the pinned SpaceKai key (fingerprint match — a
+#      rotated key would be refused by Android on install-over).
+#   6. Desktop packages present (warn only — an APK-only release is allowed).
 #
 # Runs in CI after `gh release download`, or locally after downloading a
 # release manually. The checksum file is trusted as the source of truth: it is
@@ -93,6 +95,42 @@ else
   done < "$SUMS"
   if [ "$LINES" -eq 0 ]; then
     fail "SHA256SUMS.txt is empty"
+  fi
+fi
+
+echo ""
+echo "## Signing identity (fingerprint pin)"
+# 4b. The APK must be signed with the SpaceKai key — the exact certificate
+# pinned below (CN=Sankamusic Dev, verified against the genuine v0.3.0 and
+# v0.3.2 release assets). A release signed with any other key is refused
+# before anyone downloads it: Android treats a different signing key as a
+# conflicting app and shows "Application non installée" on install-over,
+# which would silently break the in-app update the release is meant to prove.
+#
+# Extracts the signing cert from META-INF/*.RSA via unzip + openssl (both
+# preinstalled on ubuntu-latest; no JDK needed) — same value keytool reports.
+SPACEKAI_CERT_SHA256="D9:BA:FD:4F:AB:87:15:DB:03:B2:67:11:E3:A8:42:A9:6E:90:BA:BA:BF:1A:83:3F:63:57:A9:49:B4:09:63:7E"
+if [ -n "$APK" ]; then
+  if command -v unzip >/dev/null 2>&1 && command -v openssl >/dev/null 2>&1; then
+    RSA_FILE=$(unzip -Z1 "$APK" 'META-INF/*.RSA' 2>/dev/null | head -1)
+    if [ -z "$RSA_FILE" ]; then
+      fail "no META-INF/*.RSA signing block found in APK — unsigned or v1-scheme-less APK"
+    else
+      CERT_FP=$(
+        unzip -p "$APK" "$RSA_FILE" 2>/dev/null |
+          openssl pkcs7 -inform DER -print_certs 2>/dev/null |
+          openssl x509 -fingerprint -sha256 -noout 2>/dev/null |
+          sed 's/.*=//; s/://g' | tr '[:upper:]' '[:lower:]'
+      )
+      EXPECTED=$(echo "$SPACEKAI_CERT_SHA256" | sed 's/://g' | tr '[:upper:]' '[:lower:]')
+      if [ -n "$CERT_FP" ] && [ "$CERT_FP" = "$EXPECTED" ]; then
+        pass "APK signed with the pinned SpaceKai key (SHA-256 $SPACEKAI_CERT_SHA256)"
+      else
+        fail "APK signing fingerprint MISMATCH — got '$CERT_FP', expected '$SPACEKAI_CERT_SHA256'. A different key would be refused by Android on install-over."
+      fi
+    fi
+  else
+    warn "unzip/openssl not available — signing fingerprint not verified in this environment"
   fi
 fi
 

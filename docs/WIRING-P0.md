@@ -53,20 +53,18 @@ Depuis cette session, le gate vérifie **aussi** le câblage de couche :
 
 ## 2. `minimalisticNavigation` — variante barre minimaliste
 
-- **État** : toggle décoratif (0 call site).
-- **Contexte réel** : la sélection des barres vit dans `App.kt:491-506` :
+- **État** : câblé dans `App.kt` et les barres (plus de toggle décoratif).
+- **Contexte réel** : la sélection des barres vit dans `App.kt` :
   `isLiquidGlassEnabled == TRUE` → `LiquidGlassAppBottomNavigationBar`, sinon
   `AppBottomNavigationBar` (avec `isTranslucentBackground`). Le rail est
   sélectionné ailleurs (`AppNavigationRail`, lignes ~536/655).
-- **Point d'insertion** : le bloc de sélection `App.kt:491-506` — brancher une
-  variante compacte (jeu de tabs réduit / rail compact) quand le flag est actif,
-  en gardant le comportement upstream par défaut (le pattern
-  `customNavigation` : « compose a SpaceKai tab list, keep upstream's as the
-  default »).
-- **Câblage minimal** : dans le `else` de la sélection liquide (ou avant le
-  choix liquide/translucide), choisir la variante minimaliste quand
-  `isSpaceKaiFeatureEnabled(SpaceKaiFeatures::minimalisticNavigation)`.
-- **Critère** : ≥ 1 référence réelle dans App.kt (ou un composable barre),
+- **Point d'insertion** : le bloc de résolution des tabs dans `App.kt` et les
+  listes par défaut des barres.
+- **Câblage réalisé** : `minimalisticNavigation` retire Mix-for-you et réduit la
+  hauteur de la barre plate, mais conserve Analytics lorsque le suivi local est
+  actif. La même règle est utilisée par la barre, le rail et la barre verre
+  Android ; la personnalisation applique ensuite l'ordre et les éléments masqués.
+- **Critère** : ≥ 1 référence réelle dans App.kt ou un composable barre,
   pilotant le rendu.
 
 ## 3. `dynamicColor` — overrides SpaceKai du thème
@@ -236,7 +234,7 @@ barre (`AppBottomNavigationBar.kt`, `LiquidGlassAppBottomNavigationBar.kt`).
 `BottomNavScreen` est un `sealed class` dans `LiquidGlassAppBottomNavigationBar.kt`
 (:41-99) : Home, Search, Library, Analytics, MixForYou.
 
-**1. Lire le flag dans App.kt**, près des autres états de barre (~:155) :
+**1. Lire le flag dans App.kt**, près des autres états de barre :
 
 ```kotlin
 // SPACEKAI FEATURE: minimalisticNavigation — variante compacte (moins de tabs).
@@ -267,7 +265,7 @@ minimalistic: Boolean = false,   // nouveau param de la signature
 // dans les DEUX listes de tabs (barre ~:96 ET rail ~:234) :
 BottomNavScreen.Home,
 BottomNavScreen.MixForYou.takeIf { showMixForYouTab && !minimalistic },
-BottomNavScreen.Analytics.takeIf { showAnalyticsTab && !minimalistic },
+BottomNavScreen.Analytics.takeIf { showAnalyticsTab },
 BottomNavScreen.Library,
 BottomNavScreen.Search,
 ```
@@ -275,12 +273,13 @@ BottomNavScreen.Search,
 `LiquidGlassAppBottomNavigationBar.kt` (la variante verre liquide) a sa propre
 liste — même filtre si elle est séparée.
 
-**4. Critère de passage** : `audit-features` — `minimalisticNavigation` FAIL →
-PASS (≥ 1 référence réelle dans App.kt/les barres), 5 → 4 FAIL.
+**4. Critère de passage** : `audit-features` — `minimalisticNavigation` ne doit
+plus être signalé comme décoratif ; les audits de navigation et de compilation
+confirment le câblage.
 
-**5. Test visuel** : basculer le toggle → la barre perd les tabs optionnels
-(MixForYou/Analytics) et garde Home/Library/Search ; les deux styles
-(liquide/translucide) doivent réagir ; le rail paysage aussi (même logique).
+**5. Test visuel** : basculer le toggle → la barre perd Mix-for-you, garde
+Analytics lorsque le suivi local est actif, et garde Home/Library/Search ; les
+styles liquide/translucide et le rail paysage doivent réagir de la même manière.
 
 ## Guide pas-à-pas — câbler `landscapePlayer` (branche paysage du player)
 

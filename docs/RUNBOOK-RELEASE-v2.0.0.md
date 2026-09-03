@@ -153,7 +153,7 @@ bash scripts/audit-features.sh    # état initial attendu sur le LIVE : 5 FAIL
 | # | Toggle | Fichiers (live) | Câblage minimal | Critère audit | Test visuel obligatoire |
 | --- | --- | --- | --- | --- | --- |
 | 1 | `customPlayerInfo` | `NowPlayingScreen.kt` | ✅ **FAIT dans ce workspace** : `showPlayerInfo` (flag) ; OFF masque la carte paroles entière (AnimatedVisibility `&& showPlayerInfo`) + le bloc Description (`if (showPlayerInfo)`) | 0 FAIL (déjà vert) | Toggle OFF → description/paroles disparaissent ; ON → réapparaissent ; redémarrage → état persiste |
-| 2 | `minimalisticNavigation` | `App.kt` + `AppBottomNavigationBar.kt` (**les deux** listes) + LiquidGlass (expect + android + jvm) | ✅ **FAIT dans ce workspace** : `minimalisticNav` (flag) passé aux deux barres ; paramètre `minimalistic` filtre `MixForYou`/`Analytics` dans les DEUX listes de chaque barre + LaunchedEffect repli | 0 FAIL (déjà vert) | Barre compacte (Home/Library/Search) ; les deux styles + le rail paysage réagissent |
+| 2 | `minimalisticNavigation` | `App.kt` + `AppBottomNavigationBar.kt` (**les deux** listes) + LiquidGlass (expect + android + jvm) | ✅ **FAIT dans ce workspace** : `minimalisticNav` (flag) passé aux deux barres ; paramètre `minimalistic` retire MixForYou dans les DEUX listes de chaque barre, tandis qu'Analytics suit `showAnalyticsTab` + LaunchedEffect repli | 0 FAIL (déjà vert) | Barre compacte (Home/Analytics/Library/Search lorsque le suivi local est actif) ; les deux styles + le rail paysage réagissent |
 | 3 | `landscapePlayer` | ~~NowPlayingScreen.kt~~ | ✅ **RETIRÉ dans ce workspace** (WIRING-P0 option B) : le câblage précédent mettait le correctif artwork sous le flag, ce qui cassait `audit-landscape-player.sh` (correctif doit rester **inconditionnel**). Correctif restauré (`matchHeightConstraintsFirst = true` + commentaire SPACEKAI FIX), flag + rangée + persistance supprimés, ligne générateur repointée sur la chaîne réelle | 0 FAIL (déjà vert) | n/a — toggle supprimé ; le correctif artwork paysage reste appliqué dans les deux cas |
 | 4 | `dynamicColor` | `ui/theme/Theme.kt` (construction du `colorScheme`) | ✅ **FAIT dans ce workspace** : `spaceKaiDynamicColor` (flag) → `isAmoled = if (flag) false else isDark` — la correction du « fond sombre épinglé au noir » pilotée par le flag | 0 FAIL (déjà vert) | Thème sombre + ON → surfaces non-noires ; OFF → base inchangée ; wallpaper/seed intacts |
 | 5 | `downloadWifiOnly` | ~~core/data~~ | ✅ **RETIRÉ dans ce workspace** (repli B) : déclaration + rangée de réglages + persistance + ligne `wifi-only` de `generate-feature-audit.sh` supprimées | 0 FAIL (déjà vert) | n/a — toggle supprimé |
@@ -196,8 +196,9 @@ bash scripts/generate-feature-audit.sh && bash scripts/check-pre-tag.sh
      matchHeightConstraintsFirst) → reste PARTIALLY (branche wDP>hDP absente), pas
      de NOT IMPLEMENTED fantôme.
    - `minimalisticNavigation` → **câblé dans ce workspace** : `minimalisticNav` (flag)
-     passé aux deux barres ; paramètre `minimalistic` filtre `MixForYou`/`Analytics`
-     dans les deux listes de chaque barre (barre + rail, liquide + translucide) ;
+     passé aux deux barres ; paramètre `minimalistic` retire `MixForYou` dans les
+     deux listes de chaque barre (barre + rail, liquide + translucide), tandis
+     qu'Analytics suit `showAnalyticsTab` ;
    - `dynamicColor` → **câblé dans ce workspace** : `spaceKaiDynamicColor` (flag) →
      `isAmoled = if (flag) false else isDark` dans Theme.kt (wallpaper/seed intacts) ;
    - `customPlayerInfo` → **câblé dans ce workspace** : `showPlayerInfo` (flag) masque

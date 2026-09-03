@@ -441,8 +441,10 @@ different key, so Android treats it as a conflicting update and refuses it.
 - **Fix**: uninstall the official SimpMusic first, then install the SpaceKai
   APK. Local app data is lost on uninstall.
 - **Verify a signature**: `keytool -printcert -jarfile SpaceKai-vX.Y.Z.apk` —
-  the SpaceKai APKs all show `CN=LiquidFlow`,
-  fingerprint `9D:8E:4A:94:1B:AD:CE:83:66:0C:CF:F3:13:A5:4E:DC:C5:F2:13:6B`.
+  the SpaceKai APKs all show `CN=Sankamusic Dev`,
+  fingerprint `D9:BA:FD:4F:AB:87:15:DB:03:B2:67:11:E3:A8:42:A9:6E:90:BA:BA:BF:1A:83:3F:63:57:A9:49:B4:09:63:7E`
+  (verified against the genuine v0.3.0 and v0.3.2 release assets; the earlier
+  documented `CN=LiquidFlow` / `9D:8E:4A:94:…` matched no released APK).
 
 **3. Corrupted / incomplete download.**
 

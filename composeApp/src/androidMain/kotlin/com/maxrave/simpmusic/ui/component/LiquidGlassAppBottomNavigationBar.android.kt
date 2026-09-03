@@ -50,13 +50,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import com.maxrave.domain.data.player.GenericMediaItem
 import com.maxrave.logger.Logger
 import com.maxrave.simpmusic.expect.ui.PlatformBackdrop
-import com.maxrave.simpmusic.ui.navigation.destination.home.AnalyticsDestination
-import com.maxrave.simpmusic.ui.navigation.destination.home.HomeDestination
-import com.maxrave.simpmusic.ui.navigation.destination.library.LibraryDestination
-import com.maxrave.simpmusic.ui.navigation.destination.library.MixForYouDestination
 import com.maxrave.simpmusic.ui.navigation.destination.search.SearchDestination
 import com.maxrave.simpmusic.ui.screen.MiniPlayer
+import com.maxrave.simpmusic.spacekai.defaultNavTabs
 import com.maxrave.simpmusic.spacekai.features.haptics.HapticsSpaceKai
+import com.maxrave.simpmusic.spacekai.resolveInitialNavSelection
+import com.maxrave.simpmusic.spacekai.resolveNavSelectionIndex
 import com.maxrave.simpmusic.ui.theme.LocalIsDarkTheme
 import com.maxrave.simpmusic.viewModel.SharedViewModel
 import kotlinx.coroutines.Dispatchers
@@ -149,37 +148,24 @@ actual fun LiquidGlassAppBottomNavigationBar(
     // own FAB exactly as the default list does.
     val bottomNavScreens =
         navTabs
-            ?: listOfNotNull(
-                BottomNavScreen.Home,
-                BottomNavScreen.MixForYou.takeIf { showMixForYouTab && !minimalistic },
-                BottomNavScreen.Analytics.takeIf { showAnalyticsTab && !minimalistic },
-                BottomNavScreen.Library,
-                BottomNavScreen.Search,
+            ?: defaultNavTabs(
+                showAnalyticsTab = showAnalyticsTab,
+                showMixForYouTab = showMixForYouTab,
+                minimalistic = minimalistic,
             )
     // Tabs shown in the sliding bar (Apple Music style); Search lives in its own FAB.
-    val barTabs =
-        (navTabs ?: bottomNavScreens).filter { it != BottomNavScreen.Search }
+    val barTabs = bottomNavScreens.filterNot { it == BottomNavScreen.Search }
     var selectedIndex by rememberSaveable {
         mutableIntStateOf(
-            when (startDestination) {
-                is HomeDestination -> BottomNavScreen.Home.ordinal
-                is SearchDestination -> BottomNavScreen.Search.ordinal
-                is LibraryDestination -> BottomNavScreen.Library.ordinal
-                is AnalyticsDestination -> BottomNavScreen.Analytics.ordinal
-                is MixForYouDestination -> BottomNavScreen.MixForYou.ordinal
-                else -> BottomNavScreen.Home.ordinal // Default to Home if not recognized
-            },
+            resolveInitialNavSelection(startDestination, bottomNavScreens).ordinal,
         )
     }
-    // A tab can disappear from the bar under the user: tracking gets turned off while Analytics is
-    // selected, the YouTube session ends while Mix for you is, or the minimalistic variant removes
-    // both. Fall back to Home in all cases so nothing is left highlighted.
-    LaunchedEffect(showAnalyticsTab, showMixForYouTab, minimalistic) {
-        if (((!showAnalyticsTab || minimalistic) && selectedIndex == BottomNavScreen.Analytics.ordinal) ||
-            ((!showMixForYouTab || minimalistic) && selectedIndex == BottomNavScreen.MixForYou.ordinal)
-        ) {
-            selectedIndex = BottomNavScreen.Home.ordinal
-        }
+    // A tab can disappear from the bar under the user: tracking gets turned off (Analytics), the
+    // YouTube session ends (Mix for you), or the personalization editor hides the selected tab,
+    // Search, or everything. Re-resolve the highlight through the shared contract so it always
+    // lands on a visible tab.
+    LaunchedEffect(bottomNavScreens.map { it.key }) {
+        selectedIndex = resolveNavSelectionIndex(selectedIndex, bottomNavScreens)
     }
     var isExpanded by rememberSaveable {
         mutableStateOf(true)
@@ -312,23 +298,27 @@ actual fun LiquidGlassAppBottomNavigationBar(
                         onTabSelected = { position -> selectTab(barTabs[position].ordinal) },
                     )
                 }
-                Spacer(Modifier.size(12.dp))
-                // Search lives in its own circular glass FAB (Apple Music style).
-                Box(
-                    modifier =
-                        Modifier
-                            .size(56.dp)
-                            .drawInteractiveGlass(
-                                LocalIsDarkTheme.current,
-                                backdrop,
-                                layer,
-                                luminanceAnimation.value,
-                                CircleShape,
-                                searchFabInteraction,
-                            ).clickable { selectTab(BottomNavScreen.Search.ordinal) },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    BottomNavScreen.Search.icon()
+                if (bottomNavScreens.any { it == BottomNavScreen.Search }) {
+                    Spacer(Modifier.size(12.dp))
+                    // Search lives in its own circular glass FAB (Apple Music style) — but only
+                    // while personalization keeps the Search tab visible; hiding it removes the
+                    // FAB too, so no control points at a hidden destination.
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(56.dp)
+                                .drawInteractiveGlass(
+                                    LocalIsDarkTheme.current,
+                                    backdrop,
+                                    layer,
+                                    luminanceAnimation.value,
+                                    CircleShape,
+                                    searchFabInteraction,
+                                ).clickable { selectTab(BottomNavScreen.Search.ordinal) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        BottomNavScreen.Search.icon()
+                    }
                 }
             } else {
                 val selectedScreen =

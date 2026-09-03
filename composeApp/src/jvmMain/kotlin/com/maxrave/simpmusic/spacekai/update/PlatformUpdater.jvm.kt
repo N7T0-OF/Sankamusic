@@ -16,7 +16,9 @@ internal actual object PlatformUpdater {
         apkUrl: String,
         checksumsUrl: String?,
         onProgress: (downloaded: Long, total: Long, bytesPerSecond: Long) -> Unit,
+        onPhase: (SpaceKaiUpdatePhase) -> Unit,
     ): SpaceKaiUpdateResult {
+        onPhase(SpaceKaiUpdatePhase.INSTALLING)
         openUrl(apkUrl)
         Logger.d(TAG, "Opened APK URL in browser (desktop cannot install in place)")
         return SpaceKaiUpdateResult.Success
