@@ -16,7 +16,7 @@
 |---|---|---|
 | V1 | L'écran Settings ouvre avec le premier titre de section **juste sous la barre d'app** (la bande haute est mesurée sur la vraie barre, pas un 64dp codé en dur), section ouverte ET fermée ; le défilement fonctionne | `SettingScreen.kt` — item `glow_anchor` (~675-693) : `barBand = measuredPx − innerPadding.calculateTopPadding()`, `settingsTopBarHeightPx` alimenté par `onSizeChanged` sur la `TopAppBar` Settings (~3450) ; repli 64dp seulement avant la première mesure |
 | V2 | Une section **Intégrations** contient exactement Spotify, Discord, SponsorBlock (et Last.fm si le build l'a) ; fermée par défaut ; aucune duplication ailleurs dans Settings ; ouvrir une autre section la replie | `SettingScreen.kt` — `item(key = "integrations_header")` (~1888) + `if (expandedSettingsSection == "integrations")` (~1898-2128) ; `expandedSettingsSection` démarre `null` (fermé par défaut, single-open) |
-| V3 | Dans la zone À propos, une ligne **Ko-fi** est immédiatement au-dessus d'une ligne **Site** ; chacune ouvre la bonne cible externe (aucune URL inventée) | `SettingScreen.kt` — corps `about_us` (~2814-2833) : Ko-fi → `https://github.com/sponsors/maxrave-dev`, Site → `https://simpmusic.org` |
+| V3 | Dans la zone À propos, une ligne **Ko-fi** est immédiatement au-dessus d'une ligne **Site** ; chacune ouvre la bonne cible externe — Ko-fi → `https://ko-fi.com/souanpt` (mainteneur, aussi déclaré `ko_fi: souanpt` dans `.github/FUNDING.yml`), Site → `https://simpmusic.org` (seule URL de site que porte ce dépôt ; le fork ne déclare aucun homepage GitHub) | `SettingScreen.kt` — corps `about_us` (~2814-2833) : `uriHandler.openUri("https://ko-fi.com/souanpt")` puis `uriHandler.openUri("https://simpmusic.org")` |
 | V4 | Update Manager : v0.3.5 installée → v0.3.6 proposée puis installée en place (mêmes clé/applicationId, code 84 > 83), données conservées ; après installation : plus rien à mettre à jour (ni downgrade) ; SHA-256 + package-name vérifiés avant installation | `SpaceKaiUpdatesSection.kt` (UI) ; `SpaceKaiUpdateManager.runPipeline` (download → SHA-256 → package → install) ; `PlatformUpdater.android.kt` (`checkPackage` refuse ≠ `com.maxrave.simpmusic`) ; détection : `UpdateRepositoryImpl.kt:22-43` + `Ytmusic.kt:600-601` (repo `N7T0-OF/Sankamusic` uniquement) |
 
 ## 2. Prérequis (important)
@@ -83,8 +83,8 @@ Automatisé : le driver mesure `y` du premier titre et vérifie
 | # | Action | Comportement attendu | Maillon | Diagnostic si échec |
 |---|---|---|---|---|
 | 1 | Défiler jusqu'en bas, ouvrir « À propos » | Lignes « Ko-fi » puis « Site » dans cet ordre, immédiatement l'une sous l'autre, une seule fois chacune | corps `about_us` (~2814-2833) | Ordre inversé ou écart → les deux SettingItem ne sont pas contigus |
-| 2 | Toucher « Ko-fi » | Le navigateur externe s'ouvre sur GitHub Sponsors (`maxrave-dev`) | `uriHandler.openUri("https://github.com/sponsors/maxrave-dev")` | Mauvais site → URL changée/inventée |
-| 3 | Revenir, toucher « Site » | Le navigateur s'ouvre sur `simpmusic.org` | `uriHandler.openUri("https://simpmusic.org")` | Mauvais site → URL changée/inventée |
+| 2 | Toucher « Ko-fi » | Le navigateur externe s'ouvre sur `ko-fi.com/souanpt` | `uriHandler.openUri("https://ko-fi.com/souanpt")` ; sous-titre « … (ko-fi.com/souanpt) » visible dans le dump UI | Mauvais site → URL changée/inventée |
+| 3 | Revenir, toucher « Site » | Le navigateur s'ouvre sur `simpmusic.org` | `uriHandler.openUri("https://simpmusic.org")` ; sous-titre « … (simpmusic.org) » visible dans le dump UI | Mauvais site → URL changée/inventée |
 | 4 | (Cohérence) Écran À propos/Crédits | Toujours sa propre ligne « Buy me a coffee » (hors scope v0.3.6, constaté, non bloquant) | `CreditScreen.kt:201` | — |
 
 ### V4 — Update Manager v0.3.5 → v0.3.6

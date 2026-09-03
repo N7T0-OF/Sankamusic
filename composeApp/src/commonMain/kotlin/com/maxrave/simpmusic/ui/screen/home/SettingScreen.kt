@@ -2811,14 +2811,16 @@ fun SettingScreen(
                     )
                 }
                 // v0.3.6: the old "Buy me a coffee" row hid where the money went. It now reads
-                // Ko-fi + Site, both opening URLs already wired in this repo — no invented link.
-                // Ko-fi has no configured username here (.github/FUNDING.yml leaves it empty), so
-                // the donation row deliberately reuses the live GitHub Sponsors page (maxrave-dev).
+                // Ko-fi + Site with explicit targets. Ko-fi is the maintainer's real page
+                // (https://ko-fi.com/souanpt, also declared in .github/FUNDING.yml as ko_fi:
+                // souanpt). Site keeps the real site URL already wired across the app
+                // (simpmusic.org — the SpaceKai fork has no separate homepage on GitHub,
+                // so simpmusic.org is the only project site URL this repo carries).
                 SettingItem(
                     title = "Ko-fi",
-                    subtitle = "Soutenir SpaceKai / Souanpt (GitHub Sponsors)",
+                    subtitle = "Soutenir SpaceKai / Souanpt (ko-fi.com/souanpt)",
                     onClick = {
-                        uriHandler.openUri("https://github.com/sponsors/maxrave-dev")
+                        uriHandler.openUri("https://ko-fi.com/souanpt")
                     },
                 )
                 SettingItem(

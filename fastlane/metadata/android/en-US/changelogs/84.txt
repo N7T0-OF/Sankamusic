@@ -14,10 +14,11 @@ release-signed APK installs in place over v0.3.5 with data preserved.
   content inset already applied), so the screen opens with the first section
   right under the bar whether it is expanded or collapsed.
 - Settings: the "Buy me a coffee" row (which silently opened GitHub Sponsors)
-  is replaced by two explicit rows — Ko-fi ("Soutenir SpaceKai / Souanpt") and
-  Site — that state where they go; both reuse URLs already wired in the app
-  (no invented links: no Ko-fi username is configured, so donations still land
-  on the live GitHub Sponsors page, and the site opens simpmusic.org).
+  is replaced by two explicit rows — Ko-fi ("Soutenir SpaceKai / Souanpt",
+  ko-fi.com/souanpt) and Site (simpmusic.org) — that state where they go.
+  Ko-fi now opens the maintainer's real page (also declared `ko_fi: souanpt`
+  in .github/FUNDING.yml); Site opens simpmusic.org, the only project site URL
+  this repo carries (the fork declares no separate homepage on GitHub).
 - Settings: Spotify, Discord, SponsorBlock and Last.fm now live under one
   "Intégrations" section (collapsed by default, single-open like every other
   section) instead of three loose top-level entries; Last.fm is no longer

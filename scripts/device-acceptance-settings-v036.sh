@@ -305,9 +305,22 @@ flow3_kofi_site() {
   else
     bad "V3 ordering: Ko-fi not above Site (ko y=$ky, site y=$sy)"
   fi
+  # Static guard: the SUBTITLE text on each row carries the exact real target, so
+  # the UI dump must contain the URLs themselves — not just the row labels. If a
+  # future edit re-points the row, this assert fails instead of asking an operator.
+  if printf '%s' "$xml" | grep -q 'ko-fi.com/souanpt'; then
+    ok "V3 exact Ko-fi URL (ko-fi.com/souanpt) visible in the row subtitle"
+  else
+    bad "V3 exact Ko-fi URL missing from the Ko-fi row subtitle"
+  fi
+  if printf '%s' "$xml" | grep -q 'simpmusic.org'; then
+    ok "V3 exact Site URL (simpmusic.org) visible in the row subtitle"
+  else
+    bad "V3 exact Site URL missing from the Site row subtitle"
+  fi
   confirm "V3 Ko-fi target" \
-"Tap the Ko-fi row: the external browser must open GitHub Sponsors (maxrave-dev)
-— https://github.com/sponsors/maxrave-dev. Confirm the target."
+"Tap the Ko-fi row: the external browser must open the maintainer's Ko-fi page
+— https://ko-fi.com/souanpt. Confirm the exact target."
   confirm "V3 Site target" \
 "Tap the Site row: the external browser must open https://simpmusic.org. Confirm."
 }
