@@ -1,0 +1,68 @@
+# SpaceKai v0.3.6
+
+> Released 2026-09-03
+
+## What's changed
+
+v0.3.6 is a focused Settings/UX patch on the v0.3.5 code line. Same
+`applicationId`, same signing certificate, versionCode 84 > 83 — the
+release-signed APK installs in place over v0.3.5 with data preserved.
+
+### Changed
+- Settings: the top gap is no longer a hardcoded spacer — the first section
+  clears exactly the measured height of the floating top app bar (minus the
+  content inset already applied), so the screen opens with the first section
+  right under the bar whether it is expanded or collapsed.
+- Settings: the "Buy me a coffee" row (which silently opened GitHub Sponsors)
+  is replaced by two explicit rows — Ko-fi ("Soutenir SpaceKai / Souanpt") and
+  Site — that state where they go; both reuse URLs already wired in the app
+  (no invented links: no Ko-fi username is configured, so donations still land
+  on the live GitHub Sponsors page, and the site opens simpmusic.org).
+- Settings: Spotify, Discord, SponsorBlock and Last.fm now live under one
+  "Intégrations" section (collapsed by default, single-open like every other
+  section) instead of three loose top-level entries; Last.fm is no longer
+  mis-gated on the Discord section. No functionality changed — pure
+  presentation reorganisation, nothing duplicated.
+
+### Honesty note
+
+All changes above are compile / test / gate-verified (shell gates,
+`:composeApp:compileKotlinMetadata`, full `:composeApp:jvmTest`, and a full
+`:androidApp:assembleRelease` on the same code before the version bump). The
+on-device run — Settings top gap open/closed + scrolling, Intégrations
+grouping without stale duplicates, Ko-fi/Site link targets, and the
+v0.3.5→v0.3.6 in-place update flow — is still to be executed on a real phone
+before these lines are considered runtime-proven.
+
+---
+
+### Connu / non terminé
+- **Barre de navigation personnalisable (styles, sections, ordre, raccourcis)** — PARTIALLY IMPLEMENTED. Sélection exclusive de style (verre liquide / translucide / minimaliste) + ordre/masquage des sections persistant (NavCustomization/SpaceKaiNavCustomizer), câblé (audit-features PASS). Raccourcis d'actions non livrés. Statique — runtime à confirmer. Voir scripts/audit-navigation.sh.
+- **Style de barre minimaliste** — PARTIALLY IMPLEMENTED. Style minimaliste réel : icônes seules (texte masqué via showItemLabels) + hauteur réduite, sélection exclusive avec les autres styles. Statique — runtime à confirmer. Voir scripts/audit-navigation.sh.
+- **Barre verticale à droite en paysage** — PARTIALLY IMPLEMENTED. Rail de base (gauche) — pas de version SpaceKai à droite en paysage.
+- **Dynamic Color Android (fond + surfaces)** — PARTIALLY IMPLEMENTED. Flag ON → palette Material You unpinned (platformDynamicColorSchemeUnpinned) ; aucune surface de thème normal ne force le noir (barres de sélection → surfaceContainerHigh). Noirs restants = par design (écrans immersifs ForceDarkContent, scrims, overlays). Voir scripts/audit-dynamic-color.sh. Device run NON VÉRIFIÉ.
+- **Orientation auto / portrait / paysage** — NOT IMPLEMENTED. Aucune preuve (UI, logique, câblage) dans le scope vérifiable
+- **Player paysage = même player responsive (layout-only)** — PARTIALLY IMPLEMENTED. Aucune branche d'orientation dans NowPlayingScreen (portrait-first étiré) — téléphone paysage = overlay plein écran portrait comprimé. Fix : branche wDP>hDP layout-only. Le toggle SpaceKai a été retiré (WIRING-P0 option B) — le correctif artwork `matchHeightConstraintsFirst` reste inconditionnel. Voir scripts/audit-landscape-player.sh.
+- **Vibration (événements, intensité)** — PARTIALLY IMPLEMENTED. HapticManager centralisé (ON/OFF + intensité Faible/Moyenne/Forte) câblé sur la sélection d'onglets (barre plate/rail/verre liquide), les toggles SpaceKai, le slider crossfade et les actions player. Statique — ressenti/runtime à confirmer. Voir scripts/audit-features.sh.
+- **Fondu enchaîné : slider visuel** — PARTIALLY IMPLEMENTED. Slider visuel 1-30s (0 = Auto) dans SettingScreen, valeur affichée en temps réel, haptic au relâchement gated par le flag haptics. Statique — runtime à confirmer.
+- **Login (cookie sp_dc) + import playlists** — PARTIALLY IMPLEMENTED. Décision P0 documentée (docs/PROVIDER-ARCHITECTURE.md §5bis) : sp_dc pour lyrics/canvas (chaîne réelle : login WebView → saveSpotifySpdc → setSpdc → spotifyLoggedIn, gate scripts/audit-spotify-flow.sh). Aucun OAuth PKCE ni import de playlists aujourd'hui. Voir scripts/audit-spotify-flow.sh.
+- **Une seule notification par file** — NON VÉRIFIABLE. Logique dans core/data — sous-module absent de ce snapshot.
+- **Sections de réglages fermées par défaut** — PARTIALLY IMPLEMENTED. Réglages repliables (chewron rotatif, une section ouverte, corps non composé si fermée). Statique — runtime à confirmer sur appareil. Voir scripts/audit-settings-ui.sh.
+- **Mise à jour interne (check + téléchargement + installation)** — PARTIALLY IMPLEMENTED. Détection OK + téléchargement APK universel + SHA-256 avant installation + vérification du package name (getPackageArchiveInfo) + Package Installer Android (expect/actual PlatformUpdater). Détection=CORE, download/install=composeApp. Vérifié compile+jvm+gate+CI Android; device run NON VÉRIFIÉ. Voir scripts/audit-updater-flow.sh.
+- **Abstraction MusicProvider + capabilities** — NOT IMPLEMENTED. Design seul (docs/PROVIDER-ARCHITECTURE.md) — gate audit-provider-arch.sh en Mode A (aucun code provider sans l'abstraction).
+- **Apple Music (MusicKit officiel, developer token + music user token)** — NOT IMPLEMENTED. Design seul — aucune implémentation. Plan factuel docs/PROVIDER-ARCHITECTURE.md §5ter : SDK Android officiel (Authentication + Media Playback), token signé côté backend/GitHub Secret (jamais dans l'APK), storefront requis. Lecture via le player MusicKit (slot par provider), pas notre MediaPlayerInterface.
+- **Deezer (API/SDK officiel)** — NOT IMPLEMENTED. Design seul — aucune implémentation. Plan factuel docs/PROVIDER-ARCHITECTURE.md §5quater : PLAYBACK=false (streaming gateé premium+approbation), provider métadonnées seulement. Première étape : vérifier si la création d'apps est rouverte. Jamais de login factice.
+- **Recherche multi-sources (debounce, cancellation, timeouts)** — NOT IMPLEMENTED. Design seul — moteur à construire (voir §7 du design).
+- **Musique locale (MediaStore, indexation incrémentale)** — NOT IMPLEMENTED. Design seul — indexation à construire (voir §9 du design). Vérifié : MediaStore n'apparaît que dans AutoBackupWorker (sauvegarde, pas d'indexation musicale).
+- **Service MediaLibraryService (browse tree)** — NON VÉRIFIABLE. Manifeste androidApp:228-231 : SimpleMediaService (exported, FGS mediaPlayback) déclare MediaSessionService + MediaLibraryService + MediaBrowserService. Classe dans core/media/media3 — sous-module absent de ce snapshot. Browse tree (playlists/albums/artistes) à confirmer sur le dépôt complet.
+- **Widgets Android (play/pause, artwork, 4x2)** — NOT IMPLEMENTED. Aucun AppWidgetProvider dans tout le dépôt (composeApp, androidApp, core). À construire (spec #33).
+
+### Installation
+
+Android : `SpaceKai-v0.3.6.apk` — APK universel signé (arm64-v8a, armeabi-v7a, x86_64)
+Windows : installer `.msix` · macOS : `.dmg` · Linux : `.AppImage`
+
+### SHA-256
+
+`SHA256SUMS.txt` joint à la release — vérification d'intégrité avant installation.
+
