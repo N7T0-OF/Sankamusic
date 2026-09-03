@@ -15,8 +15,8 @@
 #     - Swipe-to-skip        : gated behind SpaceKai `customNavigation`
 #       (App.kt:182 → onSwipeToNext/Previous on bar + rail).
 #   What is MISSING (the user's asks #25-28, #31):
-#     - Style "minimaliste"  : does not exist as a distinct style; the SpaceKai
-#       flag `minimalisticNavigation` is DECORATIVE (0 real call sites).
+#     - Style "minimaliste"  : wired as a compact/icons-only variant; it removes
+#       Mix-for-you while Analytics remains available when local tracking is on.
 #     - No unified style selector — liquid glass and translucent are two
 #       independent toggles, not exclusive options.
 #     - Sections visibles    : only 2 hardcoded conditional tabs

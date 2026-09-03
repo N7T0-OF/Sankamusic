@@ -20,6 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.maxrave.simpmusic.spacekai.SPACEKAI_NAV_HIDDEN_KEY
 import com.maxrave.simpmusic.spacekai.SPACEKAI_NAV_ORDER_KEY
+import com.maxrave.simpmusic.spacekai.allNavTabs
 import com.maxrave.simpmusic.spacekai.parseNavHidden
 import com.maxrave.simpmusic.spacekai.parseNavOrder
 import com.maxrave.simpmusic.ui.component.BottomNavScreen
@@ -36,15 +37,8 @@ import org.jetbrains.compose.resources.stringResource
 fun SpaceKaiNavCustomizer(
     sharedViewModel: SharedViewModel,
 ) {
-    val allTabs =
-        listOf(
-            BottomNavScreen.Home,
-            BottomNavScreen.Search,
-            BottomNavScreen.Library,
-            BottomNavScreen.Analytics,
-            BottomNavScreen.MixForYou,
-        )
-    // Canonical default order = declaration order; used only until the user reorders.
+    // Canonical tab identities = declaration order; used only until the user reorders.
+    val allTabs = allNavTabs()
     val defaultOrder = allTabs.map { it.key }
 
     val persisted by

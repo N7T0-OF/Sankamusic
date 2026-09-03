@@ -81,6 +81,8 @@ import com.maxrave.simpmusic.extension.copy
 import com.maxrave.simpmusic.spacekai.SpaceKaiFeatures
 import com.maxrave.simpmusic.spacekai.SpaceKaiUpdateConfig
 import com.maxrave.simpmusic.spacekai.applyPersistedSpaceKaiFeatures
+import com.maxrave.simpmusic.spacekai.allNavTabs
+import com.maxrave.simpmusic.spacekai.defaultNavTabs
 import com.maxrave.simpmusic.spacekai.isSpaceKaiFeatureEnabled
 import com.maxrave.simpmusic.spacekai.isVersionNewer
 import com.maxrave.simpmusic.spacekai.resolveNavTabs
@@ -90,13 +92,10 @@ import com.maxrave.simpmusic.ui.component.AppNavigationRail
 import com.maxrave.simpmusic.ui.component.LiquidGlassAppBottomNavigationBar
 import com.maxrave.simpmusic.ui.icon.ArrowForwardIos
 import com.maxrave.simpmusic.ui.icon.SimpIcons
-import com.maxrave.simpmusic.ui.navigation.destination.home.AnalyticsDestination
-import com.maxrave.simpmusic.ui.navigation.destination.home.HomeDestination
 import com.maxrave.simpmusic.ui.navigation.destination.home.NotificationDestination
 import com.maxrave.simpmusic.ui.navigation.destination.home.WrappedDestination
 import com.maxrave.simpmusic.ui.navigation.destination.library.LibraryDestination
 import com.maxrave.simpmusic.ui.navigation.destination.library.LibraryDynamicPlaylistDestination
-import com.maxrave.simpmusic.ui.navigation.destination.library.MixForYouDestination
 import com.maxrave.simpmusic.ui.navigation.destination.list.AlbumDestination
 import com.maxrave.simpmusic.ui.navigation.destination.list.ArtistDestination
 import com.maxrave.simpmusic.ui.navigation.destination.list.PlaylistDestination
@@ -212,8 +211,9 @@ fun App(viewModel: SharedViewModel = koinInject()) {
     val customNavigation = isSpaceKaiFeatureEnabled(SpaceKaiFeatures::customNavigation)
     val navBarSwipeEnabled = customNavigation
     // SPACEKAI FEATURE: minimalisticNavigation — compact nav variant. When ON the
-    // optional Mix-for-you / Analytics tabs are dropped from every bar style
-    // (liquid glass, translucent, and the landscape rail); Home/Library/Search stay.
+    // optional Mix-for-you tab is dropped from every bar style (liquid glass,
+    // translucent, and the landscape rail); Analytics remains available whenever
+    // local tracking is enabled.
     val minimalisticNav = isSpaceKaiFeatureEnabled(SpaceKaiFeatures::minimalisticNavigation)
     // SPACEKAI FEATURE: personalized navigation — resolve the user's saved order/hidden into
     // the tab list handed to every bar. Null when the feature is OFF (vanilla behaviour).
@@ -223,12 +223,10 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                 userOrder = spaceKaiNavOrder,
                 hidden = spaceKaiNavHidden,
                 defaultTabs =
-                    listOfNotNull(
-                        BottomNavScreen.Home,
-                        BottomNavScreen.MixForYou.takeIf { showMixForYouTab && !minimalisticNav },
-                        BottomNavScreen.Analytics.takeIf { showAnalyticsTab && !minimalisticNav },
-                        BottomNavScreen.Library,
-                        BottomNavScreen.Search,
+                    defaultNavTabs(
+                        showAnalyticsTab = showAnalyticsTab,
+                        showMixForYouTab = showMixForYouTab,
+                        minimalistic = minimalisticNav,
                     ),
             )
         } else {
@@ -460,32 +458,28 @@ fun App(viewModel: SharedViewModel = koinInject()) {
             it.hasRoute(FullscreenDestination::class) || it.hasRoute(WrappedDestination::class)
         } == true
     }
-    LaunchedEffect(showAnalyticsTab) {
-        // Turning tracking off removes the Analytics tab, so leaving the user standing on it would
-        // strand them on a screen no tab points at anymore.
-        if (!showAnalyticsTab &&
-            navBackStackEntry?.destination?.hierarchy?.any {
-                it.hasRoute(AnalyticsDestination::class)
-            } == true
-        ) {
-            navController.navigate(HomeDestination) {
-                popUpTo(navController.graph.startDestinationId) {
-                    saveState = true
-                }
-                launchSingleTop = true
-                restoreState = true
+    // The one effective tab list every bar renders: personalized when customNavigation is ON,
+    // the feature-flag defaults otherwise. Any destination whose tab is gone — local tracking
+    // turned off (Analytics), the YouTube session ended (Mix for you), or the personalization
+    // editor hiding the selected tab, Search, or everything — is rerouted to the first visible
+    // tab, so nobody is left standing on a screen no tab points at anymore. This replaces the
+    // old per-flag Analytics/Mix-for-you effects with a single rule covering every reason a
+    // tab can disappear.
+    val effectiveNavTabs =
+        customNavTabs
+            ?: defaultNavTabs(
+                showAnalyticsTab = showAnalyticsTab,
+                showMixForYouTab = showMixForYouTab,
+                minimalistic = minimalisticNav,
+            )
+    LaunchedEffect(effectiveNavTabs.map { it.key }, navBackStackEntry) {
+        val current = navBackStackEntry?.destination ?: return@LaunchedEffect
+        val currentTab =
+            allNavTabs().firstOrNull { screen ->
+                current.hierarchy.any { it.hasRoute(screen.destination::class) }
             }
-        }
-    }
-    LaunchedEffect(showMixForYouTab) {
-        // Same for signing out of YouTube: the Mix for you tab goes away, so nobody may be left
-        // standing on a screen that has no mixes to show and no tab pointing at it.
-        if (!showMixForYouTab &&
-            navBackStackEntry?.destination?.hierarchy?.any {
-                it.hasRoute(MixForYouDestination::class)
-            } == true
-        ) {
-            navController.navigate(HomeDestination) {
+        if (currentTab != null && effectiveNavTabs.none { it == currentTab }) {
+            navController.navigate(effectiveNavTabs.first().destination) {
                 popUpTo(navController.graph.startDestinationId) {
                     saveState = true
                 }

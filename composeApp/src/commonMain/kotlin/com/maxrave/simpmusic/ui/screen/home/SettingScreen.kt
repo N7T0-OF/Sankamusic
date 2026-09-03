@@ -127,7 +127,6 @@ import com.maxrave.simpmusic.extension.isTwoLetterCode
 import com.maxrave.simpmusic.extension.isValidProxyHost
 import com.maxrave.simpmusic.getPlatform
 import com.maxrave.simpmusic.ui.component.ActionButton
-import com.maxrave.simpmusic.ui.component.AmbientGlowHeight
 import com.maxrave.simpmusic.ui.component.AmbientThemeGlow
 import com.maxrave.simpmusic.ui.component.CenterLoadingBox
 import com.maxrave.simpmusic.ui.component.EndOfPage
@@ -672,11 +671,9 @@ fun SettingScreen(
                 .hazeSource(hazeState),
     ) {
         item(key = "glow_anchor") {
-            // Dedicated anchor preserving the ambient-glow rule (item 0 must stay taller than
-            // the glow so its translation parks without a jump). Interface is now collapsible
-            // and closed by default, so this spacer is the new tall item 0 while every section
-            // below is collapsed on first view.
-            Spacer(Modifier.height(AmbientGlowHeight + 16.dp))
+            // Keep the first section below the top app bar without reserving the full glow height.
+            // The glow is a background sibling, so the list can start at the normal content inset.
+            Spacer(Modifier.height(64.dp))
         }
         item(key = "interface_header") {
             SettingsCollapsibleHeader(
