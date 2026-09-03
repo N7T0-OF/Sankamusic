@@ -83,6 +83,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.LinkAnnotation
@@ -214,7 +215,6 @@ import simpmusic.composeapp.generated.resources.balance_media_loudness
 import simpmusic.composeapp.generated.resources.better_lyrics
 import simpmusic.composeapp.generated.resources.blog_notification_description
 import simpmusic.composeapp.generated.resources.blog_notification_title
-import simpmusic.composeapp.generated.resources.buy_me_a_coffee
 import simpmusic.composeapp.generated.resources.cancel
 import simpmusic.composeapp.generated.resources.canvas_info
 import simpmusic.composeapp.generated.resources.categories_sponsor_block
@@ -252,7 +252,6 @@ import simpmusic.composeapp.generated.resources.description_and_licenses
 import simpmusic.composeapp.generated.resources.developer_blog
 import simpmusic.composeapp.generated.resources.developer_blog_tagline
 import simpmusic.composeapp.generated.resources.discord_integration
-import simpmusic.composeapp.generated.resources.donation
 import simpmusic.composeapp.generated.resources.download_quality
 import simpmusic.composeapp.generated.resources.downloads
 import simpmusic.composeapp.generated.resources.downloaded_cache
@@ -622,6 +621,9 @@ fun SettingScreen(
     var showThirdPartyLibraries by rememberSaveable {
         mutableStateOf(false)
     }
+    // Height (px) of the floating Settings top app bar, measured on the bar itself so the
+    // first list row clears exactly its band instead of a hardcoded gap (see glow_anchor).
+    var settingsTopBarHeightPx by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(true) {
         viewModel.getAllGoogleAccount()
@@ -671,9 +673,23 @@ fun SettingScreen(
                 .hazeSource(hazeState),
     ) {
         item(key = "glow_anchor") {
-            // Keep the first section below the top app bar without reserving the full glow height.
-            // The glow is a background sibling, so the list can start at the normal content inset.
-            Spacer(Modifier.height(64.dp))
+            // Keep the first section clear of the floating top app bar. The glow is a background
+            // sibling that scrolls away with the content, so the only height this list must
+            // reserve is the app bar's own band: measured from the real bar below (falling back
+            // to the standard M3 height before the first measured frame), minus the top inset
+            // that contentPadding (= innerPadding) already provides.
+            val barBand =
+                with(localDensity) {
+                    if (settingsTopBarHeightPx > 0) {
+                        (settingsTopBarHeightPx.toDp() - innerPadding.calculateTopPadding())
+                            .coerceAtLeast(0.dp)
+                    } else {
+                        64.dp
+                    }
+                }
+            if (barBand > 0.dp) {
+                Spacer(Modifier.height(barBand))
+            }
         }
         item(key = "interface_header") {
             SettingsCollapsibleHeader(
@@ -1865,19 +1881,29 @@ fun SettingScreen(
             }
         }
         }
-        item(key = "spotify_header") {
+        // v0.3.6: Spotify, Discord and SponsorBlock — and Last.fm when the build carries it —
+        // are one "Intégrations" category instead of three loose top-level entries. Each keeps
+        // its own label row and body, under the single-open collapsible model every other
+        // Settings section uses. Nothing is duplicated: these rows exist only here now.
+        item(key = "integrations_header") {
             SettingsCollapsibleHeader(
-                title = stringResource(Res.string.spotify),
-                expanded = expandedSettingsSection == "spotify",
+                title = "Intégrations",
+                expanded = expandedSettingsSection == "integrations",
                 onClick = {
                     expandedSettingsSection =
-                        if (expandedSettingsSection == "spotify") null else "spotify"
+                        if (expandedSettingsSection == "integrations") null else "integrations"
                 },
             )
         }
-        if (expandedSettingsSection == "spotify") {
+        if (expandedSettingsSection == "integrations") {
         item(key = "spotify") {
             Column {
+                Text(
+                    text = stringResource(Res.string.spotify),
+                    style = typo().labelMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
                 SettingItem(
                     // The title follows the state: a row that still reads "Log in" while logged in
                     // gives no clue that tapping it signs you out.
@@ -1927,20 +1953,14 @@ fun SettingScreen(
                 )
             }
         }
-        }
-        item(key = "discord_header") {
-            SettingsCollapsibleHeader(
-                title = stringResource(Res.string.discord_integration),
-                expanded = expandedSettingsSection == "discord",
-                onClick = {
-                    expandedSettingsSection =
-                        if (expandedSettingsSection == "discord") null else "discord"
-                },
-            )
-        }
-        if (expandedSettingsSection == "discord") {
         item(key = "discord") {
             Column {
+                Text(
+                    text = stringResource(Res.string.discord_integration),
+                    style = typo().labelMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
                 SettingItem(
                     title =
                         if (discordLoggedIn) {
@@ -1977,12 +1997,9 @@ fun SettingScreen(
                 )
             }
         }
-        }
         // Hidden entirely when the build carries no Last.fm credentials — a FOSS build, or a full
-        // build whose local.properties has no key. SPACEKAI P1: gated behind the (single-open)
-        // discord_integration section so it is composed only while that section is open — a
-        // collapsed Settings page shows headers only, never stray content items.
-        if (viewModel.lastfmAvailable && expandedSettingsSection == "discord") {
+        // build whose local.properties has no key.
+        if (viewModel.lastfmAvailable) {
             item(key = "lastfm") {
                 Column {
                     Text(
@@ -2028,19 +2045,14 @@ fun SettingScreen(
                 }
             }
         }
-        item(key = "sponsor_block_header") {
-            SettingsCollapsibleHeader(
-                title = stringResource(Res.string.sponsorBlock),
-                expanded = expandedSettingsSection == "sponsor_block",
-                onClick = {
-                    expandedSettingsSection =
-                        if (expandedSettingsSection == "sponsor_block") null else "sponsor_block"
-                },
-            )
-        }
-        if (expandedSettingsSection == "sponsor_block") {
         item(key = "sponsor_block") {
             Column {
+                Text(
+                    text = stringResource(Res.string.sponsorBlock),
+                    style = typo().labelMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
                 SettingItem(
                     title = stringResource(Res.string.enable_sponsor_block),
                     subtitle = stringResource(Res.string.skip_sponsor_part_of_video),
@@ -2798,11 +2810,22 @@ fun SettingScreen(
                         switch = (blogNotificationEnabled to { viewModel.setBlogNotificationEnabled(it) }),
                     )
                 }
+                // v0.3.6: the old "Buy me a coffee" row hid where the money went. It now reads
+                // Ko-fi + Site, both opening URLs already wired in this repo — no invented link.
+                // Ko-fi has no configured username here (.github/FUNDING.yml leaves it empty), so
+                // the donation row deliberately reuses the live GitHub Sponsors page (maxrave-dev).
                 SettingItem(
-                    title = stringResource(Res.string.buy_me_a_coffee),
-                    subtitle = stringResource(Res.string.donation),
+                    title = "Ko-fi",
+                    subtitle = "Soutenir SpaceKai / Souanpt (GitHub Sponsors)",
                     onClick = {
                         uriHandler.openUri("https://github.com/sponsors/maxrave-dev")
+                    },
+                )
+                SettingItem(
+                    title = "Site",
+                    subtitle = "souanpt / site officiel (simpmusic.org)",
+                    onClick = {
+                        uriHandler.openUri("https://simpmusic.org")
                     },
                 )
                 SettingItem(
@@ -3427,6 +3450,7 @@ fun SettingScreen(
             },
             modifier =
                 Modifier
+                    .onSizeChanged { settingsTopBarHeightPx = it.height }
                     .then(
                         if (atTop) {
                             Modifier
