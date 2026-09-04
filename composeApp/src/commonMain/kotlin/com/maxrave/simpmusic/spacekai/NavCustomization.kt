@@ -44,16 +44,21 @@ fun parseNavHidden(raw: String?): Set<String> =
 /**
  * Build the default tab list shared by every navigation presentation.
  *
- * Analytics follows local tracking; the compact mode only removes Mix-for-you.
+ * Analytics follows local tracking; Mix-for-you follows the signed-in session.
+ * There is deliberately NO style parameter: the minimalistic style is
+ * presentation-only (icons, compact size) and never removes a destination, so
+ * Mix stays whenever it is enabled, exactly like the other styles. The only
+ * way Mix disappears is the user hiding it explicitly through the
+ * personalized-navigation editor (spacekai_nav_hidden), or the YouTube
+ * session ending.
  */
 fun defaultNavTabs(
     showAnalyticsTab: Boolean,
     showMixForYouTab: Boolean,
-    minimalistic: Boolean,
 ): List<BottomNavScreen> =
     listOfNotNull(
         BottomNavScreen.Home,
-        BottomNavScreen.MixForYou.takeIf { showMixForYouTab && !minimalistic },
+        BottomNavScreen.MixForYou.takeIf { showMixForYouTab },
         BottomNavScreen.Analytics.takeIf { showAnalyticsTab },
         BottomNavScreen.Library,
         BottomNavScreen.Search,
@@ -94,9 +99,10 @@ fun ensureUsableNavTabs(tabs: List<BottomNavScreen>): List<BottomNavScreen> {
  * Resolve the final tab list for a nav bar.
  *
  * [defaultTabs] is the bar's list after its built-in conditioning: Analytics is present only
- * when local tracking is enabled, while Mix-for-you is also omitted in minimalistic mode.
- * The saved order is relative, unknown/duplicate keys are ignored, and [hidden] removes tabs.
- * The result is normalized so an empty or Search-only personalization remains usable.
+ * when local tracking is enabled, and Mix-for-you follows the signed-in session (the
+ * minimalistic style is presentation-only and never removes it). The saved order is
+ * relative, unknown/duplicate keys are ignored, and [hidden] removes tabs. The result is
+ * normalized so an empty or Search-only personalization remains usable.
  */
 fun resolveNavTabs(
     userOrder: List<String>,

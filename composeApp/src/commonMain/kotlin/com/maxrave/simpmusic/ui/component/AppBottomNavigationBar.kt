@@ -92,8 +92,9 @@ fun AppBottomNavigationBar(
     showLabels: Boolean = true,
     showAnalyticsTab: Boolean = false,
     showMixForYouTab: Boolean = false,
-    // SPACEKAI FEATURE: minimalisticNavigation — compact variant removes Mix-for-you.
-    // Analytics remains available when local tracking is enabled. Both tab lists below
+    // SPACEKAI FEATURE: minimalisticNavigation — compact variant: icons-only,
+    // reduced height, same destinations (Mix-for-you is never dropped by the style;
+    // it follows the signed-in session like every other style). Both tab lists below
     // use the same conditioning so the bottom bar and landscape rail stay consistent.
     minimalistic: Boolean = false,
     reloadDestinationIfNeeded: (KClass<*>) -> Unit = { _ -> },
@@ -114,7 +115,6 @@ fun AppBottomNavigationBar(
             ?: defaultNavTabs(
                 showAnalyticsTab = showAnalyticsTab,
                 showMixForYouTab = showMixForYouTab,
-                minimalistic = minimalistic,
             )
     var selectedIndex by rememberSaveable {
         mutableIntStateOf(
@@ -293,8 +293,9 @@ fun AppNavigationRail(
     navController: NavController,
     showAnalyticsTab: Boolean = false,
     showMixForYouTab: Boolean = false,
-    // SPACEKAI FEATURE: minimalisticNavigation — compact mode removes Mix-for-you;
-    // Analytics remains available when local tracking is enabled, same as the bottom bar.
+    // SPACEKAI FEATURE: minimalisticNavigation — compact mode: icons-only, same
+    // destinations (Mix-for-you is never dropped by the style); Analytics remains
+    // available when local tracking is enabled, same as the bottom bar.
     minimalistic: Boolean = false,
     reloadDestinationIfNeeded: (KClass<*>) -> Unit = { _ -> },
     modifier: Modifier = Modifier,
@@ -323,7 +324,6 @@ fun AppNavigationRail(
             ?: defaultNavTabs(
                 showAnalyticsTab = showAnalyticsTab,
                 showMixForYouTab = showMixForYouTab,
-                minimalistic = minimalistic,
             )
     var selectedIndex by rememberSaveable {
         mutableIntStateOf(

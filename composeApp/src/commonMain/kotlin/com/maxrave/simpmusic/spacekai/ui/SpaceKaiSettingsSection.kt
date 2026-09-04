@@ -93,7 +93,7 @@ fun SpaceKaiSettingsSection(
         )
         SettingItem(
             title = "Minimalistic navigation",
-            subtitle = "Compact navigation variant",
+            subtitle = "Icons-only compact variant (same tabs, Mix included)",
             switch =
                 (features.minimalisticNavigation to {
                     features = features.copy(minimalisticNavigation = it)

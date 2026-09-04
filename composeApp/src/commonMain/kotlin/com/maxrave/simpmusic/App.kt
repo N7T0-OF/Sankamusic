@@ -210,10 +210,11 @@ fun App(viewModel: SharedViewModel = koinInject()) {
     // flag that drives the SpaceKai navigation customizations.
     val customNavigation = isSpaceKaiFeatureEnabled(SpaceKaiFeatures::customNavigation)
     val navBarSwipeEnabled = customNavigation
-    // SPACEKAI FEATURE: minimalisticNavigation — compact nav variant. When ON the
-    // optional Mix-for-you tab is dropped from every bar style (liquid glass,
-    // translucent, and the landscape rail); Analytics remains available whenever
-    // local tracking is enabled.
+    // SPACEKAI FEATURE: minimalisticNavigation — compact nav variant: icons-only,
+    // reduced height, same destinations. It never drops Mix-for-you — Mix follows
+    // the signed-in session like every other style, and disappears only when the
+    // user hides it explicitly or the session ends. Analytics remains available
+    // whenever local tracking is enabled.
     val minimalisticNav = isSpaceKaiFeatureEnabled(SpaceKaiFeatures::minimalisticNavigation)
     // SPACEKAI FEATURE: personalized navigation — resolve the user's saved order/hidden into
     // the tab list handed to every bar. Null when the feature is OFF (vanilla behaviour).
@@ -226,7 +227,6 @@ fun App(viewModel: SharedViewModel = koinInject()) {
                     defaultNavTabs(
                         showAnalyticsTab = showAnalyticsTab,
                         showMixForYouTab = showMixForYouTab,
-                        minimalistic = minimalisticNav,
                     ),
             )
         } else {
@@ -470,7 +470,6 @@ fun App(viewModel: SharedViewModel = koinInject()) {
             ?: defaultNavTabs(
                 showAnalyticsTab = showAnalyticsTab,
                 showMixForYouTab = showMixForYouTab,
-                minimalistic = minimalisticNav,
             )
     LaunchedEffect(effectiveNavTabs.map { it.key }, navBackStackEntry) {
         val current = navBackStackEntry?.destination ?: return@LaunchedEffect

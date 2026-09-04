@@ -151,7 +151,6 @@ actual fun LiquidGlassAppBottomNavigationBar(
             ?: defaultNavTabs(
                 showAnalyticsTab = showAnalyticsTab,
                 showMixForYouTab = showMixForYouTab,
-                minimalistic = minimalistic,
             )
     // Tabs shown in the sliding bar (Apple Music style); Search lives in its own FAB.
     val barTabs = bottomNavScreens.filterNot { it == BottomNavScreen.Search }

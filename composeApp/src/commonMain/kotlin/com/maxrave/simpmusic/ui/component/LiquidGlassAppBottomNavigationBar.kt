@@ -34,8 +34,9 @@ expect fun LiquidGlassAppBottomNavigationBar(
     isScrolledToTop: Boolean = false,
     showAnalyticsTab: Boolean = false,
     showMixForYouTab: Boolean = false,
-    // SPACEKAI FEATURE: minimalisticNavigation — compact variant removes Mix-for-you;
-    // Analytics remains available when local tracking is enabled.
+    // SPACEKAI FEATURE: minimalisticNavigation — compact variant: icons-only, same
+    // destinations (Mix-for-you is never dropped by the style); Analytics remains
+    // available when local tracking is enabled.
     minimalistic: Boolean = false,
     // SPACEKAI FEATURE: personalized navigation — when non-null, this resolved tab list
     // (reordered / hidden per the user's saved config) replaces the bar's internal order.

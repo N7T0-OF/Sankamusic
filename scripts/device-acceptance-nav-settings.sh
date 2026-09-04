@@ -186,10 +186,13 @@ flow2_analytics_compact() {
     confirm "F2 Analytics present in compact" "Could not auto-locate an Analytics label in the bar region.
   Visually confirm: is the Analytics tab present in the compact bar while local tracking is ON?"
   fi
-  # Mix-for-you: absent when compact (and always when not signed in). Only assert
-  # absence when the operator is NOT signed in, to avoid a session-dependent fail.
-  confirm "F2 Mix-for-you dropped in compact" "Are you signed OUT of YouTube on this device?
-  (n) = signed in → skip the Mix assertion (compact + signed in also drops Mix, verify visually)"
+  # Mix-for-you: the compact style never drops it — Mix follows the signed-in
+  # session like every other style (minimalist is presentation-only: icons, size).
+  # Only assert absence when the operator is signed OUT, to avoid a
+  # session-dependent fail; signed in + compact must show Mix.
+  confirm "F2 Mix-for-you kept in compact" "Are you signed OUT of YouTube on this device?
+  (n) = signed in → compact must STILL show Mix (verify visually — this is the
+  P0 regression: minimalist must never drop Mix when enabled)"
   if [ "$?" -eq 0 ]; then
     local mix
     mix=""
@@ -201,8 +204,8 @@ flow2_analytics_compact() {
         break
       fi
     done
-    if [ -z "$mix" ]; then
-      ok "F2 Mix-for-you absent from the compact bar"
+    if [ -n "$mix" ]; then
+      ok "F2 Mix-for-you absent from the compact bar (signed out — expected)"
     else
       bad "F2 Mix-for-you present in the compact bar (label '$mix')"
     fi

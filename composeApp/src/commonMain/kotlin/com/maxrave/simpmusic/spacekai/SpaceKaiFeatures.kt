@@ -22,7 +22,7 @@ data class SpaceKaiFeatures(
     /** Custom bottom navigation (tabs, order, icons). */
     val customNavigation: Boolean = false,
 
-    /** Minimalistic navigation variant (fewer tabs, compact rail). */
+    /** Minimalistic navigation variant (icons-only, compact — same destinations). */
     val minimalisticNavigation: Boolean = false,
 
     /** SpaceKai dynamic colour overrides on top of the upstream theme. */

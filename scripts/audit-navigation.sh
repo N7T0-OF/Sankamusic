@@ -15,8 +15,10 @@
 #     - Swipe-to-skip        : gated behind SpaceKai `customNavigation`
 #       (App.kt:182 → onSwipeToNext/Previous on bar + rail).
 #   What is MISSING (the user's asks #25-28, #31):
-#     - Style "minimaliste"  : wired as a compact/icons-only variant; it removes
-#       Mix-for-you while Analytics remains available when local tracking is on.
+#     - Style "minimaliste"  : wired as a compact/icons-only variant — same
+#       destinations (Mix-for-you is never dropped by the style; it follows the
+#       signed-in session like every other style) and Analytics remains available
+#       when local tracking is on.
 #     - No unified style selector — liquid glass and translucent are two
 #       independent toggles, not exclusive options.
 #     - Sections visibles    : only 2 hardcoded conditional tabs
@@ -50,8 +52,9 @@ echo "============================================"
 echo "Finding: liquid-glass + translucent styles exist (base, DataStore)."
 echo "Hide-text (M3 compact) and the landscape right rail exist."
 echo "minimalisticNavigation is WIRED as icons-only (labels hidden, reduced"
-echo "height on the flat bar; labels hidden on the rail). Still MISSING:"
-echo "unified style selector, section config/reorder, shortcuts."
+echo "height on the flat bar; labels hidden on the rail), keeping every"
+echo "destination (Mix-for-you included). Still MISSING: unified style"
+echo "selector, section config/reorder, shortcuts."
 echo ""
 
 if [ ! -f "$APP" ]; then
@@ -84,7 +87,8 @@ echo "============================================"
 if [ "$fail" -eq 0 ]; then
   echo "RESULT: nav wiring intact. minimalisticNavigation is now wired as an"
   echo "        icons-only style (labels hidden + reduced height on the flat bar,"
-  echo "        labels hidden on the rail). Nav bar style is a SINGLE exclusive"
+  echo "        labels hidden on the rail), keeping every destination (Mix included)."
+  echo "        Nav bar style is a SINGLE exclusive"
   echo "        choice (minimalist / translucent / liquid glass): Settings exposes"
   echo "        one selector and App.kt renders from one derived style, so the two"
   echo "        legacy booleans can never show both styles at once. Personalized"
