@@ -48,7 +48,13 @@ class SankamusicApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        SpaceKaiApi.instance = DefaultSpaceKaiApi(networkApi = network)
+        SpaceKaiApi.instance = DefaultSpaceKaiApi(
+            networkApi = network,
+            // Persistance réelle des préférences (SharedPreferences) —
+            // gap « DataStore » de docs/MIGRATION.md étape 7 fermé sans
+            // dépendance additionnelle.
+            persistentStore = SharedPreferencesSettings.from(this),
+        )
 
         pluginEngine.register(HelloSpaceKaiPlugin())
         pluginEngine.enable(HelloSpaceKaiPlugin.ID)

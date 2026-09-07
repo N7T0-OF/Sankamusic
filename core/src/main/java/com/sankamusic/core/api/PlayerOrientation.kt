@@ -86,4 +86,13 @@ object SettingsKeys {
 
     /** Retour haptique : valeur de `hapticsPreferenceValue` (`"on"` / `"off"`). */
     const val HAPTICS_ENABLED = "haptics.enabled"
+
+    /** Mode de thème : valeur de [themeModePreference] (nom de l'enum, parse tolérant). */
+    const val THEME_MODE = "theme.mode"
+
+    /** Source de couleur : valeur de [themeColorSourcePreference] (nom de l'enum). */
+    const val THEME_COLOR_SOURCE = "theme.color_source"
+
+    /** Graine custom : valeur de [themeSeedColorPreference] (hex `#RRGGBB`). */
+    const val THEME_SEED_COLOR = "theme.seed_color"
 }
