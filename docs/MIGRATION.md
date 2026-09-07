@@ -209,8 +209,13 @@ flags persistés en chaînes préfixées, `DataStoreManager.TRUE`) :
   thème (mode + source de couleur), orientation du player, haptique, Mises à
   jour. UI non compilée localement (SDK requis) — vérifiée par le CI.
 
-Non porté (à faire) : le masquage de sections, la persistance réelle
-(DataStore) au lieu de la mémoire, la couleur custom (champ de saisie du seed).
+Fermé par la refonte Paramètres (shell :app inspiré de Convx — branche
+`feature/settings-convx-shell`) : recherche sur un catalogue réel (une entrée
+par réglage, clé testée), sections repliables, champ de saisie du seed
+custom, persistance réelle (SharedPreferences via StringSettings — pas
+DataStore) ; thème mode/source/seed persistés. Le masquage de sections de
+SpaceKai-OLD est couvert par la structure (sous-écrans + groupes
+repliables), sans préférence de masquage dédiée.
 
 ### Rendu des thèmes dans l'UI Compose (faite)
 

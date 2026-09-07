@@ -42,7 +42,7 @@ class DefaultSpaceKaiApi(
      * [SharedPreferencesSettings]) ; `null` → mémoire (tests, prototype).
      * Ferme le gap « persistance réelle » de docs/MIGRATION.md étape 7.
      */
-    settingsStore: StringSettings? = null,
+    persistentStore: StringSettings? = null,
 ) : SpaceKaiApi {
 
     private val uiRegistry = UiExtensionRegistry()
@@ -50,7 +50,7 @@ class DefaultSpaceKaiApi(
     /** Moteur de thèmes (mode, source de couleur, seed) — état exposé à l'UI. */
     val themeEngine = ThemeEngine()
 
-    private val settingsStore: StringSettings = settingsStore ?: run {
+    private val settingsStore: StringSettings = persistentStore ?: run {
         val map = mutableMapOf<String, String>()
         object : StringSettings {
             override fun get(key: String): String? = map[key]

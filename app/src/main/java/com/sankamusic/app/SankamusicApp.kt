@@ -53,7 +53,7 @@ class SankamusicApp : Application() {
             // Persistance réelle des préférences (SharedPreferences) —
             // gap « DataStore » de docs/MIGRATION.md étape 7 fermé sans
             // dépendance additionnelle.
-            settingsStore = SharedPreferencesSettings.from(this),
+            persistentStore = SharedPreferencesSettings.from(this),
         )
 
         pluginEngine.register(HelloSpaceKaiPlugin())

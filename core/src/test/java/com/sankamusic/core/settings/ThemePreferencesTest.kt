@@ -38,8 +38,9 @@ class ThemePreferencesTest {
         val stored = themeSeedColorToPreferenceValue(seed)
         assertEquals("#7C4DFF", stored)
         assertEquals(seed, themeSeedColorFromPreferenceValue(stored))
-        // Le canal alpha éventuel n'altère pas la relecture.
-        assertEquals(0x80123456L and 0xFFFFFFL, themeSeedColorFromPreferenceValue(themeSeedColorToPreferenceValue(0x80123456L)))
+        // Sémantique réelle de parseThemeColorHex : hex 6 chiffres → alpha forcé
+        // opaque, seuls les 24 bits RGB sont conservés au round-trip.
+        assertEquals(0xFF123456L, themeSeedColorFromPreferenceValue(themeSeedColorToPreferenceValue(0x80123456L)))
     }
 
     @Test
