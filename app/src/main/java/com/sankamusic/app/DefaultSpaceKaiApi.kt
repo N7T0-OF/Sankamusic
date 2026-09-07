@@ -22,6 +22,11 @@ import com.sankamusic.core.player.PlayerController
 import com.sankamusic.core.player.PlayerStatus
 import com.sankamusic.core.settings.StringSettings
 import com.sankamusic.core.settings.TypedSettings
+import com.sankamusic.core.settings.themeColorSourcePreference
+import com.sankamusic.core.settings.themeModePreference
+import com.sankamusic.core.settings.themeSeedColorFromPreferenceValue
+import com.sankamusic.core.settings.themeSeedColorPreference
+import com.sankamusic.core.settings.themeSeedColorToPreferenceValue
 
 /**
  * Implémentation squelette de la [SpaceKaiApi] — permet de démarrer le
@@ -32,6 +37,12 @@ import com.sankamusic.core.settings.TypedSettings
  */
 class DefaultSpaceKaiApi(
     private val networkApi: NetworkApi = HttpNetworkApi(),
+    /**
+     * Store réel des préférences (SharedPreferences en production —
+     * [SharedPreferencesSettings]) ; `null` → mémoire (tests, prototype).
+     * Ferme le gap « persistance réelle » de docs/MIGRATION.md étape 7.
+     */
+    settingsStore: StringSettings? = null,
 ) : SpaceKaiApi {
 
     private val uiRegistry = UiExtensionRegistry()
@@ -39,18 +50,34 @@ class DefaultSpaceKaiApi(
     /** Moteur de thèmes (mode, source de couleur, seed) — état exposé à l'UI. */
     val themeEngine = ThemeEngine()
 
-    private val settingsStore = mutableMapOf<String, String>()
+    private val settingsStore: StringSettings = settingsStore ?: run {
+        val map = mutableMapOf<String, String>()
+        object : StringSettings {
+            override fun get(key: String): String? = map[key]
+
+            override fun set(key: String, value: String) {
+                map[key] = value
+            }
+        }
+    }
 
     override val uiExtensions: UiExtensionApi = uiRegistry
 
     /** Accès typé aux préférences (étape 7 — docs/MIGRATION.md), partagé avec [settings]. */
-    val typedSettings = TypedSettings(object : StringSettings {
-        override fun get(key: String): String? = settingsStore[key]
+    val typedSettings = TypedSettings(settingsStore)
 
-        override fun set(key: String, value: String) {
-            settingsStore[key] = value
+    init {
+        // Restauration des réglages de thème persistés (mode, source, graine).
+        themeEngine.setMode(typedSettings.get(themeModePreference))
+        val source = typedSettings.get(themeColorSourcePreference)
+        if (source == ThemeColorSource.CUSTOM) {
+            // CUSTOM sans graine valide → échec propre du moteur, état inchangé.
+            themeSeedColorFromPreferenceValue(typedSettings.get(themeSeedColorPreference))
+                ?.let { seed -> themeEngine.setColorSource(ThemeColorSource.CUSTOM, seed) }
+        } else {
+            themeEngine.setColorSource(source)
         }
-    })
+    }
 
     /**
      * Contrôleur de lecture (étape 4 migration — docs/MIGRATION.md) : machine à
@@ -97,18 +124,30 @@ class DefaultSpaceKaiApi(
 
         override suspend fun setMode(mode: ThemeMode) {
             themeEngine.setMode(mode)
+            typedSettings.set(themeModePreference, mode)
         }
 
         override suspend fun setColorSource(source: ThemeColorSource, customSeedColor: Long?) {
+            // Persistance uniquement si le moteur accepte le changement
+            // (CUSTOM sans graine → échec propre, état et préférence inchangés).
             themeEngine.setColorSource(source, customSeedColor)
+                .onSuccess {
+                    typedSettings.set(themeColorSourcePreference, source)
+                    if (source == ThemeColorSource.CUSTOM && customSeedColor != null) {
+                        typedSettings.set(
+                            themeSeedColorPreference,
+                            themeSeedColorToPreferenceValue(customSeedColor),
+                        )
+                    }
+                }
         }
     }
 
     override val settings = object : SettingsApi {
-        override suspend fun get(key: String): String? = settingsStore[key]
+        override suspend fun get(key: String): String? = settingsStore.get(key)
 
         override suspend fun set(key: String, value: String) {
-            settingsStore[key] = value
+            settingsStore.set(key, value)
         }
     }
 

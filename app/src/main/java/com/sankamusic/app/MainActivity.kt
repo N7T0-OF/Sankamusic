@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.sankamusic.core.api.NavigationTab
 import com.sankamusic.core.api.SpaceKaiApi
+import com.sankamusic.core.api.UpdateManager
 import com.sankamusic.core.update.SimpMusicAdapter
 
 /**
@@ -58,13 +59,17 @@ class MainActivity : ComponentActivity() {
             SankamusicTheme(api = api) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     var showUpdates by rememberSaveable { mutableStateOf(false) }
+                    val updateEngine = (application as? SankamusicApp)?.updateEngine
                     if (showUpdates) {
                         UpdateStatusScreen(
                             updateManager = (application as SankamusicApp).updateEngine,
                             onBack = { showUpdates = false },
                         )
                     } else {
-                        MainScreen(onOpenUpdates = { showUpdates = true })
+                        MainScreen(
+                            onOpenUpdates = { showUpdates = true },
+                            updateManager = updateEngine,
+                        )
                     }
                 }
             }
@@ -81,7 +86,7 @@ private val defaultTabs = listOf(
 )
 
 @Composable
-private fun MainScreen(onOpenUpdates: () -> Unit) {
+private fun MainScreen(onOpenUpdates: () -> Unit, updateManager: UpdateManager?) {
     // Onglets par défaut + ceux déclarés par les plugins actifs (triés par priorité).
     val pluginTabs = if (SpaceKaiApi.isInitialized()) {
         SpaceKaiApi.instance.uiExtensions.navigationTabs()
@@ -102,7 +107,11 @@ private fun MainScreen(onOpenUpdates: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             when (selectedId) {
-                "settings" -> SettingsScreen(api = api, onOpenUpdates = onOpenUpdates)
+                "settings" -> SettingsScreen(
+                    api = api,
+                    updateManager = updateManager,
+                    onOpenUpdates = onOpenUpdates,
+                )
                 "home" -> HomeScreen(onOpenUpdates = onOpenUpdates)
                 else -> PlaceholderTab(tabs.firstOrNull { it.id == selectedId })
             }
