@@ -305,6 +305,69 @@ adhère au [Semantic Versioning](https://semver.org/lang/fr/) (voir `RELEASE_GUI
 
 ---
 
+## [0.4.0] - 2026-09-07
+
+### Ajouté
+- **Refonte Paramètres inspirée de Convx (PR #4)** — shell « grouped cards »
+  réimplémenté (zéro dépendance au code Convx), routé vers les API réelles
+  du Core (`DefaultSpaceKaiApi`) :
+  - bibliothèque de composants (`SettingsComponents` dans :app) — lignes à
+    puce d'icône teintée, cartes groupées thème-adaptatives, groupes
+    repliables, champ de recherche arrondi, séparateurs incrustés,
+    en-têtes de sous-écran ;
+  - catalogue des Paramètres (`SettingsCatalog` dans :core, JVM pur) —
+    **une entrée par réglage réel**, chaque contrôle lié à sa clé de
+    préférence (`SettingsKeys` ou `featureFlagKey`, invariant testé) ;
+    recherche titre/description/mots-clés ; entrées fonctionnalités
+    générées depuis le manifest intégré (sync automatique) ;
+  - `SettingsScreen` réécrit — titre large, recherche sur le catalogue
+    réel, cartes Général/SpaceKai/Système, navigation interne avec
+    `BackHandler` ;
+  - sous-écrans **Thème** (mode, source de couleur, graine hexadécimale
+    custom), **Fonctionnalités** (compatibilité upstream par
+    fonctionnalité — jamais d'APK cassée), **Player** (orientation,
+    haptique), **À propos** (faits BuildConfig/Adapter) ;
+  - badge « Disponible » uniquement sur mise à jour **confirmée** via
+    `UpdateEngine` (jamais sur échec réseau).
+- **Persistance réelle des préférences** (gap « DataStore » de
+  `docs/MIGRATION.md` étape 7 fermé) : `SharedPreferencesSettings`
+  (implémentation `StringSettings`) injectée dans `DefaultSpaceKaiApi`
+  (fallback mémoire conservé pour les tests) ; thème mode/source/seed
+  persistés (`theme.mode`, `theme.color_source`, `theme.seed_color`) et
+  restaurés à l'initialisation de l'API.
+- **13 tests JVM nouveaux** (`SettingsCatalogTest`,
+  `ThemePreferencesTest`) — invariants du catalogue (id uniques, clé
+  réelle par contrôle, sync manifest, couverture des destinations,
+  recherche) et allers-retours des préférences de thème (parse tolérant,
+  sérialisation hex de la graine).
+
+### Corrigé
+- Erreurs de compilation `:app` détectées par le CI (run 34162719664) :
+  le paramètre constructeur nullable `settingsStore` shadowait la
+  propriété non-null du même nom dans `DefaultSpaceKaiApi` (renommé
+  `persistentStore`, commit `51569ad4`) ; assertion de round-trip de la
+  graine corrigée sur la sémantique réelle de `parseThemeColorHex`
+  (hex 6 chiffres → alpha forcé opaque).
+
+### Modifié
+- `docs/MIGRATION.md` étape 7 : liste des gaps mise à jour
+  factuellement — recherche sur catalogue, sections repliables, seed
+  custom, persistance réelle via SharedPreferences (pas DataStore) ;
+  masquage de sections couvert par la structure (sous-écrans + groupes
+  repliables), sans préférence dédiée.
+
+### Notes de vérification
+- CI : run **34162738533** sur PR #4 — `validate` **PASS** (3m42s) :
+  `:app` compile (debug + release), tous les tests `:core` verts (dont
+  les 13 nouveaux), `assembleRelease` **BUILD SUCCESSFUL** ; merge squash
+  `5497de4c` sur `main`.
+- À vérifier sur l'artefact avant publication de la draft (RELEASE_GUIDE
+  étape 3/7 — manuel) : installation sur appareil propre + mise à jour
+  sans perte de données, démarrage, lecture/navigation/mise à jour
+  détectée, re-vérification `sha256sum -c` depuis GitHub.
+
+---
+
 ## Modèle pour une nouvelle version
 
 ```markdown
