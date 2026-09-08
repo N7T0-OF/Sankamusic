@@ -20,6 +20,24 @@ proven by the JVM suite (44/44 covers logic only, not the install pipeline).
 ### Build the candidate APK (exact task)
 
 ```bash
+# The pinned compottie:2.2.2-compose-1.12-SNAPSHOT was pruned from the remote and
+# CI currently fails on it. The -I script below is a VERIFICATION-ONLY workaround
+# (it changes no build file); create it locally ONCE, then build:
+mkdir -p .freebuff
+cat > .freebuff/compottie-substitution.init.gradle.kts <<'EOF'
+allprojects {
+    configurations.configureEach {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "io.github.alexzhirkevich" &&
+                requested.version == "2.2.2-compose-1.12-SNAPSHOT") {
+                useVersion("2.2.4-compose-1.12-SNAPSHOT")
+                because("Pruned pinned snapshot; verification-only substitution.")
+            }
+        }
+    }
+}
+EOF
+
 # FOSS variant (what CI publishes as "Build release APK (FOSS)"):
 ./gradlew androidApp:assembleRelease -PisFullBuild=false -I .freebuff/compottie-substitution.init.gradle.kts
 # Full variant (default; gradle.properties sets isFullBuild=true):
@@ -29,13 +47,17 @@ proven by the JVM suite (44/44 covers logic only, not the install pipeline).
 
 - The `-I` init script is the **verification-only** workaround for the pruned
   `compottie:2.2.2-compose-1.12-SNAPSHOT` pin (CI fails on it today); it is untracked
-  and changes no build file.
+  and changes no build file. Once the pin is fixed in `gradle/libs.versions.toml`,
+  drop the `-I` flag and this paragraph.
 - The local release APK is **unsigned** (no `signingConfig`): either sign it with the
   SpaceKai release key (`apksigner sign --ks ...`) or take the **CI-signed** artifact
   from a green `Build release APK` job. Never sideload an unsigned APK — T1 would fail
   at the OS signature check for the wrong reason.
 - Do **not** build with `isFullBuild` flipped relative to the artifact you actually
   publish: the E2E must test the exact binary users will receive.
+- Everything above uses only standard tooling (`adb`, `apksigner`, `gh`, `sha256sum`)
+  plus the one init script defined here — no other file from the developer's machine
+  is required.
 
 ### Evidence kit (capture on every test)
 
