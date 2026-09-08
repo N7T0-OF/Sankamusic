@@ -53,8 +53,9 @@ correct. Pour le test, il faut donc une version **plus récente** publiée.
 | # | État simulé | Comportement attendu | Maillon |
 |---|---|---|---|
 | A | Base intégrée 2.0.0 (upstream.lock) ; dernière SimpMusic = 2.0.0 | « Base utilisée : v2.0.0 · Dernière disponible : v2.0.0 · ✓ À jour » | `SPACEKAI_BASED_ON_UPSTREAM` ← BuildKonfig ← `upstream.lock` ; `Ytmusic.kt:611` (API live maxrave-dev) |
-| B | SimpMusic sort 2.1.0 | « Base utilisée : v2.0.0 · Dernière disponible : v2.1.0 · ⚠ Nouvelle release officielle détectée — SpaceKai pas encore compatible » | `computeUpstreamCompatibility` (`UpstreamCompatibility.kt`) |
-| C | Dans les deux cas | **Aucune** offre d'installation de l'APK SimpMusic, aucun bouton d'installation upstream | Le bloc upstream est info-only par design |
+| B | SimpMusic sort 2.1.0 (base **déclarée** dans `UpstreamCompatibilityMatrix`, non encore validée appareil) | « Base utilisée : v2.0.0 · Dernière disponible : v2.1.0 · ⚠ Nouvelle release officielle (v2.1.0) — base supportée, validation appareil en cours » | `computeUpstreamCompatibility` (`UpstreamCompatibility.kt`) + `UpstreamCompatibilityMatrix` (manifeste des bases déclarées) |
+| B' | SimpMusic sort 2.2.0 (base **non déclarée**) | « … · ⚠ Nouvelle release officielle détectée — SpaceKai pas encore compatible » | `computeUpstreamCompatibility` + `UpstreamCompatibilityMatrix.isCompatible` (fallback: range testé du build) |
+| C | Dans les deux cas (A/B/B') | **Aucune** offre d'installation de l'APK SimpMusic, aucun bouton d'installation upstream | Le bloc upstream est info-only par design |
 
 Pour simuler B sans attendre une vraie release 2.1.0 : éditer localement
 `upstream.lock` (base → `2.0.0`) et observer — ou attendre la sortie réelle.

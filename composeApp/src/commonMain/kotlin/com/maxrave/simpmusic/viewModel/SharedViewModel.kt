@@ -68,8 +68,13 @@ import com.maxrave.simpmusic.expect.ui.toByteArray
 import com.maxrave.simpmusic.getPlatform
 import com.maxrave.simpmusic.spacekai.SPACEKAI_NAV_HIDDEN_KEY
 import com.maxrave.simpmusic.spacekai.SPACEKAI_NAV_ORDER_KEY
+import com.maxrave.simpmusic.spacekai.SpaceKaiUpdateChannel
+import com.maxrave.simpmusic.spacekai.SpaceKaiUpdatePrefs
+import com.maxrave.simpmusic.spacekai.isSpaceKaiAvailable
+import com.maxrave.simpmusic.spacekai.isVersionNewer
 import com.maxrave.simpmusic.spacekai.parseNavHidden
 import com.maxrave.simpmusic.spacekai.parseNavOrder
+import com.maxrave.simpmusic.spacekai.selectSpaceKaiUpdate
 import com.maxrave.simpmusic.utils.VersionManager
 import com.maxrave.simpmusic.viewModel.base.BaseViewModel
 import kotlinx.coroutines.Dispatchers
@@ -1106,44 +1111,72 @@ class SharedViewModel(
         }
     }
 
+    /**
+     * Fetches the SpaceKai release selected by the private Stable/Beta preference.
+     *
+     * Stable mode reads the stable endpoint only. Beta mode reads both the newest
+     * published prerelease and the stable endpoint, then chooses the newest candidate
+     * that is actually newer than the installed semantic version.
+     */
+    private suspend fun checkForSpaceKaiUpdate(): Resource<UpdateData> {
+        val installedTag = "v${VersionManager.getVersionName()}"
+        val channel =
+            dataStoreManager
+                .getString(SpaceKaiUpdatePrefs.CHANNEL_KEY)
+                .map { SpaceKaiUpdateChannel.fromKey(it) }
+                .first()
+        val stableResponse = updateRepository.checkForGithubReleaseUpdate(includePrereleases = false).first()
+        if (channel == SpaceKaiUpdateChannel.STABLE) return stableResponse
+
+        val betaResponse = updateRepository.checkForGithubReleaseUpdate(includePrereleases = true).first()
+        val selected =
+            selectSpaceKaiUpdate(
+                channel = channel,
+                installedVersion = installedTag,
+                betaRelease = (betaResponse as? Resource.Success)?.data,
+                stableRelease = (stableResponse as? Resource.Success)?.data,
+            )
+        return selected?.let { Resource.Success(it) }
+            ?: when {
+                stableResponse is Resource.Error -> betaResponse
+                else -> stableResponse
+            }
+    }
+
     fun checkForUpdate() {
         viewModelScope.launch {
             _isCheckingUpdate.value = true
-            val updateChannel = dataStoreManager.updateChannel.first()
-            dataStoreManager.putString(
-                "CheckForUpdateAt",
-                System.currentTimeMillis().toString(),
-            )
-            if (updateChannel == DataStoreManager.GITHUB) {
-                updateRepository.checkForGithubReleaseUpdate().collectLatest { response ->
-                    val data = response.data
-                    when (response) {
-                        is Resource.Success if (data != null) -> {
-                            _updateResponse.value = data
-                            showedUpdateDialog = true
-                        }
-
-                        else -> {
-                            log("Check for update error: ${response.message}", LogLevel.WARN)
-                        }
-                    }
-                    _isCheckingUpdate.value = false
-                }
-            } else if (updateChannel == DataStoreManager.FDROID) {
-                updateRepository.checkForFdroidUpdate().collectLatest { response ->
-                    val data = response.data
-                    when (response) {
-                        is Resource.Success if (data != null) -> {
-                            _updateResponse.value = data
-                            showedUpdateDialog = true
-                        }
-
-                        else -> {
-                            log("Check for update error: ${response.message}", LogLevel.WARN)
+            try {
+                dataStoreManager.putString(
+                    "CheckForUpdateAt",
+                    System.currentTimeMillis().toString(),
+                )
+                val response =
+                    if (isSpaceKaiAvailable()) {
+                        // SpaceKai ships from its own GitHub repository. Do not let the
+                        // upstream F-Droid/GitHub selector offer a differently signed APK.
+                        checkForSpaceKaiUpdate()
+                    } else {
+                        when (dataStoreManager.updateChannel.first()) {
+                            DataStoreManager.GITHUB ->
+                                updateRepository.checkForGithubReleaseUpdate(includePrereleases = false).first()
+                            DataStoreManager.FDROID -> updateRepository.checkForFdroidUpdate().first()
+                            else -> Resource.Error<UpdateData>("Unknown update channel")
                         }
                     }
-                    _isCheckingUpdate.value = false
+                val data = response.data
+                when (response) {
+                    is Resource.Success if (data != null) -> {
+                        _updateResponse.value = data
+                        showedUpdateDialog = true
+                    }
+
+                    else -> {
+                        log("Check for update error: ${response.message}", LogLevel.WARN)
+                    }
                 }
+            } finally {
+                _isCheckingUpdate.value = false
             }
         }
     }
@@ -1880,6 +1913,33 @@ class SharedViewModel(
     fun getHideNavLabel() =
         dataStoreManager.getString(HIDE_NAV_LABEL_KEY).map { it == DataStoreManager.TRUE }
 
+    // SPACEKAI FEATURE: updater preferences remain in the generic string namespace so
+    // vanilla builds need no typed DataStore keys in the core module.
+    fun getSpaceKaiUpdateAutoCheck(): Flow<Boolean> =
+        dataStoreManager
+            .getString(SpaceKaiUpdatePrefs.AUTO_CHECK_KEY)
+            .map { it?.let { value -> value == DataStoreManager.TRUE } ?: SpaceKaiUpdatePrefs.DEFAULT_AUTO_CHECK }
+
+    fun setSpaceKaiUpdateAutoCheck(enabled: Boolean) {
+        viewModelScope.launch {
+            dataStoreManager.putString(
+                SpaceKaiUpdatePrefs.AUTO_CHECK_KEY,
+                if (enabled) DataStoreManager.TRUE else DataStoreManager.FALSE,
+            )
+        }
+    }
+
+    fun getSpaceKaiUpdateChannel(): Flow<SpaceKaiUpdateChannel> =
+        dataStoreManager
+            .getString(SpaceKaiUpdatePrefs.CHANNEL_KEY)
+            .map { SpaceKaiUpdateChannel.fromKey(it) }
+
+    fun setSpaceKaiUpdateChannel(channel: SpaceKaiUpdateChannel) {
+        viewModelScope.launch {
+            dataStoreManager.putString(SpaceKaiUpdatePrefs.CHANNEL_KEY, channel.key)
+        }
+    }
+
     // SPACEKAI FEATURE: personalized navigation — the saved tab order and hidden set,
     // read through the generic string store so the layer needs no core changes.
     fun getSpaceKaiNavOrder(): Flow<List<String>> =
@@ -1955,7 +2015,15 @@ class SharedViewModel(
         _reloadDestination.value = null
     }
 
-    fun shouldCheckForUpdate(): Boolean = runBlocking { dataStoreManager.autoCheckForUpdates.first() == TRUE }
+    fun shouldCheckForUpdate(): Boolean =
+        runBlocking {
+            if (isSpaceKaiAvailable()) {
+                dataStoreManager.getString(SpaceKaiUpdatePrefs.AUTO_CHECK_KEY).first()?.let { it == TRUE }
+                    ?: SpaceKaiUpdatePrefs.DEFAULT_AUTO_CHECK
+            } else {
+                dataStoreManager.autoCheckForUpdates.first() == TRUE
+            }
+        }
 
     private var _downloadFileProgress = MutableStateFlow<DownloadProgress>(DownloadProgress.INIT)
     val downloadFileProgress: StateFlow<DownloadProgress> get() = _downloadFileProgress

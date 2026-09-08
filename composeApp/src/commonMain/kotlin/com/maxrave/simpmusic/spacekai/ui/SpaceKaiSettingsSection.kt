@@ -61,7 +61,9 @@ fun SpaceKaiSettingsSection(
                     getString = { key -> sharedViewModel.getString(key) },
                 )
         }
-    var features by remember { mutableStateOf(persisted) }
+    // The first DataStore read completes after composition. Keying remember by the
+    // loaded value prevents the UI from staying on build defaults after that read.
+    var features by remember(persisted) { mutableStateOf(persisted) }
     val hapticFeedback = LocalHapticFeedback.current
 
     fun persist(feature: String, enabled: Boolean) {
@@ -69,7 +71,8 @@ fun SpaceKaiSettingsSection(
             "$SPACEKAI_FLAG_PREFIX$feature",
             if (enabled) DataStoreManager.TRUE else DataStoreManager.FALSE,
         )
-        // Re-issue so isSpaceKaiFeatureEnabled reflects the change immediately.
+        // Re-issue the already-updated local state so isSpaceKaiFeatureEnabled
+        // reflects the change immediately.
         configSpaceKai(features)
         // SPACEKAI FEATURE: tactile feedback on every toggle (intensity-aware).
         HapticManager.onClick(hapticFeedback)

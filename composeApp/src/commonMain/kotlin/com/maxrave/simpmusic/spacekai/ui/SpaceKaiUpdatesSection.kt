@@ -13,7 +13,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import com.maxrave.simpmusic.spacekai.SPACEKAI_VERSION
+import com.maxrave.simpmusic.spacekai.SpaceKaiUpdateChannel
+import com.maxrave.simpmusic.spacekai.SpaceKaiUpdatePrefs
 import com.maxrave.simpmusic.spacekai.UpstreamCheckState
 import com.maxrave.simpmusic.spacekai.computeUpstreamCompatibility
 import com.maxrave.simpmusic.spacekai.displayUpstreamVersion
@@ -57,6 +60,14 @@ fun SpaceKaiUpdatesSection(
     val upstreamCheckError by sharedViewModel.upstreamCheckError.collectAsState()
     val lastUpstreamCheckAt by sharedViewModel.lastUpstreamCheckAt.collectAsState()
     val updateUi by SpaceKaiUpdateManager.state.collectAsState()
+    val autoCheckEnabled by
+        sharedViewModel
+            .getSpaceKaiUpdateAutoCheck()
+            .collectAsState(SpaceKaiUpdatePrefs.DEFAULT_AUTO_CHECK)
+    val updateChannel by
+        sharedViewModel
+            .getSpaceKaiUpdateChannel()
+            .collectAsState(SpaceKaiUpdatePrefs.DEFAULT_CHANNEL)
     val scope = rememberCoroutineScope()
 
     // Kick the upstream (SimpMusic) check once when the section appears, so the
@@ -90,6 +101,31 @@ fun SpaceKaiUpdatesSection(
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(vertical = 8.dp),
         )
+        SettingItem(
+            title = "Vérification automatique",
+            subtitle = "Rechercher une mise à jour SpaceKai au démarrage",
+            switch =
+                autoCheckEnabled to {
+                    sharedViewModel.setSpaceKaiUpdateAutoCheck(it)
+                },
+        )
+        SettingItem(
+            title = "Canal SpaceKai",
+            subtitle =
+                when (updateChannel) {
+                    SpaceKaiUpdateChannel.STABLE -> "Stable — versions publiées uniquement"
+                    SpaceKaiUpdateChannel.BETA -> "Beta — inclut les préversions publiées"
+                },
+            onClick = {
+                sharedViewModel.setSpaceKaiUpdateChannel(
+                    if (updateChannel == SpaceKaiUpdateChannel.STABLE) {
+                        SpaceKaiUpdateChannel.BETA
+                    } else {
+                        SpaceKaiUpdateChannel.STABLE
+                    },
+                )
+            },
+        )
 
         // ---------- SpaceKai block (the installed app) ----------
         // Installée = the REAL build version (VersionManager/BuildKonfig); dernière =
@@ -111,7 +147,7 @@ fun SpaceKaiUpdatesSection(
         // SHA-256 -> install pipeline and surface its progress. Before the first check, the
         // same row just triggers the release check.
         val resp: com.maxrave.domain.data.model.update.UpdateData? = updateResponse
-        if (resp?.apkUrl != null && isNewer) {
+        if (!resp?.apkUrl.isNullOrBlank() && isNewer) {
             SpaceKaiUpdateRow(
                 state = updateUi,
                 onClickStart = {
@@ -142,6 +178,7 @@ fun SpaceKaiUpdatesSection(
                         when {
                             isCheckingUpstream -> "…"
                             upstreamCheckError -> "indisponible"
+                            upstreamResponse?.tagName.isNullOrBlank() -> "—"
                             else -> "v${displayUpstreamVersion(upstreamResponse?.tagName)}"
                         }
                     append("Dernière release officielle : $latest\n")
@@ -162,13 +199,6 @@ fun SpaceKaiUpdatesSection(
                 sharedViewModel.checkForUpstreamRelease()
             },
         )
-        SettingItem(
-            title = "Vérifier les mises à jour",
-            subtitle = "Rechercher la dernière version SpaceKai",
-            onClick = {
-                sharedViewModel.checkForUpdate()
-            },
-        )
     }
 }
 
@@ -183,9 +213,11 @@ private fun SpaceKaiUpdateRow(
             val text =
                 when (state.phase) {
                     SpaceKaiUpdatePhase.DOWNLOADING ->
-                        "Téléchargement… ${mb(state.downloadedBytes)}" +
-                            if (state.totalBytes > 0L) " / ${mb(state.totalBytes)} Mo" else " Mo" +
-                            if (state.bytesPerSecond > 0L) " · ${kb(state.bytesPerSecond)}" else ""
+                        buildString {
+                            append("Téléchargement… ${mb(state.downloadedBytes)}")
+                            if (state.totalBytes > 0L) append(" / ${mb(state.totalBytes)} Mo")
+                            if (state.bytesPerSecond > 0L) append(" · ${kb(state.bytesPerSecond)}")
+                        }
                     SpaceKaiUpdatePhase.VERIFYING -> "Vérification SHA-256…"
                     SpaceKaiUpdatePhase.INSTALLING -> "Installation…"
                     else -> ""
@@ -226,8 +258,10 @@ private fun SpaceKaiUpdateRow(
 }
 
 private fun mb(bytes: Long): String {
-    val mb = bytes.toDouble() / (1024.0 * 1024.0)
-    return java.math.BigDecimal(mb).setScale(1, java.math.RoundingMode.HALF_UP).toPlainString()
+    val tenths =
+        (bytes.coerceAtLeast(0L).toDouble() / (1024.0 * 1024.0) * 10.0)
+            .roundToInt()
+    return "${tenths / 10}.${tenths % 10}"
 }
 
 private fun kb(bps: Long): String = "${(bps / 1024.0).toInt()} Ko/s"

@@ -147,6 +147,7 @@ import com.maxrave.simpmusic.ui.navigation.destination.login.DiscordLoginDestina
 import com.maxrave.simpmusic.ui.navigation.destination.login.LastfmLoginDestination
 import com.maxrave.simpmusic.ui.navigation.destination.login.LoginDestination
 import com.maxrave.simpmusic.ui.navigation.destination.login.SpotifyLoginDestination
+import com.maxrave.simpmusic.spacekai.isSpaceKaiAvailable
 import com.maxrave.simpmusic.spacekai.ui.SpaceKaiSettingsSection
 
 import com.maxrave.simpmusic.spacekai.features.haptics.HapticsSpaceKai
@@ -2739,56 +2740,57 @@ fun SettingScreen(
                         navController.navigate(CreditDestination)
                     },
                 )
-                SettingItem(
-                    title = stringResource(Res.string.auto_check_for_update),
-                    subtitle = stringResource(Res.string.auto_check_for_update_description),
-                    switch = (autoCheckUpdate to { viewModel.setAutoCheckUpdate(it) }),
-                )
-                SettingItem(
-                    title = stringResource(Res.string.update_channel),
-                    subtitle =
-                        if (updateChannel == DataStoreManager.FDROID) {
-                            "F-Droid"
-                        } else {
-                            // SPACEKAI CUSTOMIZATION: label reflects SpaceKai, not SimpMusic
-                            "SpaceKai GitHub Release"
+                if (!isSpaceKaiAvailable()) {
+                    // SpaceKai owns its updater settings in the dedicated Updates section.
+                    // Keep these legacy controls unchanged for vanilla SimpMusic builds.
+                    SettingItem(
+                        title = stringResource(Res.string.auto_check_for_update),
+                        subtitle = stringResource(Res.string.auto_check_for_update_description),
+                        switch = (autoCheckUpdate to { viewModel.setAutoCheckUpdate(it) }),
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.update_channel),
+                        subtitle =
+                            if (updateChannel == DataStoreManager.FDROID) {
+                                "F-Droid"
+                            } else {
+                                "GitHub Release"
+                            },
+                        onClick = {
+                            viewModel.setAlertData(
+                                SettingAlertState(
+                                    title = runBlocking { getString(Res.string.update_channel) },
+                                    selectOne =
+                                        SettingAlertState.SelectData(
+                                            listSelect =
+                                                listOf(
+                                                    (updateChannel == DataStoreManager.FDROID) to "F-Droid",
+                                                    (updateChannel == DataStoreManager.GITHUB) to "GitHub Release",
+                                                ),
+                                        ),
+                                    confirm =
+                                        runBlocking { getString(Res.string.change) } to { state ->
+                                            viewModel.setUpdateChannel(
+                                                when (state.selectOne?.getSelected()) {
+                                                    "F-Droid" -> DataStoreManager.FDROID
+                                                    "GitHub Release" -> DataStoreManager.GITHUB
+                                                    else -> DataStoreManager.GITHUB
+                                                },
+                                            )
+                                        },
+                                    dismiss = runBlocking { getString(Res.string.cancel) },
+                                ),
+                            )
                         },
-                    onClick = {
-                        viewModel.setAlertData(
-                            SettingAlertState(
-                                title = runBlocking { getString(Res.string.update_channel) },
-                                selectOne =
-                                    SettingAlertState.SelectData(
-                                        listSelect =
-                                            listOf(
-                                                (updateChannel == DataStoreManager.FDROID) to "F-Droid",
-                                                // SPACEKAI CUSTOMIZATION: label reflects SpaceKai
-                                                (updateChannel == DataStoreManager.GITHUB) to "SpaceKai GitHub Release",
-                                            ),
-                                    ),
-                                confirm =
-                                    runBlocking { getString(Res.string.change) } to { state ->
-                                        viewModel.setUpdateChannel(
-                                            when (state.selectOne?.getSelected()) {
-                                                "F-Droid" -> DataStoreManager.FDROID
-                                                // SPACEKAI CUSTOMIZATION: label reflects SpaceKai
-                                                "SpaceKai GitHub Release" -> DataStoreManager.GITHUB
-                                                else -> DataStoreManager.GITHUB
-                                            },
-                                        )
-                                    },
-                                dismiss = runBlocking { getString(Res.string.cancel) },
-                            ),
-                        )
-                    },
-                )
-                SettingItem(
-                    title = stringResource(Res.string.check_for_update),
-                    subtitle = checkForUpdateSubtitle,
-                    onClick = {
-                        sharedViewModel.checkForUpdate()
-                    },
-                )
+                    )
+                    SettingItem(
+                        title = stringResource(Res.string.check_for_update),
+                        subtitle = checkForUpdateSubtitle,
+                        onClick = {
+                            sharedViewModel.checkForUpdate()
+                        },
+                    )
+                }
                 SettingItem(
                     title = stringResource(Res.string.author),
                     subtitle = stringResource(Res.string.maxrave_dev),

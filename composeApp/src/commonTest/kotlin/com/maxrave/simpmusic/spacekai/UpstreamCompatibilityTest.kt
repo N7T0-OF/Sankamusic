@@ -28,19 +28,37 @@ class UpstreamCompatibilityTest {
     }
 
     // ---------- Spec test 2: a genuinely newer official release exists ----------
-    // integrated = 1.7.0, latest = 2.0.0 => UPDATE AVAILABLE (not compatible yet).
+    // integrated = 1.7.0, latest = 2.2.0 (an UNDECLARED future base) => UPDATE
+    // AVAILABLE but no compatible SpaceKai build exists yet.
     @Test
     fun `newer official release is reported as detected`() {
+        val c =
+            computeUpstreamCompatibility(
+                latestUpstream = "v2.2.0",
+                basedOn = "1.7.0",
+                maxTested = "1.7.0",
+            )
+        assertFalse(c.compatible, "newer release matching no declared base is not compatible")
+        assertTrue(c.statusLabel.contains("Nouvelle release officielle détectée"))
+        // The raw GitHub tag is kept as-is (leading "v" preserved); display strips it.
+        assertEquals("v2.2.0", c.latestUpstream)
+    }
+
+    // ---------- Spec test 2b: newer release on a DECLARED base ----------
+    // integrated = 1.7.0, latest = 2.0.0 (declared TESTED base in the matrix):
+    // the manifest says compatible — a newer SpaceKai build exists for that
+    // base, so the user is told the base is supported, never "not compatible".
+    @Test
+    fun `newer release on a declared base is supported not incompatible`() {
         val c =
             computeUpstreamCompatibility(
                 latestUpstream = "v2.0.0",
                 basedOn = "1.7.0",
                 maxTested = "1.7.0",
             )
-        assertFalse(c.compatible, "newer release outside tested range is not compatible")
-        assertTrue(c.statusLabel.contains("Nouvelle release officielle détectée"))
-        // The raw GitHub tag is kept as-is (leading "v" preserved); display strips it.
-        assertEquals("v2.0.0", c.latestUpstream)
+        assertTrue(c.compatible, "a declared base is compatible even when newer than the build's base")
+        assertTrue(c.statusLabel.contains("base supportée"), "label must point at the supported base")
+        assertFalse(c.statusLabel.contains("pas encore compatible"))
     }
 
     // ---------- Spec test 3: integrated == latest => UP TO DATE ----------
@@ -132,6 +150,13 @@ class UpstreamCompatibilityTest {
             )
         assertEquals("2.0.0", d.basedOnUpstream)
         assertEquals("v2.1.0", d.latestUpstream)
-        assertFalse(d.compatible)
+        // 2.1.0 is a DECLARED (untested) base in the matrix, so the verdict is
+        // compatible with the device-validation nuance — never "not compatible"
+        // as the old hardcoded ceiling would have said.
+        assertTrue(d.compatible, "2.1.0 is a declared base in UpstreamCompatibilityMatrix")
+        assertTrue(
+            d.statusLabel.contains("validation appareil"),
+            "declared-but-untested base keeps the honest nuance",
+        )
     }
 }

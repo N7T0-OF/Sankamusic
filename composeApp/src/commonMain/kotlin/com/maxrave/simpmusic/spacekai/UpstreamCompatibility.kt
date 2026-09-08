@@ -21,8 +21,12 @@ import com.maxrave.domain.data.model.update.UpdateData
  *     dynamically — never hardcoded).
  *
  * A SpaceKai build is considered COMPATIBLE with the latest upstream when the
- * upstream release falls within the tested range declared by this build:
- *   [SPACEKAI_BASED_ON_UPSTREAM .. SPACEKAI_MAX_TESTED_UPSTREAM].
+ * release matches a base declared in [UpstreamCompatibilityMatrix] — the
+ * manifest of SimpMusic bases this SpaceKai line supports — or, as a fallback
+ * for an unknown future base, when it falls within this build's own tested
+ * range [SPACEKAI_BASED_ON_UPSTREAM .. maxTested]. A declared base is
+ * compatible even when newer than this build's base: that is how SpaceKai
+ * follows new SimpMusic releases without an updater code change.
  * Use OPT_IN upgrades for a newer base: it only counts once the SpaceKai layer
  * has actually been rebuilt on top of it.
  *
@@ -165,6 +169,7 @@ fun computeUpstreamCompatibility(
 
     val baseVersion = parseVersion(basedOn)
     val maxVersion = parseVersion(maxTested)
+    val latestIsNewerThanBase = baseVersion?.let { latestVersion > it } == true
 
     // BASE NEWER THAN RELEASE (e.g. base 2.0.0 vs release 1.7.0): SpaceKai is
     // already ahead of the official line. No update, no downgrade, and NOT a
@@ -182,17 +187,33 @@ fun computeUpstreamCompatibility(
     }
 
     val inRange = maxVersion == null || latestVersion <= maxVersion
+    // SPACEKAI FEATURE: the compatibility verdict is now driven by the manifest
+    // (UpstreamCompatibilityMatrix) instead of the hardcoded max-tested ceiling.
+    // A release matching a declared base is compatible even when it is newer than
+    // this build's own base — that is exactly how SpaceKai follows new SimpMusic
+    // releases without a code change in the updater. The old range check stays as
+    // a fallback when the release matches no declared base (unknown future base).
+    val manifestCompatible = UpstreamCompatibilityMatrix.isCompatible(latest)
+    val manifestUntested = UpstreamCompatibilityMatrix.isUntested(latest)
+    val compatible = manifestCompatible || inRange
     return UpstreamCompatibility(
         basedOnUpstream = basedOn,
         maxTestedUpstream = maxTested,
         latestUpstream = latest,
         checkState = checkState,
-        compatible = inRange,
+        compatible = compatible,
         statusLabel =
-            if (inRange) {
-                "✓ À jour avec la dernière release officielle"
-            } else {
-                "⚠ Nouvelle release officielle détectée (v$latestDisplay) — SpaceKai pas encore compatible"
+            when {
+                manifestCompatible && manifestUntested && latestIsNewerThanBase ->
+                    "⚠ Nouvelle release officielle (v$latestDisplay) — base supportée, validation appareil en cours"
+                manifestCompatible && latestIsNewerThanBase ->
+                    "⚠ Nouvelle release officielle (v$latestDisplay) — base supportée par SpaceKai"
+                manifestCompatible ->
+                    "✓ À jour avec la dernière release officielle"
+                inRange ->
+                    "✓ À jour avec la dernière release officielle"
+                else ->
+                    "⚠ Nouvelle release officielle détectée (v$latestDisplay) — SpaceKai pas encore compatible"
             },
     )
 }
