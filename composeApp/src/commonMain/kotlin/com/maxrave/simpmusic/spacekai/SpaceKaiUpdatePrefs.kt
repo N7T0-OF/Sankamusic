@@ -23,10 +23,7 @@ enum class SpaceKaiUpdateChannel(val key: String) {
 
     companion object {
         fun fromKey(raw: String?): SpaceKaiUpdateChannel =
-            entries.firstOrNull { it.key == raw?.trim()?.lowercase(    )
-}
-
- ?: STABLE
+            entries.firstOrNull { it.key == raw?.trim()?.lowercase() } ?: STABLE
     }
 }
 
@@ -73,8 +70,7 @@ fun selectSpaceKaiUpdate(
 
     val candidates =
         listOfNotNull(betaRelease, stableRelease)
-            .filter { isVersionNewer(it.tagName, installedVersion    )
-}
+            .filter { isVersionNewer(it.tagName, installedVersion) }
     return candidates.maxWithOrNull(
         Comparator { left, right ->
             val leftVersion = parseVersion(left.tagName)
