@@ -1,6 +1,6 @@
 # E2E device checklist — SpaceKai updater v0.3.7 (merge gate for Sankamusic#5 / core#1)
 
-Ground truth: the code reviewed on tips `37bf53ae` (parent) / `062a348` (core),
+Ground truth: the code reviewed on tip `deca90b3` (parent) / `062a348` (core),
 plus the deterministic APK resolver described in P3 below. Scope: every claim
 below is observable on one Android device; JVM tests cover selection/state logic
 only, not the download, package-check, or install pipeline.
@@ -21,35 +21,16 @@ only, not the download, package-check, or install pipeline.
 ### Build the candidate APK (exact task)
 
 ```bash
-# The pinned compottie:2.2.2-compose-1.12-SNAPSHOT was pruned from the remote and
-# CI currently fails on it. The -I script below is a VERIFICATION-ONLY workaround
-# (it changes no build file); create it locally ONCE, then build:
-mkdir -p .freebuff
-cat > .freebuff/compottie-substitution.init.gradle.kts <<'EOF'
-allprojects {
-    configurations.configureEach {
-        resolutionStrategy.eachDependency {
-            if (requested.group == "io.github.alexzhirkevich" &&
-                requested.version == "2.2.2-compose-1.12-SNAPSHOT") {
-                useVersion("2.2.4-compose-1.12-SNAPSHOT")
-                because("Pruned pinned snapshot; verification-only substitution.")
-            }
-        }
-    }
-}
-EOF
+# Compottie is pinned to the published Central Portal Compose 1.12 snapshot in
+# gradle/libs.versions.toml; no local dependency substitution is required.
 
 # FOSS variant (what CI publishes as "Build release APK (FOSS)"):
-./gradlew androidApp:assembleRelease -PisFullBuild=false -I .freebuff/compottie-substitution.init.gradle.kts
+./gradlew androidApp:assembleRelease -PisFullBuild=false
 # Full variant (default; gradle.properties sets isFullBuild=true):
-./gradlew androidApp:assembleRelease -I .freebuff/compottie-substitution.init.gradle.kts
+./gradlew androidApp:assembleRelease
 # Output: androidApp/build/outputs/apk/release/androidApp-release.apk
 ```
 
-- The `-I` init script is the **verification-only** workaround for the pruned
-  `compottie:2.2.2-compose-1.12-SNAPSHOT` pin (CI fails on it today); it is untracked
-  and changes no build file. Once the pin is fixed in `gradle/libs.versions.toml`,
-  drop the `-I` flag and this paragraph.
 - The local release APK is **unsigned** (no `signingConfig`): either sign it with the
   SpaceKai release key (`apksigner sign --ks ...`) or take the **CI-signed** artifact
   from a green `Build release APK` job. Never sideload an unsigned APK — T1 would fail
@@ -57,7 +38,7 @@ EOF
 - Do **not** build with `isFullBuild` flipped relative to the artifact you actually
   publish: the E2E must test the exact binary users will receive.
 - Everything above uses only standard tooling (`adb`, `apksigner`, `gh`, `sha256sum`)
-  plus the one init script defined here — no other file from the developer's machine
+  and the tracked dependency declaration — no other file from the developer's machine
   is required.
 
 ### Evidence kit (capture on every test)
