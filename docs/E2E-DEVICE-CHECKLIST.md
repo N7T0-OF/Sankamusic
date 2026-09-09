@@ -1,6 +1,6 @@
 # E2E device checklist — SpaceKai updater v0.3.7 (merge gate for Sankamusic#5 / core#1)
 
-Ground truth: the code reviewed on tip `deca90b3` (parent) / `062a348` (core),
+Ground truth: the code reviewed on tip `391659b6` (parent) / `062a348` (core),
 plus the deterministic APK resolver described in P3 below. Scope: every claim
 below is observable on one Android device; JVM tests cover selection/state logic
 only, not the download, package-check, or install pipeline.
