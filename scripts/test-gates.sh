@@ -134,7 +134,7 @@ CRITICAL=(
   "$CM/ui/navigation/graph/LoginScreenGraph.kt|SpotifyLoginDestination"
   "$CM/ui/screen/home/SettingScreen.kt|spotifyLoggedIn"
   "$CM/viewModel/SharedViewModel.kt|fun checkForUpdate()"
-  "$CM/viewModel/SharedViewModel.kt|checkForGithubReleaseUpdate()"
+  "$CM/viewModel/SharedViewModel.kt|checkForGithubReleaseUpdate("
   "$CM/viewModel/SharedViewModel.kt|CheckForUpdateAt"
   "$AND/expect/ui/PlatformColorScheme.android.kt|dynamicDarkColorScheme("
   "$AND/expect/ui/PlatformColorScheme.android.kt|dynamicLightColorScheme("

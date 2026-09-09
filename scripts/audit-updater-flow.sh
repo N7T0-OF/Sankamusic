@@ -78,10 +78,10 @@ else
   else
     crit "checkForUpdate() removed — Settings 'Check for update' does nothing"
   fi
-  if grep -q 'checkForGithubReleaseUpdate()' "$VM"; then
+  if grep -q 'checkForGithubReleaseUpdate(' "$VM"; then
     pass "GitHub release checker called (impl lives in core/data, upstream)"
   else
-    crit "checkForGithubReleaseUpdate() removed — no release check happens"
+    crit "checkForGithubReleaseUpdate(...) removed — no release check happens"
   fi
   if grep -q '"CheckForUpdateAt"' "$VM"; then
     pass "Update-check timestamp cache present (no per-recomposition GitHub call)"
